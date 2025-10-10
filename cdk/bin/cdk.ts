@@ -5,7 +5,7 @@ import { DatabaseStack } from "../lib/database-stack";
 //import { ApiGatewayStack } from "../lib/api-stack";
 import { DBFlowStack } from "../lib/dbFlow-stack";
 //import { AmplifyStack } from "../lib/amplify-stack";
-//import { CICDStack } from "../lib/cicd-stack";
+import { CICDStack } from "../lib/cicd-stack";
 
 const app = new cdk.App();
 
@@ -35,3 +35,20 @@ const dbFlowStack = new DBFlowStack(
   dbStack,
   { env }
 );
+
+const cicdStack = new CICDStack(app, `${StackPrefix}-CICD`, {
+  env,
+  githubRepo: githubRepo,
+  environmentName: environment,
+  lambdaFunctions: [
+    /* Example entry for additional Lambda functions and path filters
+    {
+      name: "dataIngestion",
+      functionName: `${StackPrefix}-Api-DataIngestionLambdaDockerFunc`,
+      sourceDir: "cdk/lambda/data_ingestion",
+    },*/
+  ],
+  pathFilters: [
+    //"cdk/lambda/data_ingestion/**",
+  ],
+});
