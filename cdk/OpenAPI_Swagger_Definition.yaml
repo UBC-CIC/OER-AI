@@ -13,8 +13,8 @@ x-amazon-apigateway-request-validators:
     validateRequestParameters: true
     validateRequestBody: true
   params-only:
-    validateRequestParameters": true
-    validateRequestBody": false
+    validateRequestParameters: true
+    validateRequestBody: false
 x-amazon-apigateway-request-validator: params-only
 x-amazon-apigateway-gateway-responses:
   UNAUTHORIZED:
