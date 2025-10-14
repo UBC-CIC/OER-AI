@@ -66,7 +66,7 @@ export class CICDStack extends cdk.Stack {
 
     const username = cdk.aws_ssm.StringParameter.valueForStringParameter(
       this,
-      "oeai-owner-name"
+      "oer-owner-name"
     );
 
     // Add source stage

@@ -47,14 +47,14 @@ export class DatabaseStack extends Stack {
     const secret = secretmanager.Secret.fromSecretNameV2(
       this,
       "ImportedSecrets",
-      "OEAISecrets"
+      "OERSecrets"
     );
 
     /**
      * Create Secrets for various users
      */
-    this.secretPathAdminName = `${id}-OEAI/credentials/rdsDbCredential`;
-    const secretPathUserName = `${id}-OEAI/userCredentials/rdsDbCredential`;
+    this.secretPathAdminName = `${id}-OER/credentials/rdsDbCredential`;
+    const secretPathUserName = `${id}-OER/userCredentials/rdsDbCredential`;
     this.secretPathUser = new secretsmanager.Secret(this, secretPathUserName, {
       secretName: secretPathUserName,
       description: "Secrets for clients to connect to RDS",
@@ -65,7 +65,7 @@ export class DatabaseStack extends Stack {
       },
     });
 
-    const secretPathTableCreator = `${id}-OEAI/userCredentials/TableCreator`;
+    const secretPathTableCreator = `${id}-OER/userCredentials/TableCreator`;
     this.secretPathTableCreator = new secretsmanager.Secret(
       this,
       secretPathTableCreator,
@@ -123,7 +123,7 @@ export class DatabaseStack extends Stack {
       backupRetention: Duration.days(7),
       deleteAutomatedBackups: true,
       deletionProtection: true,
-      databaseName: "oeai",
+      databaseName: "oer",
       publiclyAccessible: false,
       cloudwatchLogsRetention: logs.RetentionDays.THREE_MONTHS,
       storageEncrypted: true, // storage encryption at rest
