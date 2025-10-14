@@ -4,7 +4,7 @@ import { VpcStack } from "../lib/vpc-stack";
 import { DatabaseStack } from "../lib/database-stack";
 import { ApiGatewayStack } from "../lib/api-stack";
 import { DBFlowStack } from "../lib/dbFlow-stack";
-//import { AmplifyStack } from "../lib/amplify-stack";
+import { AmplifyStack } from "../lib/amplify-stack";
 import { CICDStack } from "../lib/cicd-stack";
 
 const app = new cdk.App();
@@ -58,3 +58,7 @@ const apiStack = new ApiGatewayStack(
     ecrRepositories: cicdStack.ecrRepositories,
   }
 );
+const amplifyStack = new AmplifyStack(app, `${StackPrefix}-Amplify`, apiStack, {
+  env,
+  githubRepo: githubRepo,
+});
