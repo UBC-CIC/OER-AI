@@ -771,48 +771,5 @@ export class ApiGatewayStack extends cdk.Stack {
       action: "lambda:InvokeFunction",
       sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/user*`,
     });
-
-    const lambdaAdminFunction = new lambda.Function(
-      this,
-      `${id}-adminFunction`,
-      {
-        runtime: lambda.Runtime.NODEJS_20_X,
-        code: lambda.Code.fromAsset("lambda"),
-        handler: "handlers/adminHandler.handler",
-        timeout: Duration.seconds(300),
-        vpc: vpcStack.vpc,
-        environment: {
-          SM_DB_CREDENTIALS: db.secretPathUser.secretName,
-          RDS_PROXY_ENDPOINT: db.rdsProxyEndpoint,
-          USER_POOL: this.userPool.userPoolId,
-        },
-        functionName: `${id}-adminFunction`,
-        memorySize: 512,
-        layers: [postgres],
-        role: lambdaRole,
-      }
-    );
-
-    lambdaAdminFunction.addPermission("AllowApiGatewayInvoke", {
-      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
-      action: "lambda:InvokeFunction",
-      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/member*`,
-    });
-
-    lambdaAdminFunction.addPermission("AllowTestInvoke", {
-      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
-      action: "lambda:InvokeFunction",
-      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/test-invoke-stage/*/*`,
-    });
-
-    const cfnLambda_admin = lambdaAdminFunction.node
-      .defaultChild as lambda.CfnFunction;
-    cfnLambda_admin.overrideLogicalId("adminFunction");
-
-    lambdaAdminFunction.addPermission("AllowAdminApiGatewayInvoke", {
-      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
-      action: "lambda:InvokeFunction",
-      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/admin*`,
-    });
   }
 }
