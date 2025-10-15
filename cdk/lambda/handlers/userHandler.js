@@ -32,15 +32,14 @@ exports.handler = async (event) => {
         break;
       case "POST /user_sessions":
         const sessionId = crypto.randomUUID();
-        const query = `
+        const result = await sqlConnection`
           INSERT INTO user_sessions (session_id, created_at, last_active_at)
-          VALUES ($1, NOW(), NOW())
+          VALUES (${sessionId}, NOW(), NOW())
           RETURNING id, session_id, created_at
         `;
-        const result = await sqlConnection.query(query, [sessionId]);
         data = {
-          sessionId: result.rows[0].session_id,
-          userSessionId: result.rows[0].id
+          sessionId: result[0].session_id,
+          userSessionId: result[0].id
         };
         response.body = JSON.stringify(data);
         break;
