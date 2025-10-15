@@ -473,6 +473,123 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
+  /textbooks/{id}/faq:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get FAQ cache for a textbook
+      operationId: get_textbook_faq
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: FAQ cache entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    question_text:
+                      type: string
+                    answer_text:
+                      type: string
+                    usage_count:
+                      type: integer
+                    last_used_at:
+                      type: string
+                      format: date-time
+                    cached_at:
+                      type: string
+                      format: date-time
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      tags:
+        - User
+      summary: Add FAQ entry to textbook cache
+      operationId: create_textbook_faq
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - question_text
+                - answer_text
+              properties:
+                question_text:
+                  type: string
+                answer_text:
+                  type: string
+      responses:
+        "201":
+          description: FAQ entry created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  question_text:
+                    type: string
+                  answer_text:
+                    type: string
+                  usage_count:
+                    type: integer
+                  last_used_at:
+                    type: string
+                    format: date-time
+                  cached_at:
+                    type: string
+                    format: date-time
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
   /user/exampleEndpoint:
     options:
       summary: CORS support
