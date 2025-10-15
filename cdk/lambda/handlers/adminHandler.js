@@ -30,13 +30,29 @@ exports.handler = async (event) => {
         data = "Example endpoint invoked";
         response.body = JSON.stringify(data);
         break;
+      case "POST /admin/users":
+        const { display_name, email, institution_id } = JSON.parse(event.body);
+        
+        const result = await sqlConnection.query(
+          'INSERT INTO users (display_name, email, institution_id) VALUES ($1, $2, $3) RETURNING *',
+          [display_name, email, institution_id]
+        );
+        
+        response.statusCode = 201;
+        response.body = JSON.stringify(result.rows[0]);
+        break;
       default:
         throw new Error(`Unsupported route: "${pathData}"`);
     }
   } catch (error) {
-    response.statusCode = 500;
     console.log(error);
-    response.body = JSON.stringify(error.message);
+    if (error.code === '23505') { // Unique constraint violation
+      response.statusCode = 409;
+      response.body = JSON.stringify({ error: 'Email already exists' });
+    } else {
+      response.statusCode = 500;
+      response.body = JSON.stringify({ error: 'Internal server error' });
+    }
   }
   console.log(response);
   return response;

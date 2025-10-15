@@ -53,6 +53,65 @@ x-common-options: &commonOptions
               {}
 
 paths:
+  /admin/users:
+    <<: *commonOptions
+    post:
+      tags:
+        - Admin
+      summary: Create a new admin user
+      operationId: create_admin_user
+      security:
+        - adminAuthorizer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - display_name
+                - email
+              properties:
+                display_name:
+                  type: string
+                  maxLength: 255
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                institution_id:
+                  type: string
+                  maxLength: 255
+      responses:
+        "201":
+          description: Admin user created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  display_name:
+                    type: string
+                  email:
+                    type: string
+                  role:
+                    type: string
+                    example: "admin"
+        "409":
+          description: Email already exists
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${adminFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+      x-amazon-apigateway-request-validator: all
+
   /user/publicToken:
     options:
       summary: CORS support
