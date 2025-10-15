@@ -6,7 +6,7 @@
 :root {
   --background: rgb(255, 255, 255);
   --foreground: rgb(0, 0, 0);
-  --card: rgb(255, 255, 255);
+  --card: rgb(245, 245, 245);
   --card-foreground: rgb(38, 38, 38);
   --popover: rgb(255, 255, 255);
   --popover-foreground: rgb(10, 10, 10);
