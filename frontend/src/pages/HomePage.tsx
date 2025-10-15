@@ -1,9 +1,13 @@
 import Header from "@/components/Header";
-import TextbookCard from "./HomePage/TextbookCard";
+import TextbookCard from "@/components/HomePage/TextbookCard";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function HomePage() {
+  const [userSearch, setUserSearch] = useState<string>("");
+  const [filteredBooks, setFilteredBooks] = useState<typeof textbooks>([]);
+
   const textbooks = [
     {
       id: 1,
@@ -57,6 +61,22 @@ export default function HomePage() {
     },
   ];
 
+  //   Search filtering
+  useEffect(() => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) {
+      setFilteredBooks(textbooks);
+      return;
+    }
+
+    setFilteredBooks(
+      textbooks.filter(
+        (textbook) =>
+          textbook.title.toLowerCase().includes(q) ||
+          textbook.author.join(" ").toLowerCase().includes(q)
+      )
+    );
+  }, [userSearch]);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -82,12 +102,15 @@ export default function HomePage() {
               type="search"
               placeholder="Search by Title or Author"
               className="h-12 bg-input border pl-10 text-base shadow-sm"
+              onChange={(e) => {
+                setUserSearch(e.target.value);
+              }}
             />
           </div>
 
           {/* Textbook Grid */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {textbooks.map((textbook) => (
+            {filteredBooks.map((textbook) => (
               <TextbookCard key={textbook.id} textbook={textbook} />
             ))}
           </div>
