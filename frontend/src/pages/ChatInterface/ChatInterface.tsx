@@ -23,7 +23,10 @@ export default function AIChatPage() {
       <Header />
       <div className="pt-[70px] flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <StudentSideBar textbookTitle={textbookTitle} textbookAuthor={textbookAuthor} />
+        <StudentSideBar
+          textbookTitle={textbookTitle}
+          textbookAuthor={textbookAuthor}
+        />
 
         {/* Main Content: make this scrollable independently */}
         <main className="md:ml-64 flex flex-1 overflow-y-auto p-8 justify-center items-center">
@@ -69,11 +72,17 @@ export default function AIChatPage() {
 
             {/* Prompt Options*/}
             <div className="w-full flex gap-4 justify-end items-center">
-              <Button variant={"link"} className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-gray-900 transition-colors">
+              <Button
+                variant={"link"}
+                className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-gray-900 transition-colors"
+              >
                 Prompt Library
                 <LibraryBig className="h-4 w-4" />
               </Button>
-              <Button variant={"link"} className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-gray-900 transition-colors">
+              <Button
+                variant={"link"}
+                className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-gray-900 transition-colors"
+              >
                 See more prompts
                 <ChevronDown className="h-4 w-4" />
               </Button>
