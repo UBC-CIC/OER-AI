@@ -379,6 +379,161 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
+      // GET /textbooks/{id}/sections - Get sections for a textbook
+      case "GET /textbooks/{id}/sections":
+        const sectionsTextbookId = event.pathParameters?.id;
+        if (!sectionsTextbookId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Textbook ID is required" });
+          break;
+        }
+        
+        // Get sections ordered by order_index for proper hierarchy
+        const sections = await sqlConnection`
+          SELECT id, textbook_id, parent_section_id, title, order_index, page_start, page_end, summary, created_at
+          FROM sections
+          WHERE textbook_id = ${sectionsTextbookId}
+          ORDER BY order_index ASC
+        `;
+        
+        data = sections;
+        response.body = JSON.stringify(data);
+        break;
+        
+      // POST /textbooks/{id}/sections - Create new section for textbook
+      case "POST /textbooks/{id}/sections":
+        const postSectionsTextbookId = event.pathParameters?.id;
+        if (!postSectionsTextbookId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Textbook ID is required" });
+          break;
+        }
+        
+        // Parse section data from request body
+        let sectionData;
+        try {
+          sectionData = JSON.parse(event.body || '{}');
+        } catch {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Invalid JSON body" });
+          break;
+        }
+        
+        // Extract fields from request body
+        const { title: sectionTitle, parent_section_id, order_index, page_start, page_end, summary: sectionSummary } = sectionData;
+        if (!sectionTitle) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "title is required" });
+          break;
+        }
+        
+        // Verify textbook exists
+        const sectionTextbookExists = await sqlConnection`
+          SELECT id FROM textbooks WHERE id = ${postSectionsTextbookId}
+        `;
+        if (sectionTextbookExists.length === 0) {
+          response.statusCode = 404;
+          response.body = JSON.stringify({ error: "Textbook not found" });
+          break;
+        }
+        
+        // Create new section
+        const newSection = await sqlConnection`
+          INSERT INTO sections (textbook_id, parent_section_id, title, order_index, page_start, page_end, summary)
+          VALUES (${postSectionsTextbookId}, ${parent_section_id || null}, ${sectionTitle}, ${order_index || null}, ${page_start || null}, ${page_end || null}, ${sectionSummary || null})
+          RETURNING id, textbook_id, parent_section_id, title, order_index, page_start, page_end, summary, created_at
+        `;
+        
+        response.statusCode = 201; // Created
+        data = newSection[0];
+        response.body = JSON.stringify(data);
+        break;
+        
+      // GET /sections/{id} - Get specific section by ID
+      case "GET /sections/{id}":
+        const getSectionId = event.pathParameters?.id;
+        if (!getSectionId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Section ID is required" });
+          break;
+        }
+        
+        const section = await sqlConnection`
+          SELECT id, textbook_id, parent_section_id, title, order_index, page_start, page_end, summary, created_at
+          FROM sections
+          WHERE id = ${getSectionId}
+        `;
+        
+        if (section.length === 0) {
+          response.statusCode = 404;
+          response.body = JSON.stringify({ error: "Section not found" });
+          break;
+        }
+        
+        data = section[0];
+        response.body = JSON.stringify(data);
+        break;
+        
+      // PUT /sections/{id} - Update specific section
+      case "PUT /sections/{id}":
+        const putSectionId = event.pathParameters?.id;
+        if (!putSectionId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Section ID is required" });
+          break;
+        }
+        
+        let putSectionData;
+        try {
+          putSectionData = JSON.parse(event.body || '{}');
+        } catch {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Invalid JSON body" });
+          break;
+        }
+        
+        const { title: putSectionTitle, parent_section_id: putParentSectionId, order_index: putOrderIndex, page_start: putPageStart, page_end: putPageEnd, summary: putSectionSummary } = putSectionData;
+        
+        const updatedSection = await sqlConnection`
+          UPDATE sections 
+          SET title = ${putSectionTitle}, parent_section_id = ${putParentSectionId || null}, order_index = ${putOrderIndex || null}, page_start = ${putPageStart || null}, page_end = ${putPageEnd || null}, summary = ${putSectionSummary || null}
+          WHERE id = ${putSectionId}
+          RETURNING id, textbook_id, parent_section_id, title, order_index, page_start, page_end, summary, created_at
+        `;
+        
+        if (updatedSection.length === 0) {
+          response.statusCode = 404;
+          response.body = JSON.stringify({ error: "Section not found" });
+          break;
+        }
+        
+        data = updatedSection[0];
+        response.body = JSON.stringify(data);
+        break;
+        
+      // DELETE /sections/{id} - Delete specific section
+      case "DELETE /sections/{id}":
+        const deleteSectionId = event.pathParameters?.id;
+        if (!deleteSectionId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Section ID is required" });
+          break;
+        }
+        
+        const deletedSection = await sqlConnection`
+          DELETE FROM sections WHERE id = ${deleteSectionId} RETURNING id
+        `;
+        
+        if (deletedSection.length === 0) {
+          response.statusCode = 404;
+          response.body = JSON.stringify({ error: "Section not found" });
+          break;
+        }
+        
+        response.statusCode = 204; // No Content
+        response.body = "";
+        break;
+        
       // Handle unsupported routes
       default:
         throw new Error(`Unsupported route: "${pathData}"`);

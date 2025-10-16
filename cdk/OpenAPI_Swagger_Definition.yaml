@@ -838,6 +838,318 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
+  /textbooks/{id}/sections:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get sections for a textbook
+      operationId: get_textbook_sections
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Sections for textbook
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    textbook_id:
+                      type: string
+                      format: uuid
+                    parent_section_id:
+                      type: string
+                      format: uuid
+                    title:
+                      type: string
+                    order_index:
+                      type: integer
+                    page_start:
+                      type: integer
+                    page_end:
+                      type: integer
+                    summary:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+        "400":
+          description: Invalid parameters
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      tags:
+        - User
+      summary: Create section for textbook
+      operationId: create_textbook_section
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                parent_section_id:
+                  type: string
+                  format: uuid
+                order_index:
+                  type: integer
+                page_start:
+                  type: integer
+                page_end:
+                  type: integer
+                summary:
+                  type: string
+      responses:
+        "201":
+          description: Section created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  parent_section_id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  order_index:
+                    type: integer
+                  page_start:
+                    type: integer
+                  page_end:
+                    type: integer
+                  summary:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        "400":
+          description: Invalid request
+        "404":
+          description: Textbook not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /sections/{id}:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get a specific section by ID
+      operationId: get_section_by_id
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Section UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Section details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  parent_section_id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  order_index:
+                    type: integer
+                  page_start:
+                    type: integer
+                  page_end:
+                    type: integer
+                  summary:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Section not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      tags:
+        - User
+      summary: Update a specific section
+      operationId: update_section
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Section UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                parent_section_id:
+                  type: string
+                  format: uuid
+                order_index:
+                  type: integer
+                page_start:
+                  type: integer
+                page_end:
+                  type: integer
+                summary:
+                  type: string
+      responses:
+        "200":
+          description: Section updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  parent_section_id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  order_index:
+                    type: integer
+                  page_start:
+                    type: integer
+                  page_end:
+                    type: integer
+                  summary:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Section not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    delete:
+      tags:
+        - User
+      summary: Delete a specific section
+      operationId: delete_section
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Section UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Section deleted successfully
+        "404":
+          description: Section not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
   /user/exampleEndpoint:
     options:
       summary: CORS support
