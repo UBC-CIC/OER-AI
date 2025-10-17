@@ -5,18 +5,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import StudentSideBar from "./StudentSideBar";
-import { useLocation } from 'react-router'
+import { useLocation } from "react-router";
 
 export default function AIChatPage() {
   const [message, setMessage] = useState("");
   const location = useLocation();
 
   // try to get textbook data from navigation state
-  const navTextbook = (location.state)?.textbook;
+  const navTextbook = location.state?.textbook;
 
   // fallback textbook data (if user navigates directly)
   const textbookTitle = navTextbook?.title ?? "Calculus: Volume 3";
-  const textbookAuthor = navTextbook?.author ? navTextbook.author.join(', ') : "OpenStax";
+  const textbookAuthor = navTextbook?.author
+    ? navTextbook.author.join(", ")
+    : "OpenStax";
 
   const prompts = [
     "Summarize a Chapter",

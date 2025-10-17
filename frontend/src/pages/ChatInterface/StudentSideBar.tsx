@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
 
 type StudentSideBarProps = {
   textbookTitle: string;
@@ -49,7 +49,7 @@ export default function StudentSideBar({
         <h4 className="font-semibold text-sm px-3">Tutor</h4>
       </div>
     </>
-  )
+  );
 
   return (
     <>
