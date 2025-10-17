@@ -28,10 +28,9 @@ export default function AIChatPage() {
           textbookAuthor={textbookAuthor}
         />
 
-        {/* Main Content: make this scrollable independently */}
         <main className="md:ml-64 flex flex-1 overflow-y-auto p-8 justify-center items-center">
           <div className="w-full max-w-2xl px-4">
-            {/* Heading */}
+            {/* Hero title */}
             <h1 className="text-4xl font-bold text-center mb-12 leading-tight max-w-full break-words">
               What can I help with?
             </h1>
@@ -42,7 +41,7 @@ export default function AIChatPage() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={`Ask anything about ${textbookTitle}`}
-                className="bg-input !border-[var(--border)] min-h-[120px] pr-12 resize-none text-sm"
+                className="bg-input !border-[var(--border)] h-[120px] pr-12 resize-none text-sm"
               />
               <Button
                 size="icon"
