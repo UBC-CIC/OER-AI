@@ -65,6 +65,27 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
+      case "POST /textbooks":
+        const createData = parseBody(event.body);
+        const { title: createTitle, authors: createAuthors, license: createLicense, source_url: createSourceUrl, publisher: createPublisher, year: createYear, summary: createSummary, language: createLanguage, level: createLevel, created_by: createCreatedBy, metadata: createMetadata } = createData;
+        
+        if (!createTitle) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Title is required" });
+          break;
+        }
+        
+        const newTextbook = await sqlConnection`
+          INSERT INTO textbooks (title, authors, license, source_url, publisher, year, summary, language, level, created_by, metadata)
+          VALUES (${createTitle}, ${createAuthors || []}, ${createLicense || null}, ${createSourceUrl || null}, ${createPublisher || null}, ${createYear || null}, ${createSummary || null}, ${createLanguage || null}, ${createLevel || null}, ${createCreatedBy || null}, ${createMetadata || {}})
+          RETURNING id, title, authors, license, source_url, publisher, year, summary, language, level, created_at, updated_at, metadata
+        `;
+        
+        response.statusCode = 201;
+        data = newTextbook[0];
+        response.body = JSON.stringify(data);
+        break;
+        
       case "PUT /textbooks/{id}":
         const updateId = event.pathParameters?.id;
         if (!updateId) {
