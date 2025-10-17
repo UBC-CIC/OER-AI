@@ -10,26 +10,7 @@
  * Only authenticated admin users can access these endpoints.
  */
 
-const { initializeConnection } = require("./initializeConnection.js");
-// Environment variables are set in AWS Lambda configuration
-// These contain database connection details stored in AWS Secrets Manager
-let { SM_DB_CREDENTIALS, RDS_PROXY_ENDPOINT } = process.env;
-
-// Database connection variable - stored outside handler for performance optimization
-// Lambda containers are reused across invocations, so we cache the connection
-let sqlConnection;
-
-/**
- * Initialize database connection using AWS RDS Proxy
- * RDS Proxy manages database connections and provides connection pooling
- */
-const initConnection = async () => {
-  if (!sqlConnection) {
-    // Retrieve database credentials from AWS Secrets Manager and establish connection
-    await initializeConnection(SM_DB_CREDENTIALS, RDS_PROXY_ENDPOINT);
-    sqlConnection = global.sqlConnection;
-  }
-};
+const { initConnection, createResponse, parseBody, handleError, getSqlConnection } = require("./utils/handlerUtils.js");
 
 // Initialize connection during Lambda cold start (when container first starts)
 // This improves performance for subsequent invocations (warm starts)
@@ -43,21 +24,11 @@ const initConnection = async () => {
  * @returns {Object} HTTP response object with statusCode, headers, and body
  */
 exports.handler = async (event) => {
-  // Standard HTTP response structure for API Gateway
-  const response = {
-    statusCode: 200, // Default success status
-    headers: {
-      // CORS headers to allow cross-origin requests from web browsers
-      "Access-Control-Allow-Headers":
-        "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-      "Access-Control-Allow-Origin": "*", // Allow requests from any domain
-      "Access-Control-Allow-Methods": "*", // Allow all HTTP methods
-    },
-    body: "", // Response data (will be JSON string)
-  };
-
+  const response = createResponse();
+  
   // Ensure database connection is ready (fallback for edge cases)
   await initConnection();
+  const sqlConnection = getSqlConnection();
 
   let data; // Variable to store response data
   try {
@@ -80,10 +51,10 @@ exports.handler = async (event) => {
         // Parse JSON request body containing new user data
         let userData;
         try {
-          userData = JSON.parse(event.body || '{}');
-        } catch {
+          userData = parseBody(event.body);
+        } catch (error) {
           response.statusCode = 400;
-          response.body = JSON.stringify({ error: "Invalid JSON body" });
+          response.body = JSON.stringify({ error: error.message });
           break;
         }
         
@@ -140,9 +111,6 @@ exports.handler = async (event) => {
         throw new Error(`Unsupported route: "${pathData}"`);
     }
   } catch (error) {
-    // Enhanced error handling for different types of database errors
-    console.log(error); // Log error for AWS CloudWatch monitoring
-    
     // Handle specific PostgreSQL error codes
     if (error.code === '23505') {
       // Unique constraint violation (duplicate email)
@@ -154,8 +122,7 @@ exports.handler = async (event) => {
       response.body = JSON.stringify({ error: 'Required field is missing' });
     } else {
       // Generic server error for other exceptions
-      response.statusCode = 500;
-      response.body = JSON.stringify({ error: 'Internal server error' });
+      handleError(error, response);
     }
   }
   
