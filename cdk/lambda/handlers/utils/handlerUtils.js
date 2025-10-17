@@ -4,9 +4,8 @@ let { SM_DB_CREDENTIALS, RDS_PROXY_ENDPOINT } = process.env;
 let sqlConnection;
 
 const initConnection = async () => {
-  if (!sqlConnection) {
+  if (!global.sqlConnection) {
     await initializeConnection(SM_DB_CREDENTIALS, RDS_PROXY_ENDPOINT);
-    sqlConnection = global.sqlConnection;
   }
 };
 
@@ -39,5 +38,5 @@ module.exports = {
   createResponse,
   parseBody,
   handleError,
-  getSqlConnection: () => sqlConnection
+  getSqlConnection: () => global.sqlConnection
 };

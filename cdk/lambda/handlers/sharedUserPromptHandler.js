@@ -1,4 +1,60 @@
-const { initConnection, createResponse, parseBody, handleError, getSqlConnection } = require("./utils/handlerUtils.js");
+const postgres = require("postgres");
+const { SecretsManagerClient, GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
+
+let sqlConnection;
+const secretsManager = new SecretsManagerClient();
+
+const initConnection = async () => {
+  if (!sqlConnection) {
+    try {
+      const getSecretValueCommand = new GetSecretValueCommand({
+        SecretId: process.env.SM_DB_CREDENTIALS,
+      });
+      const secretResponse = await secretsManager.send(getSecretValueCommand);
+      const credentials = JSON.parse(secretResponse.SecretString);
+      
+      const connectionConfig = {
+        host: process.env.RDS_PROXY_ENDPOINT,
+        port: credentials.port,
+        username: credentials.username,
+        password: credentials.password,
+        database: credentials.dbname,
+        ssl: { rejectUnauthorized: false },
+      };
+      
+      sqlConnection = postgres(connectionConfig);
+      await sqlConnection`SELECT 1`;
+      console.log("Database connection initialized successfully");
+    } catch (error) {
+      console.error("Error initializing database connection:", error);
+      throw error;
+    }
+  }
+};
+
+const createResponse = () => ({
+  statusCode: 200,
+  headers: {
+    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "*",
+  },
+  body: "",
+});
+
+const parseBody = (body) => {
+  try {
+    return JSON.parse(body || '{}');
+  } catch {
+    throw new Error("Invalid JSON body");
+  }
+};
+
+const handleError = (error, response) => {
+  response.statusCode = 500;
+  console.log(error);
+  response.body = JSON.stringify(error.message);
+};
 
 (async () => {
   await initConnection();
@@ -9,7 +65,6 @@ exports.handler = async (event) => {
   let data;
   
   try {
-    const sqlConnection = getSqlConnection();
     const pathData = event.httpMethod + " " + event.resource;
     
     switch (pathData) {
