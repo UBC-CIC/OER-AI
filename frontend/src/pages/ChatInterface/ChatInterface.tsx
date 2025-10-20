@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Send, ChevronDown, LibraryBig } from "lucide-react";
 import PromptCard from "./PromptCard";
+import AIChatMessage from "./AIChatMessage";
+import UserChatMessage from "./UserChatMessage";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,28 +79,12 @@ export default function AIChatPage() {
     }, 700);
   }
 
-  function messageFormatter(m: Message) {
-    if (m.sender === "user") {
-      return (
-        <div className="flex justify-end">
-          <Card key={m.id} className="py-[10px] w-[90%]">
-            <CardContent className="px-[10px] text-sm lg:text-md break-words">
-              <p>{m.text}</p>
-            </CardContent>
-          </Card>
-        </div>
-      );
+  function messageFormatter(message: Message) {
+    if (message.sender === "user") {
+      return <UserChatMessage key={message.id} text={message.text} />;
     } else {
-      return (
-        <div className="flex justify-start">
-          <Card key={m.id} className="py-[10px] w-full bg-transparent border-none shadow-none">
-            <CardContent className="px-[10px] text-sm break-words">
-              <p>{m.text}</p>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
+      return <AIChatMessage key={message.id} text={message.text} />;
+    }   
   }
 
   return (
@@ -123,9 +108,7 @@ export default function AIChatPage() {
             ) : (
               // messages area
               <div className="flex flex-col gap-4 mb-6">
-                {messages.map((m) => (
-                  messageFormatter(m)
-                ))}
+                {messages.map((m) => messageFormatter(m))}
               </div>
             )}
 
@@ -155,12 +138,18 @@ export default function AIChatPage() {
 
             {/* Prompt Suggestions */}
             {(messages.length === 0 || seeMore) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-                {prompts.slice(0, messages.length === 0 && !seeMore ? 3 : 12).map((prompt, index) => (
-                  <PromptCard key={index} text={prompt} onClick={() => {
-                    setMessage(prompt);
-                  }} />
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                {prompts
+                  .slice(0, messages.length === 0 && !seeMore ? 3 : 12)
+                  .map((prompt, index) => (
+                    <PromptCard
+                      key={index}
+                      text={prompt}
+                      onClick={() => {
+                        setMessage(prompt);
+                      }}
+                    />
+                  ))}
               </div>
             )}
 
@@ -179,34 +168,37 @@ export default function AIChatPage() {
                 variant={"link"}
                 className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-gray-900 transition-colors"
               >
-                {seeMore ? 'Show less' : 'See more prompts'}
-                <ChevronDown className={`h-4 w-4 transition-transform ${seeMore ? 'rotate-180' : ''}`} />
+                {seeMore ? "Show less" : "See more prompts"}
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${
+                    seeMore ? "rotate-180" : ""
+                  }`}
+                />
               </Button>
             </div>
           </div>
+          {/* Prompt Library Modal */}
+          <Dialog open={showLibrary} onOpenChange={setShowLibrary}>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Prompt Library</DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                {prompts.map((prompt, index) => (
+                  <PromptCard
+                    key={index}
+                    text={prompt}
+                    onClick={() => {
+                      setMessage(prompt);
+                      setShowLibrary(false);
+                    }}
+                  />
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
         </main>
       </div>
-
-      {/* Prompt Library Modal */}
-      <Dialog open={showLibrary} onOpenChange={setShowLibrary}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Prompt Library</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-            {prompts.map((prompt, index) => (
-              <PromptCard 
-                key={index} 
-                text={prompt} 
-                onClick={() => {
-                  setMessage(prompt);
-                  setShowLibrary(false);
-                }} 
-              />
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
