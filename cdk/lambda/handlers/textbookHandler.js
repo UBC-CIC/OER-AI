@@ -60,46 +60,6 @@ const handleError = (error, response) => {
   response.body = JSON.stringify(error.message);
 };
 
-const checkAdminRole = async (event) => {
-  // Check if user context exists (from authorizer)
-  const userContext = event.requestContext?.authorizer;
-
-  console.log(
-    "Checking admin role for user context:",
-    JSON.stringify(userContext, null, 2)
-  );
-
-  if (!userContext || !userContext.userId) {
-    console.log("No user context or userId found");
-    return { isAdmin: false, error: "User not authenticated" };
-  }
-
-  // Ensure database connection is available
-  if (!sqlConnection) {
-    await initConnection();
-  }
-
-  // Query the database to check if user has admin role
-  try {
-    console.log("Querying database for user role, userId:", userContext.userId);
-    const userResult = await sqlConnection`
-      SELECT role FROM users WHERE id = ${userContext.userId}
-    `;
-
-    if (userResult.length === 0) {
-      console.log("User not found in database");
-      return { isAdmin: false, error: "User not found" };
-    }
-
-    const userRole = userResult[0].role;
-    console.log("User role found:", userRole);
-    return { isAdmin: userRole === "admin", error: null };
-  } catch (error) {
-    console.error("Error checking admin role:", error);
-    return { isAdmin: false, error: "Error checking user role" };
-  }
-};
-
 exports.handler = async (event) => {
   const response = createResponse();
   let data;
@@ -166,16 +126,6 @@ exports.handler = async (event) => {
         break;
 
       case "POST /textbooks":
-        // Check if user is admin
-        const adminCheck = await checkAdminRole(event);
-        if (!adminCheck.isAdmin) {
-          response.statusCode = 403;
-          response.body = JSON.stringify({
-            error: "Admin access required to create textbooks",
-          });
-          break;
-        }
-
         const createData = parseBody(event.body);
         const {
           title: createTitle,
@@ -215,16 +165,6 @@ exports.handler = async (event) => {
         break;
 
       case "PUT /textbooks/{id}":
-        // Check if user is admin
-        const updateAdminCheck = await checkAdminRole(event);
-        if (!updateAdminCheck.isAdmin) {
-          response.statusCode = 403;
-          response.body = JSON.stringify({
-            error: "Admin access required to modify textbooks",
-          });
-          break;
-        }
-
         const updateId = event.pathParameters?.id;
         if (!updateId) {
           response.statusCode = 400;
@@ -266,16 +206,6 @@ exports.handler = async (event) => {
         break;
 
       case "DELETE /textbooks/{id}":
-        // Check if user is admin
-        const deleteAdminCheck = await checkAdminRole(event);
-        if (!deleteAdminCheck.isAdmin) {
-          response.statusCode = 403;
-          response.body = JSON.stringify({
-            error: "Admin access required to delete textbooks",
-          });
-          break;
-        }
-
         const deleteId = event.pathParameters?.id;
         if (!deleteId) {
           response.statusCode = 400;

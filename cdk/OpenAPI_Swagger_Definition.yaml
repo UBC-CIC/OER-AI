@@ -941,11 +941,11 @@ paths:
         type: aws_proxy
     post:
       tags:
-        - User
+        - Admin
       summary: Create a new textbook
       operationId: create_textbook
       security:
-        - userAuthorizer: []
+        - adminAuthorizer: []
       requestBody:
         required: true
         content:
@@ -1109,11 +1109,11 @@ paths:
         type: aws_proxy
     put:
       tags:
-        - User
+        - Admin
       summary: Update a specific textbook
       operationId: update_textbook
       security:
-        - userAuthorizer: []
+        - adminAuthorizer: []
       parameters:
         - name: id
           in: path
@@ -1204,11 +1204,11 @@ paths:
         type: aws_proxy
     delete:
       tags:
-        - User
+        - Admin
       summary: Delete a specific textbook
       operationId: delete_textbook
       security:
-        - userAuthorizer: []
+        - adminAuthorizer: []
       parameters:
         - name: id
           in: path
