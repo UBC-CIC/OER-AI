@@ -5,12 +5,7 @@ import AIChatMessage from "./AIChatMessage";
 import UserChatMessage from "./UserChatMessage";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import PromptLibraryModal from "./PromptLibraryModal";
 import Header from "@/components/Header";
 import StudentSideBar from "../../components/ChatInterface/StudentSideBar";
 import { useLocation } from "react-router";
@@ -192,25 +187,12 @@ export default function AIChatPage() {
             </div>
           </div>
           {/* Prompt Library Modal */}
-          <Dialog open={showLibrary} onOpenChange={setShowLibrary}>
-            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Prompt Library</DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 items-stretch">
-                {prompts.map((prompt, index) => (
-                  <PromptCard
-                    key={index}
-                    text={prompt}
-                    onClick={() => {
-                      setMessage(prompt);
-                      setShowLibrary(false);
-                    }}
-                  />
-                ))}
-              </div>
-            </DialogContent>
-          </Dialog>
+          <PromptLibraryModal
+            open={showLibrary}
+            onOpenChange={setShowLibrary}
+            prompts={prompts}
+            onSelectPrompt={(p) => setMessage(p)}
+          />
         </main>
       </div>
     </div>
