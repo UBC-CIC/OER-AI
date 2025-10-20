@@ -95,7 +95,7 @@ export default function AIChatPage() {
           className={`md:ml-64 flex flex-col flex-1 items-center justify-center`}
         >
           <div
-            className={`flex flex-col w-full max-w-2xl px-4 py-4 ${
+            className={`flex flex-col w-full max-w-2xl 2xl:max-w-3xl px-4 py-4 ${
               messages.length === 0
                 ? "justify-center"
                 : "justify-between min-h-[90vh]"
