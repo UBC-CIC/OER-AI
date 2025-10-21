@@ -93,111 +93,111 @@ export default function AIChatPage() {
             textbookAuthor={textbookAuthor}
           />
 
-        <main
-          className={`md:ml-64 flex flex-col flex-1 items-center justify-center`}
-        >
-          <div
-            className={`flex flex-col w-full max-w-2xl 2xl:max-w-3xl px-4 py-4 ${
-              messages.length === 0
-                ? "justify-center"
-                : "justify-between min-h-[90vh]"
-            }`}
+          <main
+            className={`md:ml-64 flex flex-col flex-1 items-center justify-center`}
           >
-            {/* top section */}
-            <div>
-              {messages.length === 0 ? (
-                <>
-                  {/* Hero title */}
-                  <h1 className="text-4xl font-bold text-center mb-12 leading-tight max-w-full break-words">
-                    What can I help with?
-                  </h1>
-                </>
-              ) : (
-                // messages area
-                <div className="flex flex-col gap-4 mb-6">
-                  {messages.map((m) => messageFormatter(m))}
-                </div>
-              )}
-            </div>
-
-            {/* thebottom section */}
-            <div>
-              {/* Input Area */}
-              <div className="relative mb-6">
-                <Textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      sendMessage();
-                    }
-                  }}
-                  placeholder={`Ask anything about ${textbookTitle}`}
-                  className="bg-input !border-[var(--border)] h-[120px] pr-12 resize-none text-sm"
-                />
-                <Button
-                  onClick={sendMessage}
-                  size="icon"
-                  variant="link"
-                  className="cursor-pointer absolute bottom-3 right-3 h-8 w-8 text-muted-foreground hover:text-gray-900 transition-colors"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
+            <div
+              className={`flex flex-col w-full max-w-2xl 2xl:max-w-3xl px-4 py-4 ${
+                messages.length === 0
+                  ? "justify-center"
+                  : "justify-between min-h-[90vh]"
+              }`}
+            >
+              {/* top section */}
+              <div>
+                {messages.length === 0 ? (
+                  <>
+                    {/* Hero title */}
+                    <h1 className="text-4xl font-bold text-center mb-12 leading-tight max-w-full break-words">
+                      What can I help with?
+                    </h1>
+                  </>
+                ) : (
+                  // messages area
+                  <div className="flex flex-col gap-4 mb-6">
+                    {messages.map((m) => messageFormatter(m))}
+                  </div>
+                )}
               </div>
 
-              {/* Prompt Suggestions */}
-              {(messages.length === 0 || seeMore) && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-                  {prompts
-                    .slice(0, messages.length === 0 && !seeMore ? 3 : 12)
-                    .map((prompt, index) => (
-                      <PromptCard
-                        key={index}
-                        text={prompt}
-                        onClick={() => {
-                          setMessage(prompt);
-                        }}
-                      />
-                    ))}
-                </div>
-              )}
-
-              {/* Prompt Options*/}
-              <div className="w-full gap-4 flex justify-end items-center">
-                <Button
-                  onClick={() => setShowLibrary(true)}
-                  variant={"link"}
-                  className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-gray-900 transition-colors"
-                >
-                  Prompt Library
-                  <LibraryBig className="h-4 w-4" />
-                </Button>
-                <Button
-                  onClick={() => setSeeMore(!seeMore)}
-                  variant={"link"}
-                  className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-gray-900 transition-colors"
-                >
-                  {seeMore ? "Show less" : "See more prompts"}
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${
-                      seeMore ? "rotate-180" : ""
-                    }`}
+              {/* thebottom section */}
+              <div>
+                {/* Input Area */}
+                <div className="relative mb-6">
+                  <Textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                    placeholder={`Ask anything about ${textbookTitle}`}
+                    className="bg-input !border-[var(--border)] h-[120px] pr-12 resize-none text-sm"
                   />
-                </Button>
+                  <Button
+                    onClick={sendMessage}
+                    size="icon"
+                    variant="link"
+                    className="cursor-pointer absolute bottom-3 right-3 h-8 w-8 text-muted-foreground hover:text-gray-900 transition-colors"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Prompt Suggestions */}
+                {(messages.length === 0 || seeMore) && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                    {prompts
+                      .slice(0, messages.length === 0 && !seeMore ? 3 : 12)
+                      .map((prompt, index) => (
+                        <PromptCard
+                          key={index}
+                          text={prompt}
+                          onClick={() => {
+                            setMessage(prompt);
+                          }}
+                        />
+                      ))}
+                  </div>
+                )}
+
+                {/* Prompt Options*/}
+                <div className="w-full gap-4 flex justify-end items-center">
+                  <Button
+                    onClick={() => setShowLibrary(true)}
+                    variant={"link"}
+                    className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-gray-900 transition-colors"
+                  >
+                    Prompt Library
+                    <LibraryBig className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={() => setSeeMore(!seeMore)}
+                    variant={"link"}
+                    className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-gray-900 transition-colors"
+                  >
+                    {seeMore ? "Show less" : "See more prompts"}
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        seeMore ? "rotate-180" : ""
+                      }`}
+                    />
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-          {/* Prompt Library Modal */}
-          <PromptLibraryModal
-            open={showLibrary}
-            onOpenChange={setShowLibrary}
-            prompts={prompts}
-            onSelectPrompt={(p) => setMessage(p)}
-          />
-        </main>
+            {/* Prompt Library Modal */}
+            <PromptLibraryModal
+              open={showLibrary}
+              onOpenChange={setShowLibrary}
+              prompts={prompts}
+              onSelectPrompt={(p) => setMessage(p)}
+            />
+          </main>
+        </div>
       </div>
-    </div>
     </SidebarProvider>
   );
 }
