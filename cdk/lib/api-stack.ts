@@ -620,7 +620,7 @@ export class ApiGatewayStack extends cdk.Stack {
       `${id}-user-authorization-api-gateway`,
       {
         runtime: lambda.Runtime.NODEJS_20_X,
-        code: lambda.Code.fromAsset("lambda/userAuthorizerFunction"),
+        code: lambda.Code.fromAsset("lambda/authorization"),
         handler: "userAuthorizerFunction.handler",
         timeout: Duration.seconds(300),
         memorySize: 256,
@@ -772,31 +772,58 @@ export class ApiGatewayStack extends cdk.Stack {
       sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/user*`,
     });
 
-    const lambdaAdminFunction = new lambda.Function(
-      this,
-      `${id}-adminFunction`,
-      {
-        runtime: lambda.Runtime.NODEJS_20_X,
-        code: lambda.Code.fromAsset("lambda"),
-        handler: "handlers/adminHandler.handler",
-        timeout: Duration.seconds(300),
-        vpc: vpcStack.vpc,
-        environment: {
-          SM_DB_CREDENTIALS: db.secretPathUser.secretName,
-          RDS_PROXY_ENDPOINT: db.rdsProxyEndpoint,
-          USER_POOL: this.userPool.userPoolId,
-        },
-        functionName: `${id}-adminFunction`,
-        memorySize: 512,
-        layers: [postgres],
-        role: lambdaRole,
-      }
-    );
+    const lambdaTextbookFunction = new lambda.Function(this, `${id}-textbookFunction`, {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      code: lambda.Code.fromAsset("lambda"),
+      handler: "handlers/textbookHandler.handler",
+      timeout: Duration.seconds(300),
+      vpc: vpcStack.vpc,
+      environment: {
+        SM_DB_CREDENTIALS: db.secretPathUser.secretName,
+        RDS_PROXY_ENDPOINT: db.rdsProxyEndpoint,
+      },
+      functionName: `${id}-textbookFunction`,
+      memorySize: 512,
+      layers: [postgres],
+      role: lambdaRole,
+    });
+
+    lambdaTextbookFunction.addPermission("AllowApiGatewayInvoke", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+      action: "lambda:InvokeFunction",
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/textbooks*`,
+    });
+
+    lambdaTextbookFunction.addPermission("AllowTestInvoke", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+      action: "lambda:InvokeFunction",
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/test-invoke-stage/*/*`,
+    });
+
+    const cfnLambda_textbook = lambdaTextbookFunction.node
+      .defaultChild as lambda.CfnFunction;
+    cfnLambda_textbook.overrideLogicalId("textbookFunction");
+
+    const lambdaAdminFunction = new lambda.Function(this, `${id}-adminFunction`, {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      code: lambda.Code.fromAsset("lambda"),
+      handler: "handlers/adminHandler.handler",
+      timeout: Duration.seconds(300),
+      vpc: vpcStack.vpc,
+      environment: {
+        SM_DB_CREDENTIALS: db.secretPathUser.secretName,
+        RDS_PROXY_ENDPOINT: db.rdsProxyEndpoint,
+      },
+      functionName: `${id}-adminFunction`,
+      memorySize: 512,
+      layers: [postgres],
+      role: lambdaRole,
+    });
 
     lambdaAdminFunction.addPermission("AllowApiGatewayInvoke", {
       principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
       action: "lambda:InvokeFunction",
-      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/member*`,
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/admin*`,
     });
 
     lambdaAdminFunction.addPermission("AllowTestInvoke", {
@@ -809,10 +836,56 @@ export class ApiGatewayStack extends cdk.Stack {
       .defaultChild as lambda.CfnFunction;
     cfnLambda_admin.overrideLogicalId("adminFunction");
 
-    lambdaAdminFunction.addPermission("AllowAdminApiGatewayInvoke", {
+    const lambdaPromptTemplateFunction = new lambda.Function(this, `${id}-promptTemplateFunction`, {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      code: lambda.Code.fromAsset("lambda"),
+      handler: "handlers/promptTemplateHandler.handler",
+      timeout: Duration.seconds(300),
+      vpc: vpcStack.vpc,
+      environment: {
+        SM_DB_CREDENTIALS: db.secretPathUser.secretName,
+        RDS_PROXY_ENDPOINT: db.rdsProxyEndpoint,
+      },
+      functionName: `${id}-promptTemplateFunction`,
+      memorySize: 512,
+      layers: [postgres],
+      role: lambdaRole,
+    });
+
+    lambdaPromptTemplateFunction.addPermission("AllowApiGatewayInvoke", {
       principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
       action: "lambda:InvokeFunction",
-      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/admin*`,
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/prompt_templates*`,
     });
+
+    const cfnLambda_promptTemplate = lambdaPromptTemplateFunction.node
+      .defaultChild as lambda.CfnFunction;
+    cfnLambda_promptTemplate.overrideLogicalId("promptTemplateFunction");
+
+    const lambdaSharedUserPromptFunction = new lambda.Function(this, `${id}-sharedUserPromptFunction`, {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      code: lambda.Code.fromAsset("lambda"),
+      handler: "handlers/sharedUserPromptHandler.handler",
+      timeout: Duration.seconds(300),
+      vpc: vpcStack.vpc,
+      environment: {
+        SM_DB_CREDENTIALS: db.secretPathUser.secretName,
+        RDS_PROXY_ENDPOINT: db.rdsProxyEndpoint,
+      },
+      functionName: `${id}-sharedUserPromptFunction`,
+      memorySize: 512,
+      layers: [postgres],
+      role: lambdaRole,
+    });
+
+    lambdaSharedUserPromptFunction.addPermission("AllowApiGatewayInvoke", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+      action: "lambda:InvokeFunction",
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/shared_prompts*`,
+    });
+
+    const cfnLambda_sharedUserPrompt = lambdaSharedUserPromptFunction.node
+      .defaultChild as lambda.CfnFunction;
+    cfnLambda_sharedUserPrompt.overrideLogicalId("sharedUserPromptFunction");
   }
 }

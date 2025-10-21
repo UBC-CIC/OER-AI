@@ -53,6 +53,98 @@ x-common-options: &commonOptions
               {}
 
 paths:
+  /admin/users:
+    <<: *commonOptions
+    post:
+      tags:
+        - Admin
+      summary: Create a new admin user
+      operationId: create_admin_user
+      security:
+        - adminAuthorizer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - display_name
+                - email
+              properties:
+                display_name:
+                  type: string
+                  maxLength: 255
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                institution_id:
+                  type: string
+                  maxLength: 255
+      responses:
+        "201":
+          description: Admin user created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  display_name:
+                    type: string
+                  email:
+                    type: string
+                  role:
+                    type: string
+                    example: "admin"
+        "409":
+          description: Email already exists
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${adminFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+      x-amazon-apigateway-request-validator: all
+
+  /chat_sessions/{id}: #this endpoint is just shorter than having all the extra data to slot it under textbooks.
+    <<: *commonOptions
+    delete:
+      tags:
+        - Admin
+      summary: Delete a specific chat session
+      operationId: delete_chat_session
+      security:
+        - adminAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Chat session UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Chat session deleted successfully
+        "404":
+          description: Chat session not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${adminFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
   /user/publicToken:
     options:
       summary: CORS support
@@ -98,6 +190,3226 @@ paths:
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PublicTokenFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /user_sessions:
+    <<: *commonOptions
+    post:
+      tags:
+        - User
+      summary: Create a new user session
+      operationId: create_user_session
+      security:
+        - userAuthorizer: []
+      responses:
+        "200":
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionId:
+                    type: string
+                    format: uuid
+                  userSessionId:
+                    type: string
+                    format: uuid
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /user_sessions/{session_id}/interactions:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get user interactions for a session
+      operationId: get_session_interactions
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          description: User session UUID
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Number of interactions to return (default 20, max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of interactions to skip (default 0)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: List of user interactions for session
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  interactions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        session_id:
+                          type: string
+                          format: uuid
+                        sender_role:
+                          type: string
+                          enum: ['AI', 'User']
+                        query_text:
+                          type: string
+                        response_text:
+                          type: string
+                        message_meta:
+                          type: object
+                        source_chunks:
+                          type: array
+                        created_at:
+                          type: string
+                          format: date-time
+                        order_index:
+                          type: integer
+                  pagination:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      total:
+                        type: integer
+                      hasMore:
+                        type: boolean
+        "400":
+          description: Invalid parameters
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      tags:
+        - User
+      summary: Create user interaction for session
+      operationId: create_session_interaction
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          description: User session UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sender_role
+              properties:
+                sender_role:
+                  type: string
+                  enum: ['AI', 'User']
+                query_text:
+                  type: string
+                response_text:
+                  type: string
+                message_meta:
+                  type: object
+                source_chunks:
+                  type: array
+                order_index:
+                  type: integer
+      responses:
+        "201":
+          description: User interaction created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  session_id:
+                    type: string
+                    format: uuid
+                  sender_role:
+                    type: string
+                    enum: ['AI', 'User']
+                  query_text:
+                    type: string
+                  response_text:
+                    type: string
+                  message_meta:
+                    type: object
+                  source_chunks:
+                    type: array
+                  created_at:
+                    type: string
+                    format: date-time
+                  order_index:
+                    type: integer
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+      x-amazon-apigateway-request-validator: all
+
+  /user_sessions/{session_id}/analytics:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get analytics events for a session
+      operationId: get_session_analytics
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          description: User session UUID
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Number of analytics events to return (default 20, max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of analytics events to skip (default 0)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: List of analytics events for session
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  analytics:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        user_session_id:
+                          type: string
+                          format: uuid
+                        event_type:
+                          type: string
+                        properties:
+                          type: object
+                        created_at:
+                          type: string
+                          format: date-time
+                  pagination:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      total:
+                        type: integer
+                      hasMore:
+                        type: boolean
+        "400":
+          description: Invalid parameters
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      tags:
+        - User
+      summary: Create analytics event for session
+      operationId: create_session_analytics
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          description: User session UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - event_type
+              properties:
+                event_type:
+                  type: string
+                  maxLength: 128
+                properties:
+                  type: object
+      responses:
+        "201":
+          description: Analytics event created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  user_session_id:
+                    type: string
+                    format: uuid
+                  event_type:
+                    type: string
+                  properties:
+                    type: object
+                  created_at:
+                    type: string
+                    format: date-time
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+      x-amazon-apigateway-request-validator: all
+
+  /interactions/{id}:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get a specific user interaction by ID
+      operationId: get_interaction_by_id
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Interaction UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: User interaction details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  session_id:
+                    type: string
+                    format: uuid
+                  sender_role:
+                    type: string
+                    enum: ['AI', 'User']
+                  query_text:
+                    type: string
+                  response_text:
+                    type: string
+                  message_meta:
+                    type: object
+                  source_chunks:
+                    type: array
+                  created_at:
+                    type: string
+                    format: date-time
+                  order_index:
+                    type: integer
+        "404":
+          description: Interaction not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      tags:
+        - User
+      summary: Update a specific user interaction
+      operationId: update_interaction
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Interaction UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sender_role:
+                  type: string
+                  enum: ['AI', 'User']
+                query_text:
+                  type: string
+                response_text:
+                  type: string
+                message_meta:
+                  type: object
+                source_chunks:
+                  type: array
+                order_index:
+                  type: integer
+      responses:
+        "200":
+          description: User interaction updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  session_id:
+                    type: string
+                    format: uuid
+                  sender_role:
+                    type: string
+                    enum: ['AI', 'User']
+                  query_text:
+                    type: string
+                  response_text:
+                    type: string
+                  message_meta:
+                    type: object
+                  source_chunks:
+                    type: array
+                  created_at:
+                    type: string
+                    format: date-time
+                  order_index:
+                    type: integer
+        "404":
+          description: Interaction not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    delete:
+      tags:
+        - User
+      summary: Delete a specific user interaction
+      operationId: delete_interaction
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Interaction UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: User interaction deleted successfully
+        "404":
+          description: Interaction not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /analytics/{id}:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get a specific analytics event by ID
+      operationId: get_analytics_by_id
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Analytics event UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Analytics event details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  user_session_id:
+                    type: string
+                    format: uuid
+                  event_type:
+                    type: string
+                  properties:
+                    type: object
+                  created_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Analytics event not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      tags:
+        - User
+      summary: Update a specific analytics event
+      operationId: update_analytics
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Analytics event UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event_type:
+                  type: string
+                  maxLength: 128
+                properties:
+                  type: object
+      responses:
+        "200":
+          description: Analytics event updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  user_session_id:
+                    type: string
+                    format: uuid
+                  event_type:
+                    type: string
+                  properties:
+                    type: object
+                  created_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Analytics event not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    delete:
+      tags:
+        - User
+      summary: Delete a specific analytics event
+      operationId: delete_analytics
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Analytics event UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Analytics event deleted successfully
+        "404":
+          description: Analytics event not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /textbooks:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get paginated list of available textbooks
+      operationId: get_textbooks
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: limit
+          in: query
+          description: Number of textbooks to return (default 20, max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of textbooks to skip (default 0)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: List of textbooks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  textbooks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        title:
+                          type: string
+                        authors:
+                          type: array
+                          items:
+                            type: string
+                        publisher:
+                          type: string
+                        year:
+                          type: integer
+                        summary:
+                          type: string
+                        language:
+                          type: string
+                        level:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                  pagination:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      total:
+                        type: integer
+                      hasMore:
+                        type: boolean
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      tags:
+        - Admin
+      summary: Create a new textbook
+      operationId: create_textbook
+      security:
+        - adminAuthorizer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                authors:
+                  type: array
+                  items:
+                    type: string
+                license:
+                  type: string
+                  maxLength: 255
+                source_url:
+                  type: string
+                  maxLength: 512
+                publisher:
+                  type: string
+                  maxLength: 255
+                year:
+                  type: integer
+                summary:
+                  type: string
+                language:
+                  type: string
+                  maxLength: 64
+                level:
+                  type: string
+                  maxLength: 64
+                created_by:
+                  type: string
+                  format: uuid
+                metadata:
+                  type: object
+      responses:
+        "201":
+          description: Textbook created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  authors:
+                    type: array
+                    items:
+                      type: string
+                  license:
+                    type: string
+                  source_url:
+                    type: string
+                  publisher:
+                    type: string
+                  year:
+                    type: integer
+                  summary:
+                    type: string
+                  language:
+                    type: string
+                  level:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+                  metadata:
+                    type: object
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+      x-amazon-apigateway-request-validator: all
+
+  /textbooks/{id}:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get a specific textbook by ID
+      operationId: get_textbook_by_id
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Textbook details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  authors:
+                    type: array
+                    items:
+                      type: string
+                  license:
+                    type: string
+                  source_url:
+                    type: string
+                  publisher:
+                    type: string
+                  year:
+                    type: integer
+                  summary:
+                    type: string
+                  language:
+                    type: string
+                  level:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+                  metadata:
+                    type: object
+        "404":
+          description: Textbook not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      tags:
+        - Admin
+      summary: Update a specific textbook
+      operationId: update_textbook
+      security:
+        - adminAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                authors:
+                  type: array
+                  items:
+                    type: string
+                license:
+                  type: string
+                source_url:
+                  type: string
+                publisher:
+                  type: string
+                year:
+                  type: integer
+                summary:
+                  type: string
+                language:
+                  type: string
+                level:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        "200":
+          description: Textbook updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  authors:
+                    type: array
+                    items:
+                      type: string
+                  license:
+                    type: string
+                  source_url:
+                    type: string
+                  publisher:
+                    type: string
+                  year:
+                    type: integer
+                  summary:
+                    type: string
+                  language:
+                    type: string
+                  level:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+                  metadata:
+                    type: object
+        "404":
+          description: Textbook not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    delete:
+      tags:
+        - Admin
+      summary: Delete a specific textbook
+      operationId: delete_textbook
+      security:
+        - adminAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Textbook deleted successfully
+        "404":
+          description: Textbook not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /textbooks/{id}/faq:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get FAQ cache for a textbook
+      operationId: get_textbook_faq
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: FAQ cache entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    question_text:
+                      type: string
+                    answer_text:
+                      type: string
+                    usage_count:
+                      type: integer
+                    last_used_at:
+                      type: string
+                      format: date-time
+                    cached_at:
+                      type: string
+                      format: date-time
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      tags:
+        - User
+      summary: Add FAQ entry to textbook cache
+      operationId: create_textbook_faq
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - question_text
+                - answer_text
+              properties:
+                question_text:
+                  type: string
+                answer_text:
+                  type: string
+      responses:
+        "201":
+          description: FAQ entry created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  question_text:
+                    type: string
+                  answer_text:
+                    type: string
+                  usage_count:
+                    type: integer
+                  last_used_at:
+                    type: string
+                    format: date-time
+                  cached_at:
+                    type: string
+                    format: date-time
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /faq/{id}:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get a specific FAQ entry by ID
+      operationId: get_faq_by_id
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: FAQ entry UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: FAQ entry details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  question_text:
+                    type: string
+                  answer_text:
+                    type: string
+                  usage_count:
+                    type: integer
+                  last_used_at:
+                    type: string
+                    format: date-time
+                  cached_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: FAQ entry not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      tags:
+        - User
+      summary: Update a specific FAQ entry
+      operationId: update_faq
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: FAQ entry UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                question_text:
+                  type: string
+                answer_text:
+                  type: string
+      responses:
+        "200":
+          description: FAQ entry updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  question_text:
+                    type: string
+                  answer_text:
+                    type: string
+                  usage_count:
+                    type: integer
+                  last_used_at:
+                    type: string
+                    format: date-time
+                  cached_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: FAQ entry not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    delete:
+      tags:
+        - User
+      summary: Delete a specific FAQ entry
+      operationId: delete_faq
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: FAQ entry UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: FAQ entry deleted successfully
+        "404":
+          description: FAQ entry not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /textbooks/{id}/chat_sessions:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get paginated chat sessions for a textbook
+      operationId: get_textbook_chat_sessions
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          description: Page number (default 1)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of sessions per page (default 50, max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Paginated chat sessions for textbook
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chat_sessions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        user_sessions_session_id:
+                          type: string
+                          format: uuid
+                        textbook_id:
+                          type: string
+                          format: uuid
+                        context:
+                          type: object
+                        created_at:
+                          type: string
+                          format: date-time
+                        metadata:
+                          type: object
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      total_pages:
+                        type: integer
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      tags:
+        - User
+      summary: Create chat session for textbook
+      operationId: create_textbook_chat_session
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_sessions_session_id
+              properties:
+                user_sessions_session_id:
+                  type: string
+                  format: uuid
+                context:
+                  type: object
+      responses:
+        "201":
+          description: Chat session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  user_sessions_session_id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  context:
+                    type: object
+                  created_at:
+                    type: string
+                    format: date-time
+                  metadata:
+                    type: object
+        "400":
+          description: Invalid request
+        "404":
+          description: Textbook not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /textbooks/{id}/chat_sessions/user/{user_session_id}:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get chat sessions for a textbook filtered by user session
+      operationId: get_textbook_chat_sessions_by_user
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+        - name: user_session_id
+          in: path
+          required: true
+          description: User session UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Chat sessions for textbook and user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    user_sessions_session_id:
+                      type: string
+                      format: uuid
+                    textbook_id:
+                      type: string
+                      format: uuid
+                    context:
+                      type: object
+                    created_at:
+                      type: string
+                      format: date-time
+                    metadata:
+                      type: object
+        "400":
+          description: Invalid parameters
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /textbooks/{id}/sections:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get sections for a textbook
+      operationId: get_textbook_sections
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Sections for textbook
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    textbook_id:
+                      type: string
+                      format: uuid
+                    parent_section_id:
+                      type: string
+                      format: uuid
+                    title:
+                      type: string
+                    order_index:
+                      type: integer
+                    page_start:
+                      type: integer
+                    page_end:
+                      type: integer
+                    summary:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+        "400":
+          description: Invalid parameters
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      tags:
+        - User
+      summary: Create section for textbook
+      operationId: create_textbook_section
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                parent_section_id:
+                  type: string
+                  format: uuid
+                order_index:
+                  type: integer
+                page_start:
+                  type: integer
+                page_end:
+                  type: integer
+                summary:
+                  type: string
+      responses:
+        "201":
+          description: Section created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  parent_section_id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  order_index:
+                    type: integer
+                  page_start:
+                    type: integer
+                  page_end:
+                    type: integer
+                  summary:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        "400":
+          description: Invalid request
+        "404":
+          description: Textbook not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /sections/{id}:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get a specific section by ID
+      operationId: get_section_by_id
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Section UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Section details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  parent_section_id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  order_index:
+                    type: integer
+                  page_start:
+                    type: integer
+                  page_end:
+                    type: integer
+                  summary:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Section not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      tags:
+        - User
+      summary: Update a specific section
+      operationId: update_section
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Section UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                parent_section_id:
+                  type: string
+                  format: uuid
+                order_index:
+                  type: integer
+                page_start:
+                  type: integer
+                page_end:
+                  type: integer
+                summary:
+                  type: string
+      responses:
+        "200":
+          description: Section updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  parent_section_id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  order_index:
+                    type: integer
+                  page_start:
+                    type: integer
+                  page_end:
+                    type: integer
+                  summary:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Section not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    delete:
+      tags:
+        - User
+      summary: Delete a specific section
+      operationId: delete_section
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Section UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Section deleted successfully
+        "404":
+          description: Section not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /textbooks/{id}/media_items:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get media items for a textbook
+      operationId: get_textbook_media_items
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Media items for textbook
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    textbook_id:
+                      type: string
+                      format: uuid
+                    media_type:
+                      type: string
+                      enum: ['pdf', 'audio', 'video', 'image', 'transcript', 'h5p', 'other']
+                    uri:
+                      type: string
+                      maxLength: 512
+                    size_bytes:
+                      type: integer
+                      format: int64
+                    mime_type:
+                      type: string
+                      maxLength: 128
+                    description:
+                      type: string
+                    page_start:
+                      type: integer
+                    page_end:
+                      type: integer
+                    created_at:
+                      type: string
+                      format: date-time
+        "400":
+          description: Invalid parameters
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      tags:
+        - User
+      summary: Create media item for textbook
+      operationId: create_textbook_media_item
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - media_type
+                - uri
+              properties:
+                media_type:
+                  type: string
+                  enum: ['pdf', 'audio', 'video', 'image', 'transcript', 'h5p', 'other']
+                uri:
+                  type: string
+                  maxLength: 512
+                size_bytes:
+                  type: integer
+                  format: int64
+                mime_type:
+                  type: string
+                  maxLength: 128
+                description:
+                  type: string
+                page_start:
+                  type: integer
+                page_end:
+                  type: integer
+      responses:
+        "201":
+          description: Media item created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  media_type:
+                    type: string
+                    enum: ['pdf', 'audio', 'video', 'image', 'transcript', 'h5p', 'other']
+                  uri:
+                    type: string
+                  size_bytes:
+                    type: integer
+                    format: int64
+                  mime_type:
+                    type: string
+                  description:
+                    type: string
+                  page_start:
+                    type: integer
+                  page_end:
+                    type: integer
+                  created_at:
+                    type: string
+                    format: date-time
+        "400":
+          description: Invalid request
+        "404":
+          description: Textbook not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /media_items/{id}:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get a specific media item by ID
+      operationId: get_media_item_by_id
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Media item UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Media item details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  media_type:
+                    type: string
+                    enum: ['pdf', 'audio', 'video', 'image', 'transcript', 'h5p', 'other']
+                  uri:
+                    type: string
+                  size_bytes:
+                    type: integer
+                    format: int64
+                  mime_type:
+                    type: string
+                  description:
+                    type: string
+                  page_start:
+                    type: integer
+                  page_end:
+                    type: integer
+                  created_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Media item not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      tags:
+        - User
+      summary: Update a specific media item
+      operationId: update_media_item
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Media item UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                media_type:
+                  type: string
+                  enum: ['pdf', 'audio', 'video', 'image', 'transcript', 'h5p', 'other']
+                uri:
+                  type: string
+                  maxLength: 512
+                size_bytes:
+                  type: integer
+                  format: int64
+                mime_type:
+                  type: string
+                  maxLength: 128
+                description:
+                  type: string
+                page_start:
+                  type: integer
+                page_end:
+                  type: integer
+      responses:
+        "200":
+          description: Media item updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  media_type:
+                    type: string
+                    enum: ['pdf', 'audio', 'video', 'image', 'transcript', 'h5p', 'other']
+                  uri:
+                    type: string
+                  size_bytes:
+                    type: integer
+                    format: int64
+                  mime_type:
+                    type: string
+                  description:
+                    type: string
+                  page_start:
+                    type: integer
+                  page_end:
+                    type: integer
+                  created_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Media item not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    delete:
+      tags:
+        - User
+      summary: Delete a specific media item
+      operationId: delete_media_item
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Media item UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Media item deleted successfully
+        "404":
+          description: Media item not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /textbooks/{id}/chunks:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get paginated document chunks for a textbook
+      operationId: get_textbook_chunks
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          description: Page number (default 1)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of chunks per page (default 50, max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Paginated document chunks for textbook
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chunks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        textbook_id:
+                          type: string
+                          format: uuid
+                        section_id:
+                          type: string
+                          format: uuid
+                        media_item_id:
+                          type: string
+                          format: uuid
+                        chunk_text:
+                          type: string
+                        chunk_meta:
+                          type: object
+                        created_at:
+                          type: string
+                          format: date-time
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      total_pages:
+                        type: integer
+        "400":
+          description: Invalid parameters
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      tags:
+        - User
+      summary: Create document chunk for textbook
+      operationId: create_textbook_chunk
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - chunk_text
+              properties:
+                section_id:
+                  type: string
+                  format: uuid
+                media_item_id:
+                  type: string
+                  format: uuid
+                chunk_text:
+                  type: string
+                chunk_meta:
+                  type: object
+      responses:
+        "201":
+          description: Document chunk created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  section_id:
+                    type: string
+                    format: uuid
+                  media_item_id:
+                    type: string
+                    format: uuid
+                  chunk_text:
+                    type: string
+                  chunk_meta:
+                    type: object
+                  created_at:
+                    type: string
+                    format: date-time
+        "400":
+          description: Invalid request
+        "404":
+          description: Textbook not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /chunks/{id}:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get a specific document chunk by ID
+      operationId: get_chunk_by_id
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Chunk UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Document chunk details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  section_id:
+                    type: string
+                    format: uuid
+                  media_item_id:
+                    type: string
+                    format: uuid
+                  chunk_text:
+                    type: string
+                  chunk_meta:
+                    type: object
+                  created_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Chunk not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      tags:
+        - User
+      summary: Update a specific document chunk
+      operationId: update_chunk
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Chunk UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                section_id:
+                  type: string
+                  format: uuid
+                media_item_id:
+                  type: string
+                  format: uuid
+                chunk_text:
+                  type: string
+                chunk_meta:
+                  type: object
+      responses:
+        "200":
+          description: Document chunk updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  section_id:
+                    type: string
+                    format: uuid
+                  media_item_id:
+                    type: string
+                    format: uuid
+                  chunk_text:
+                    type: string
+                  chunk_meta:
+                    type: object
+                  created_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Chunk not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    delete:
+      tags:
+        - User
+      summary: Delete a specific document chunk
+      operationId: delete_chunk
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Chunk UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Document chunk deleted successfully
+        "404":
+          description: Chunk not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /prompt_templates:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get paginated list of prompt templates
+      operationId: get_prompt_templates
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: limit
+          in: query
+          description: Number of templates to return (default 20, max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of templates to skip (default 0)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: List of prompt templates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  templates:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        description:
+                          type: string
+                        type:
+                          type: string
+                          enum: ['RAG', 'quiz_generation', 'mcq_generation', 'audio_generation']
+                        current_version_id:
+                          type: integer
+                        created_by:
+                          type: string
+                          format: uuid
+                        visibility:
+                          type: string
+                          enum: ['private', 'org', 'public']
+                        metadata:
+                          type: object
+                        created_at:
+                          type: string
+                          format: date-time
+                        updated_at:
+                          type: string
+                          format: date-time
+                  pagination:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      total:
+                        type: integer
+                      hasMore:
+                        type: boolean
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${promptTemplateFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      tags:
+        - User
+      summary: Create a new prompt template
+      operationId: create_prompt_template
+      security:
+        - userAuthorizer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - type
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: ['RAG', 'quiz_generation', 'mcq_generation', 'audio_generation']
+                current_version_id:
+                  type: integer
+                created_by:
+                  type: string
+                  format: uuid
+                visibility:
+                  type: string
+                  enum: ['private', 'org', 'public']
+                  default: 'private'
+                metadata:
+                  type: object
+      responses:
+        "201":
+          description: Prompt template created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  type:
+                    type: string
+                    enum: ['RAG', 'quiz_generation', 'mcq_generation', 'audio_generation']
+                  current_version_id:
+                    type: integer
+                  created_by:
+                    type: string
+                    format: uuid
+                  visibility:
+                    type: string
+                    enum: ['private', 'org', 'public']
+                  metadata:
+                    type: object
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${promptTemplateFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+      x-amazon-apigateway-request-validator: all
+
+  /prompt_templates/{id}:
+    <<: *commonOptions
+    get:
+      tags:
+        - Admin
+      summary: Get a specific prompt template by ID
+      operationId: get_prompt_template_by_id
+      security:
+        - adminAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Prompt template details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  type:
+                    type: string
+                    enum: ['RAG', 'quiz_generation', 'mcq_generation', 'audio_generation']
+                  current_version_id:
+                    type: integer
+                  created_by:
+                    type: string
+                    format: uuid
+                  visibility:
+                    type: string
+                    enum: ['private', 'org', 'public']
+                  metadata:
+                    type: object
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Template not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${promptTemplateFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      tags:
+        - Admin
+      summary: Update a specific prompt template
+      operationId: update_prompt_template
+      security:
+        - adminAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: ['RAG', 'quiz_generation', 'mcq_generation', 'audio_generation']
+                current_version_id:
+                  type: integer
+                visibility:
+                  type: string
+                  enum: ['private', 'org', 'public']
+                metadata:
+                  type: object
+      responses:
+        "200":
+          description: Template updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  type:
+                    type: string
+                    enum: ['RAG', 'quiz_generation', 'mcq_generation', 'audio_generation']
+                  current_version_id:
+                    type: integer
+                  created_by:
+                    type: string
+                    format: uuid
+                  visibility:
+                    type: string
+                    enum: ['private', 'org', 'public']
+                  metadata:
+                    type: object
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Template not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${promptTemplateFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    delete:
+      tags:
+        - Admin
+      summary: Delete a specific prompt template
+      operationId: delete_prompt_template
+      security:
+        - adminAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Template deleted successfully
+        "404":
+          description: Template not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${promptTemplateFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /textbooks/{id}/shared_prompts:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get shared user prompts for a textbook
+      operationId: get_textbook_shared_prompts
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Number of prompts to return (default 20, max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of prompts to skip (default 0)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: List of shared user prompts for textbook
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  prompts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        title:
+                          type: string
+                        prompt_text:
+                          type: string
+                        owner_session_id:
+                          type: string
+                          format: uuid
+                        owner_user_id:
+                          type: string
+                          format: uuid
+                        textbook_id:
+                          type: string
+                          format: uuid
+                        visibility:
+                          type: string
+                          enum: ['private', 'org', 'public']
+                        tags:
+                          type: array
+                          items:
+                            type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                        updated_at:
+                          type: string
+                          format: date-time
+                        metadata:
+                          type: object
+                  pagination:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      total:
+                        type: integer
+                      hasMore:
+                        type: boolean
+        "400":
+          description: Invalid parameters
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${sharedUserPromptFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      tags:
+        - User
+      summary: Create shared user prompt for textbook
+      operationId: create_textbook_shared_prompt
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - prompt_text
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                prompt_text:
+                  type: string
+                owner_session_id:
+                  type: string
+                  format: uuid
+                owner_user_id:
+                  type: string
+                  format: uuid
+                visibility:
+                  type: string
+                  enum: ['private', 'org', 'public']
+                  default: 'public'
+                tags:
+                  type: array
+                  items:
+                    type: string
+                metadata:
+                  type: object
+      responses:
+        "201":
+          description: Shared user prompt created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  prompt_text:
+                    type: string
+                  owner_session_id:
+                    type: string
+                    format: uuid
+                  owner_user_id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  visibility:
+                    type: string
+                    enum: ['private', 'org', 'public']
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+                  metadata:
+                    type: object
+        "400":
+          description: Invalid request
+        "404":
+          description: Textbook not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${sharedUserPromptFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+      x-amazon-apigateway-request-validator: all
+
+  /shared_prompts/{id}:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get a specific shared user prompt by ID
+      operationId: get_shared_prompt_by_id
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Shared prompt UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Shared user prompt details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  prompt_text:
+                    type: string
+                  owner_session_id:
+                    type: string
+                    format: uuid
+                  owner_user_id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  visibility:
+                    type: string
+                    enum: ['private', 'org', 'public']
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+                  metadata:
+                    type: object
+        "404":
+          description: Prompt not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${sharedUserPromptFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      tags:
+        - User
+      summary: Update a specific shared user prompt
+      operationId: update_shared_prompt
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Shared prompt UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                prompt_text:
+                  type: string
+                visibility:
+                  type: string
+                  enum: ['private', 'org', 'public']
+                tags:
+                  type: array
+                  items:
+                    type: string
+                metadata:
+                  type: object
+      responses:
+        "200":
+          description: Shared user prompt updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                  prompt_text:
+                    type: string
+                  owner_session_id:
+                    type: string
+                    format: uuid
+                  owner_user_id:
+                    type: string
+                    format: uuid
+                  textbook_id:
+                    type: string
+                    format: uuid
+                  visibility:
+                    type: string
+                    enum: ['private', 'org', 'public']
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+                  metadata:
+                    type: object
+        "404":
+          description: Prompt not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${sharedUserPromptFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    delete:
+      tags:
+        - User
+      summary: Delete a specific shared user prompt
+      operationId: delete_shared_prompt
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Shared prompt UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Shared user prompt deleted successfully
+        "404":
+          description: Prompt not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${sharedUserPromptFunction.Arn}/invocations
         passthroughBehavior: "when_no_match"
         httpMethod: POST
         type: aws_proxy
