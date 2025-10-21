@@ -83,7 +83,7 @@ export default function HomePage() {
       <HomePageHeader />
 
       {/* Main Content */}
-      <main className="container mx-auto flex-1 px-6 py-16">
+      <main className="container mx-auto flex-1 flex-col justify-center px-6 py-16">
         <div className="mx-auto max-w-6xl">
           {/* Hero Section */}
           <div className="mb-12 text-center">

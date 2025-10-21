@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Send, ChevronDown, LibraryBig } from "lucide-react";
-import PromptCard from "./PromptCard";
-import AIChatMessage from "./AIChatMessage";
-import UserChatMessage from "./UserChatMessage";
+import PromptCard from "@/components/ChatInterface/PromptCard";
+import AIChatMessage from "@/components/ChatInterface/AIChatMessage";
+import UserChatMessage from "@/components/ChatInterface/UserChatMessage";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import PromptLibraryModal from "./PromptLibraryModal";
+import PromptLibraryModal from "@/components/ChatInterface/PromptLibraryModal";
 import Header from "@/components/Header";
-import StudentSideBar from "../../components/ChatInterface/StudentSideBar";
-import { SidebarProvider } from "../../components/ChatInterface/SidebarContext";
+import StudentSideBar from "@/components/ChatInterface/StudentSideBar";
+import { SidebarProvider } from "@/components/ChatInterface/SidebarContext";
 import { useLocation } from "react-router";
 
 type Message = {
