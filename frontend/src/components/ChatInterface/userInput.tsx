@@ -1,4 +1,4 @@
-import { useRef, useEffect, type KeyboardEvent } from "react"
+import { useRef, useEffect, useMemo, type KeyboardEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Send } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -30,6 +30,12 @@ export function AiChatInput({
   const isComposingRef = useRef(false)
   const isUpdatingRef = useRef(false)
 
+  // Memoize regex to avoid recreating on every render
+  const regex = useMemo(
+    () => new RegExp(highlightPattern.source, highlightPattern.flags),
+    [highlightPattern.source, highlightPattern.flags]
+  )
+
   // Get plain text content from the editable div
   const getTextContent = (): string => {
     return editableRef.current?.textContent || ""
@@ -41,7 +47,8 @@ export function AiChatInput({
 
     let result = ""
     let lastIndex = 0
-    const regex = new RegExp(highlightPattern.source, highlightPattern.flags)
+    // Reset regex state
+    regex.lastIndex = 0
     let match: RegExpExecArray | null
 
     while ((match = regex.exec(text)) !== null) {
@@ -88,52 +95,50 @@ export function AiChatInput({
     if (!selection || !editableRef.current) return
 
     let charCount = 0
-    const nodeStack = [editableRef.current]
-    let node: Node | undefined
     let foundPosition = false
 
-    while ((node = nodeStack.pop())) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const textNode = node as Text
-        const nextCharCount = charCount + textNode.length
+    // Use a tree walker for more efficient traversal
+    const walker = document.createTreeWalker(
+      editableRef.current,
+      NodeFilter.SHOW_TEXT,
+      null
+    )
 
-        if (!foundPosition && position >= charCount && position <= nextCharCount) {
-          const range = document.createRange()
-          range.setStart(textNode, Math.min(position - charCount, textNode.length))
-          range.collapse(true)
-          selection.removeAllRanges()
-          selection.addRange(range)
-          foundPosition = true
-          break
-        }
+    let textNode: Text | null
+    while ((textNode = walker.nextNode() as Text | null)) {
+      const nextCharCount = charCount + textNode.length
 
-        charCount = nextCharCount
-      } else {
-        const childNodes = Array.from(node.childNodes)
-        for (let i = childNodes.length - 1; i >= 0; i--) {
-          nodeStack.push(childNodes[i])
-        }
+      if (!foundPosition && position >= charCount && position <= nextCharCount) {
+        const range = document.createRange()
+        range.setStart(textNode, Math.min(position - charCount, textNode.length))
+        range.collapse(true)
+        selection.removeAllRanges()
+        selection.addRange(range)
+        foundPosition = true
+        break
       }
+
+      charCount = nextCharCount
     }
   }
 
   const handleInput = () => {
     if (isComposingRef.current || !editableRef.current || isUpdatingRef.current) return
 
-    const cursorPosition = saveCursorPosition()
-    const text = getTextContent()
+      const cursorPosition = saveCursorPosition()
+      const text = getTextContent()
 
-    // Call parent's onChange with plain text
-    onChange(text)
+      // Call parent's onChange with plain text
+      onChange(text)
 
-    // Update highlighting
-    const highlighted = highlightText(text)
-    if (editableRef.current.innerHTML !== highlighted) {
-      isUpdatingRef.current = true
-      editableRef.current.innerHTML = highlighted || ""
-      restoreCursorPosition(cursorPosition)
-      isUpdatingRef.current = false
-    }
+      // Update highlighting immediately to prevent stale blue backgrounds
+      const highlighted = highlightText(text)
+      if (editableRef.current.innerHTML !== highlighted) {
+        isUpdatingRef.current = true
+        editableRef.current.innerHTML = highlighted || ""
+        restoreCursorPosition(cursorPosition)
+        isUpdatingRef.current = false
+      }
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -177,6 +182,7 @@ export function AiChatInput({
 
       isUpdatingRef.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
 
   return (
