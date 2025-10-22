@@ -2,13 +2,13 @@ import { Card } from "@/components/ui/card";
 import { CornerUpRight } from "lucide-react";
 
 type PromptCardProps = {
-  title: string;
+  name: string;
   onClick?: () => void;
   className?: string;
 };
 
 export default function PromptCard({
-  title,
+  name,
   onClick,
   className,
 }: PromptCardProps) {
@@ -20,7 +20,7 @@ export default function PromptCard({
       }`}
     >
       <div className="relative h-full flex flex-col items-start">
-        <p className="text-md text-muted-foreground mb-auto">{title}</p>
+        <p className="text-md text-muted-foreground mb-auto">{name}</p>
         <CornerUpRight className="absolute bottom-0 right-0 h-4 w-4 text-muted-foreground" />
       </div>
     </Card>

@@ -1,4 +1,5 @@
 export interface PromptTemplate {
-    title: string;
-    text: string;
+    id: number;
+    name: string;
+    description: string;
 }

@@ -49,12 +49,12 @@ export default function PromptLibraryModal({
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 items-stretch">
-              {prompts.map((prompt, index) => (
+              {prompts.map((prompt) => (
                 <PromptCard
-                  key={index}
-                  title={prompt.title}
+                  key={prompt.id}
+                  name={prompt.name}
                   onClick={() => {
-                    onSelectPrompt?.(prompt.text);
+                    onSelectPrompt?.(prompt.description);
                     onOpenChange(false);
                   }}
                 />
@@ -70,12 +70,12 @@ export default function PromptLibraryModal({
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 items-stretch">
-              {prompts.map((prompt, index) => (
+              {prompts.map((prompt) => (
                 <PromptCard
-                  key={index}
-                  title={prompt.title}
+                  key={prompt.id}
+                  name={prompt.name}
                   onClick={() => {
-                    onSelectPrompt?.(prompt.text);
+                    onSelectPrompt?.(prompt.description);
                     onOpenChange(false);
                   }}
                 />
