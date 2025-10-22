@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "./SidebarContext";
+import { useNavigate } from "react-router";
 
 type StudentSideBarProps = {
   textbookTitle: string;
@@ -12,10 +13,11 @@ export default function StudentSideBar({
   textbookAuthor,
 }: StudentSideBarProps) {
   const { mobileOpen, setMobileOpen } = useSidebar();
+  const navigate = useNavigate();
 
   const SidebarContent = () => (
     <>
-      <Card className="py-[10px] gap-2 mb-6">
+      <Card className="cursor-pointer py-[10px] hover:bg-gray-50 gap-2 mb-6" onClick={() => {navigate("/")}}>
         <CardContent
           className="line-clamp-2 leading-[1.25] overflow-hidden"
           style={{ minHeight: `calc(1em * 1.25 * 2)` }}
