@@ -839,7 +839,7 @@ export class ApiGatewayStack extends cdk.Stack {
       })
     );
 
-    // AppSync permissions
+    /* AppSync permissions
     textGenLambdaDockerFunc.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -855,8 +855,9 @@ export class ApiGatewayStack extends cdk.Stack {
         ],
       })
     );
+    */
 
-    // Additional AppSync permission for mutations
+    /* Additional AppSync permission for mutations
     textGenLambdaDockerFunc.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -864,6 +865,7 @@ export class ApiGatewayStack extends cdk.Stack {
         resources: [`${this.eventApi.arn}`],
       })
     );
+    */
 
     const dataIngestionLambdaDockerFunction = new lambda.DockerImageFunction(
       this,

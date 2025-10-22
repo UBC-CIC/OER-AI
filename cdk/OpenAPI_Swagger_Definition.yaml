@@ -197,7 +197,7 @@ paths:
           description: Internal Server Error
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TextGenLambdaDockerFunction.Arn}/invocations
         passthroughBehavior: "when_no_match"
         httpMethod: POST
         type: aws_proxy
@@ -340,7 +340,7 @@ paths:
                           format: uuid
                         sender_role:
                           type: string
-                          enum: ['AI', 'User']
+                          enum: ["AI", "User"]
                         query_text:
                           type: string
                         response_text:
@@ -403,7 +403,7 @@ paths:
               properties:
                 sender_role:
                   type: string
-                  enum: ['AI', 'User']
+                  enum: ["AI", "User"]
                 query_text:
                   type: string
                 response_text:
@@ -430,7 +430,7 @@ paths:
                     format: uuid
                   sender_role:
                     type: string
-                    enum: ['AI', 'User']
+                    enum: ["AI", "User"]
                   query_text:
                     type: string
                   response_text:
@@ -638,7 +638,7 @@ paths:
                     format: uuid
                   sender_role:
                     type: string
-                    enum: ['AI', 'User']
+                    enum: ["AI", "User"]
                   query_text:
                     type: string
                   response_text:
@@ -688,7 +688,7 @@ paths:
               properties:
                 sender_role:
                   type: string
-                  enum: ['AI', 'User']
+                  enum: ["AI", "User"]
                 query_text:
                   type: string
                 response_text:
@@ -715,7 +715,7 @@ paths:
                     format: uuid
                   sender_role:
                     type: string
-                    enum: ['AI', 'User']
+                    enum: ["AI", "User"]
                   query_text:
                     type: string
                   response_text:
@@ -920,7 +920,7 @@ paths:
         - User
       summary: Get paginated list of available textbooks
       operationId: get_textbooks
-      
+
       parameters:
         - name: limit
           in: query
@@ -2112,7 +2112,16 @@ paths:
                       format: uuid
                     media_type:
                       type: string
-                      enum: ['pdf', 'audio', 'video', 'image', 'transcript', 'h5p', 'other']
+                      enum:
+                        [
+                          "pdf",
+                          "audio",
+                          "video",
+                          "image",
+                          "transcript",
+                          "h5p",
+                          "other",
+                        ]
                     uri:
                       type: string
                       maxLength: 512
@@ -2170,7 +2179,16 @@ paths:
               properties:
                 media_type:
                   type: string
-                  enum: ['pdf', 'audio', 'video', 'image', 'transcript', 'h5p', 'other']
+                  enum:
+                    [
+                      "pdf",
+                      "audio",
+                      "video",
+                      "image",
+                      "transcript",
+                      "h5p",
+                      "other",
+                    ]
                 uri:
                   type: string
                   maxLength: 512
@@ -2202,7 +2220,16 @@ paths:
                     format: uuid
                   media_type:
                     type: string
-                    enum: ['pdf', 'audio', 'video', 'image', 'transcript', 'h5p', 'other']
+                    enum:
+                      [
+                        "pdf",
+                        "audio",
+                        "video",
+                        "image",
+                        "transcript",
+                        "h5p",
+                        "other",
+                      ]
                   uri:
                     type: string
                   size_bytes:
@@ -2267,7 +2294,16 @@ paths:
                     format: uuid
                   media_type:
                     type: string
-                    enum: ['pdf', 'audio', 'video', 'image', 'transcript', 'h5p', 'other']
+                    enum:
+                      [
+                        "pdf",
+                        "audio",
+                        "video",
+                        "image",
+                        "transcript",
+                        "h5p",
+                        "other",
+                      ]
                   uri:
                     type: string
                   size_bytes:
@@ -2320,7 +2356,16 @@ paths:
               properties:
                 media_type:
                   type: string
-                  enum: ['pdf', 'audio', 'video', 'image', 'transcript', 'h5p', 'other']
+                  enum:
+                    [
+                      "pdf",
+                      "audio",
+                      "video",
+                      "image",
+                      "transcript",
+                      "h5p",
+                      "other",
+                    ]
                 uri:
                   type: string
                   maxLength: 512
@@ -2352,7 +2397,16 @@ paths:
                     format: uuid
                   media_type:
                     type: string
-                    enum: ['pdf', 'audio', 'video', 'image', 'transcript', 'h5p', 'other']
+                    enum:
+                      [
+                        "pdf",
+                        "audio",
+                        "video",
+                        "image",
+                        "transcript",
+                        "h5p",
+                        "other",
+                      ]
                   uri:
                     type: string
                   size_bytes:
@@ -2742,7 +2796,7 @@ paths:
         - User
       summary: Get paginated list of prompt templates
       operationId: get_prompt_templates
-      
+
       parameters:
         - name: limit
           in: query
@@ -2783,7 +2837,13 @@ paths:
                           type: string
                         type:
                           type: string
-                          enum: ['RAG', 'quiz_generation', 'mcq_generation', 'audio_generation']
+                          enum:
+                            [
+                              "RAG",
+                              "quiz_generation",
+                              "mcq_generation",
+                              "audio_generation",
+                            ]
                         current_version_id:
                           type: integer
                         created_by:
@@ -2791,7 +2851,7 @@ paths:
                           format: uuid
                         visibility:
                           type: string
-                          enum: ['private', 'org', 'public']
+                          enum: ["private", "org", "public"]
                         metadata:
                           type: object
                         created_at:
@@ -2845,7 +2905,13 @@ paths:
                   type: string
                 type:
                   type: string
-                  enum: ['RAG', 'quiz_generation', 'mcq_generation', 'audio_generation']
+                  enum:
+                    [
+                      "RAG",
+                      "quiz_generation",
+                      "mcq_generation",
+                      "audio_generation",
+                    ]
                 current_version_id:
                   type: integer
                 created_by:
@@ -2853,8 +2919,8 @@ paths:
                   format: uuid
                 visibility:
                   type: string
-                  enum: ['private', 'org', 'public']
-                  default: 'private'
+                  enum: ["private", "org", "public"]
+                  default: "private"
                 metadata:
                   type: object
       responses:
@@ -2874,7 +2940,13 @@ paths:
                     type: string
                   type:
                     type: string
-                    enum: ['RAG', 'quiz_generation', 'mcq_generation', 'audio_generation']
+                    enum:
+                      [
+                        "RAG",
+                        "quiz_generation",
+                        "mcq_generation",
+                        "audio_generation",
+                      ]
                   current_version_id:
                     type: integer
                   created_by:
@@ -2882,7 +2954,7 @@ paths:
                     format: uuid
                   visibility:
                     type: string
-                    enum: ['private', 'org', 'public']
+                    enum: ["private", "org", "public"]
                   metadata:
                     type: object
                   created_at:
@@ -2939,7 +3011,13 @@ paths:
                     type: string
                   type:
                     type: string
-                    enum: ['RAG', 'quiz_generation', 'mcq_generation', 'audio_generation']
+                    enum:
+                      [
+                        "RAG",
+                        "quiz_generation",
+                        "mcq_generation",
+                        "audio_generation",
+                      ]
                   current_version_id:
                     type: integer
                   created_by:
@@ -2947,7 +3025,7 @@ paths:
                     format: uuid
                   visibility:
                     type: string
-                    enum: ['private', 'org', 'public']
+                    enum: ["private", "org", "public"]
                   metadata:
                     type: object
                   created_at:
@@ -2997,12 +3075,18 @@ paths:
                   type: string
                 type:
                   type: string
-                  enum: ['RAG', 'quiz_generation', 'mcq_generation', 'audio_generation']
+                  enum:
+                    [
+                      "RAG",
+                      "quiz_generation",
+                      "mcq_generation",
+                      "audio_generation",
+                    ]
                 current_version_id:
                   type: integer
                 visibility:
                   type: string
-                  enum: ['private', 'org', 'public']
+                  enum: ["private", "org", "public"]
                 metadata:
                   type: object
       responses:
@@ -3022,7 +3106,13 @@ paths:
                     type: string
                   type:
                     type: string
-                    enum: ['RAG', 'quiz_generation', 'mcq_generation', 'audio_generation']
+                    enum:
+                      [
+                        "RAG",
+                        "quiz_generation",
+                        "mcq_generation",
+                        "audio_generation",
+                      ]
                   current_version_id:
                     type: integer
                   created_by:
@@ -3030,7 +3120,7 @@ paths:
                     format: uuid
                   visibility:
                     type: string
-                    enum: ['private', 'org', 'public']
+                    enum: ["private", "org", "public"]
                   metadata:
                     type: object
                   created_at:
@@ -3147,7 +3237,7 @@ paths:
                           format: uuid
                         visibility:
                           type: string
-                          enum: ['private', 'org', 'public']
+                          enum: ["private", "org", "public"]
                         tags:
                           type: array
                           items:
@@ -3220,8 +3310,8 @@ paths:
                   format: uuid
                 visibility:
                   type: string
-                  enum: ['private', 'org', 'public']
-                  default: 'public'
+                  enum: ["private", "org", "public"]
+                  default: "public"
                 tags:
                   type: array
                   items:
@@ -3254,7 +3344,7 @@ paths:
                     format: uuid
                   visibility:
                     type: string
-                    enum: ['private', 'org', 'public']
+                    enum: ["private", "org", "public"]
                   tags:
                     type: array
                     items:
@@ -3326,7 +3416,7 @@ paths:
                     format: uuid
                   visibility:
                     type: string
-                    enum: ['private', 'org', 'public']
+                    enum: ["private", "org", "public"]
                   tags:
                     type: array
                     items:
@@ -3380,7 +3470,7 @@ paths:
                   type: string
                 visibility:
                   type: string
-                  enum: ['private', 'org', 'public']
+                  enum: ["private", "org", "public"]
                 tags:
                   type: array
                   items:
@@ -3413,7 +3503,7 @@ paths:
                     format: uuid
                   visibility:
                     type: string
-                    enum: ['private', 'org', 'public']
+                    enum: ["private", "org", "public"]
                   tags:
                     type: array
                     items:
