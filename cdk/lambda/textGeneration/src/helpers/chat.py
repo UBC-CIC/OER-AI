@@ -23,10 +23,22 @@ def get_bedrock_llm(
     Returns:
     ChatBedrock: An instance of the Bedrock LLM
     """
+    # Default model parameters for most models
+    model_kwargs = {
+        "temperature": temperature,
+        "max_tokens": 4096
+    }
+    
+    # Special handling for different model families
     if "llama" in bedrock_llm_id.lower():
         model_kwargs = {
             "temperature": temperature,
             "max_gen_len": 2048
+        }
+    elif "titan" in bedrock_llm_id.lower():
+        model_kwargs = {
+            "temperature": temperature,
+            "maxTokenCount": 4096
         }
     
     logging.info(f"Initializing Bedrock LLM {bedrock_llm_id}")
@@ -104,14 +116,14 @@ def get_response(query: str, textbook_id: str, llm: ChatBedrock, retriever, conn
         # Set up prompt template
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_message),
-            ("human", f"{query}\n\nContext from textbook:\n{{context}}")
+            ("human", "{input}\n\nContext from textbook:\n{context}")
         ])
         
         # Create document chain
         document_chain = create_stuff_documents_chain(llm, prompt)
         
         # Generate response
-        result = document_chain.invoke({"context": docs, "question": query})
+        result = document_chain.invoke({"context": docs, "input": query})
         response_text = result["answer"]
         
         # Extract sources used

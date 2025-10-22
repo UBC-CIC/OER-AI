@@ -116,7 +116,7 @@ def handler(event, context):
         return {
             "statusCode": 400,
             "headers": {"Content-Type": "application/json"},
-            "body": json.dumps({"error": "No question provided in the message_content field"})
+            "body": json.dumps({"error": "No question provided in the query field"})
         }
     
     try:
@@ -160,14 +160,25 @@ def handler(event, context):
         try:
             # Log the interaction for analytics purposes
             with connection.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO user_interactions
-                    (session_id, sender_role, query_text, response_text)
-                    VALUES (%s, %s, %s, %s)
-                    """,
-                    (session_id, "user", question, response_data["response"])
-                )
+                # Check if session_id is provided for the log
+                if session_id:
+                    cur.execute(
+                        """
+                        INSERT INTO user_interactions
+                        (session_id, sender_role, query_text, response_text)
+                        VALUES (%s, %s, %s, %s)
+                        """,
+                        (session_id, "user", question, response_data["response"])
+                    )
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO user_interactions
+                        (sender_role, query_text, response_text)
+                        VALUES (%s, %s, %s, %s)
+                        """,
+                        ("user", question, response_data["response"])
+                    )
             
             connection.commit()
             logger.info(f"Logged question for textbook {textbook_id}")
