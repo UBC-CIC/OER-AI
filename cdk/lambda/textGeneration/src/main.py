@@ -23,11 +23,17 @@ secrets_manager = boto3.client("secretsmanager", region_name=REGION)
 bedrock_runtime = boto3.client("bedrock-runtime", region_name=REGION)
 
 # Initialize embeddings
-embeddings = BedrockEmbeddings(
-    model_id=EMBEDDING_MODEL_ID,
-    client=bedrock_runtime,
-    region_name=REGION
-)
+try:
+    logger.info(f"Initializing embeddings with model ID: {EMBEDDING_MODEL_ID}")
+    embeddings = BedrockEmbeddings(
+        model_id=EMBEDDING_MODEL_ID,
+        client=bedrock_runtime,
+        region_name=REGION
+    )
+    logger.info("Embeddings initialized successfully")
+except Exception as e:
+    logger.error(f"Error initializing embeddings: {str(e)}", exc_info=True)
+    raise
 
 def get_db_credentials():
     """Get database credentials from Secrets Manager"""
@@ -71,17 +77,30 @@ def process_query(query, textbook_id, retriever, connection=None):
     Returns:
         Response dictionary with answer and sources used
     """
-    # Initialize LLM
-    llm = get_bedrock_llm(BEDROCK_LLM_ID)
+    # Log the model ID being used
+    logger.info(f"Processing query with LLM model ID: '{BEDROCK_LLM_ID}'")
+    logger.info(f"Environment variables: REGION={REGION}, RDS_PROXY_ENDPOINT={RDS_PROXY_ENDPOINT}")
     
-    # Use the helper function from chat.py to generate the response
-    return get_response(
-        query=query,
-        textbook_id=textbook_id,
-        llm=llm,
-        retriever=retriever,
-        connection=connection
-    )
+    try:
+        # Initialize LLM
+        logger.info(f"Initializing Bedrock LLM with model ID: {BEDROCK_LLM_ID}")
+        llm = get_bedrock_llm(BEDROCK_LLM_ID)
+        
+        # Log the embeddings model ID for context
+        logger.info(f"Using embedding model ID: {EMBEDDING_MODEL_ID}")
+        
+        # Use the helper function from chat.py to generate the response
+        logger.info(f"Calling get_response with textbook_id: {textbook_id}")
+        return get_response(
+            query=query,
+            textbook_id=textbook_id,
+            llm=llm,
+            retriever=retriever,
+            connection=connection
+        )
+    except Exception as e:
+        logger.error(f"Error in process_query: {str(e)}", exc_info=True)
+        raise
 
 def handler(event, context):
     """
@@ -92,10 +111,15 @@ def handler(event, context):
     an answer using the helper functions in chat.py
     """
     logger.info("Starting textbook question answering Lambda")
+    logger.info(f"AWS Region: {REGION}")
+    logger.info(f"Lambda function ARN: {context.invoked_function_arn}")
+    logger.info(f"Lambda function name: {context.function_name}")
+    logger.info(f"Using model IDs - LLM: {BEDROCK_LLM_ID}, Embeddings: {EMBEDDING_MODEL_ID}")
     
     # Extract parameters from the request
     query_params = event.get("queryStringParameters", {})
     path_params = event.get("pathParameters", {})
+    logger.info(f"Request path parameters: {path_params}")
     
     session_id = path_params.get("session_id", "")
     
