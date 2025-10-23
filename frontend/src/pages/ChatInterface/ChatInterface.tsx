@@ -15,6 +15,7 @@ type Message = {
   id: string;
   sender: "user" | "bot";
   text: string;
+  sources_used?: string[];
   time: number;
 };
 
@@ -49,27 +50,125 @@ export default function AIChatPage() {
   useEffect(() => {
     const fetchPrompts = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/prompt_templates`);
+        const response = await fetch(
+          `${import.meta.env.VITE_API_ENDPOINT}/prompt_templates`
+        );
         const data = await response.json();
         const templates = data.templates || [];
-        setPrompts(templates.length > 0 ? templates : [
-          { id: '1', name: "Summarize a Chapter", description: "Provide a concise summary of a specific chapter", type: 'RAG', visibility: 'public', created_at: '' },
-          { id: '2', name: "Define and explain a term", description: "Give a clear definition and explanation of a concept or term", type: 'RAG', visibility: 'public', created_at: '' },
-          { id: '3', name: "Generate an example problem", description: "Create a practice problem with step-by-step solution", type: 'RAG', visibility: 'public', created_at: '' },
-          { id: '4', name: "Explain a concept in simple terms", description: "Break down complex concepts into easy-to-understand language", type: 'RAG', visibility: 'public', created_at: '' },
-          { id: '5', name: "Create practice questions", description: "Generate quiz questions to test understanding", type: 'RAG', visibility: 'public', created_at: '' },
-          { id: '6', name: "Compare and contrast topics", description: "Analyze similarities and differences between related concepts", type: 'RAG', visibility: 'public', created_at: '' }
-        ]);
+        setPrompts(
+          templates.length > 0
+            ? templates
+            : [
+                {
+                  id: "1",
+                  name: "Summarize a Chapter",
+                  description:
+                    "Provide a concise summary of a specific chapter",
+                  type: "RAG",
+                  visibility: "public",
+                  created_at: "",
+                },
+                {
+                  id: "2",
+                  name: "Define and explain a term",
+                  description:
+                    "Give a clear definition and explanation of a concept or term",
+                  type: "RAG",
+                  visibility: "public",
+                  created_at: "",
+                },
+                {
+                  id: "3",
+                  name: "Generate an example problem",
+                  description:
+                    "Create a practice problem with step-by-step solution",
+                  type: "RAG",
+                  visibility: "public",
+                  created_at: "",
+                },
+                {
+                  id: "4",
+                  name: "Explain a concept in simple terms",
+                  description:
+                    "Break down complex concepts into easy-to-understand language",
+                  type: "RAG",
+                  visibility: "public",
+                  created_at: "",
+                },
+                {
+                  id: "5",
+                  name: "Create practice questions",
+                  description: "Generate quiz questions to test understanding",
+                  type: "RAG",
+                  visibility: "public",
+                  created_at: "",
+                },
+                {
+                  id: "6",
+                  name: "Compare and contrast topics",
+                  description:
+                    "Analyze similarities and differences between related concepts",
+                  type: "RAG",
+                  visibility: "public",
+                  created_at: "",
+                },
+              ]
+        );
       } catch (error) {
-        console.error('Error fetching prompt templates:', error);
+        console.error("Error fetching prompt templates:", error);
         // Fallback to default prompts
         setPrompts([
-          { id: '1', name: "Summarize a Chapter", description: "Provide a concise summary of a specific chapter", type: 'RAG', visibility: 'public', created_at: '' },
-          { id: '2', name: "Define and explain a term", description: "Give a clear definition and explanation of a concept or term", type: 'RAG', visibility: 'public', created_at: '' },
-          { id: '3', name: "Generate an example problem", description: "Create a practice problem with step-by-step solution", type: 'RAG', visibility: 'public', created_at: '' },
-          { id: '4', name: "Explain a concept in simple terms", description: "Break down complex concepts into easy-to-understand language", type: 'RAG', visibility: 'public', created_at: '' },
-          { id: '5', name: "Create practice questions", description: "Generate quiz questions to test understanding", type: 'RAG', visibility: 'public', created_at: '' },
-          { id: '6', name: "Compare and contrast topics", description: "Analyze similarities and differences between related concepts", type: 'RAG', visibility: 'public', created_at: '' }
+          {
+            id: "1",
+            name: "Summarize a Chapter",
+            description: "Provide a concise summary of a specific chapter",
+            type: "RAG",
+            visibility: "public",
+            created_at: "",
+          },
+          {
+            id: "2",
+            name: "Define and explain a term",
+            description:
+              "Give a clear definition and explanation of a concept or term",
+            type: "RAG",
+            visibility: "public",
+            created_at: "",
+          },
+          {
+            id: "3",
+            name: "Generate an example problem",
+            description: "Create a practice problem with step-by-step solution",
+            type: "RAG",
+            visibility: "public",
+            created_at: "",
+          },
+          {
+            id: "4",
+            name: "Explain a concept in simple terms",
+            description:
+              "Break down complex concepts into easy-to-understand language",
+            type: "RAG",
+            visibility: "public",
+            created_at: "",
+          },
+          {
+            id: "5",
+            name: "Create practice questions",
+            description: "Generate quiz questions to test understanding",
+            type: "RAG",
+            visibility: "public",
+            created_at: "",
+          },
+          {
+            id: "6",
+            name: "Compare and contrast topics",
+            description:
+              "Analyze similarities and differences between related concepts",
+            type: "RAG",
+            visibility: "public",
+            created_at: "",
+          },
         ]);
       } finally {
         setLoading(false);
@@ -98,29 +197,35 @@ export default function AIChatPage() {
       // Generate a temporary chat session ID (in real app, this would come from session creation)
       const sessionId = "temp-session-id";
       const textbookId = navTextbook?.id || "temp-textbook-id";
-      
-      const response = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/chat_sessions/${sessionId}/text_generation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          textbook_id: textbookId,
-          query: text
-        })
-      });
+
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_ENDPOINT
+        }/chat_sessions/${sessionId}/text_generation`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            textbook_id: textbookId,
+            query: text,
+          }),
+        }
+      );
 
       const data = await response.json();
-      
+
       const botMsg: Message = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         sender: "bot",
         text: data.response || "Sorry, I couldn't generate a response.",
+        sources_used: data.sources || [],
         time: Date.now(),
       };
       setMessages((m) => [...m, botMsg]);
     } catch (error) {
-      console.error('Error generating text:', error);
+      console.error("Error generating text:", error);
       const errorMsg: Message = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         sender: "bot",
@@ -135,7 +240,13 @@ export default function AIChatPage() {
     if (message.sender === "user") {
       return <UserChatMessage key={message.id} text={message.text} />;
     } else {
-      return <AIChatMessage key={message.id} text={message.text} />;
+      return (
+        <AIChatMessage
+          key={message.id}
+          text={message.text}
+          sources={message.sources_used}
+        />
+      );
     }
   }
 
@@ -207,7 +318,9 @@ export default function AIChatPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
                     {loading ? (
                       <div className="col-span-full text-center py-4">
-                        <p className="text-muted-foreground">Loading prompts...</p>
+                        <p className="text-muted-foreground">
+                          Loading prompts...
+                        </p>
                       </div>
                     ) : (
                       prompts
@@ -254,9 +367,9 @@ export default function AIChatPage() {
             <PromptLibraryModal
               open={showLibrary}
               onOpenChange={setShowLibrary}
-              prompts={prompts.map(p => p.name)}
+              prompts={prompts.map((p) => p.name)}
               onSelectPrompt={(p) => {
-                const template = prompts.find(t => t.name === p);
+                const template = prompts.find((t) => t.name === p);
                 setMessage(template?.description || p);
               }}
             />
