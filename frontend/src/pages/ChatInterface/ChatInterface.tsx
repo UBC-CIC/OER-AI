@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import { Send, ChevronDown, LibraryBig } from "lucide-react";
+import { ChevronDown, LibraryBig } from "lucide-react";
 import PromptCard from "@/components/ChatInterface/PromptCard";
 import AIChatMessage from "@/components/ChatInterface/AIChatMessage";
 import UserChatMessage from "@/components/ChatInterface/UserChatMessage";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import PromptLibraryModal from "@/components/ChatInterface/PromptLibraryModal";
 import Header from "@/components/Header";
 import StudentSideBar from "@/components/ChatInterface/StudentSideBar";
 import { SidebarProvider } from "@/components/ChatInterface/SidebarContext";
 import { useLocation } from "react-router";
+import { AiChatInput } from "@/components/ChatInterface/userInput";
+import type { PromptTemplate } from "@/types/Chat";
 
 type Message = {
   id: string;
@@ -19,14 +20,7 @@ type Message = {
   time: number;
 };
 
-type PromptTemplate = {
-  id: string;
-  name: string;
-  description?: string;
-  type: string;
-  visibility: string;
-  created_at: string;
-};
+
 
 export default function AIChatPage() {
   const [message, setMessage] = useState("");
@@ -261,7 +255,7 @@ export default function AIChatPage() {
           />
 
           <main
-            className={`md:ml-64 flex flex-col flex-1 items-center justify-center`}
+            className={`md:ml-64 flex flex-col flex-1 items-center justify-center max-w-screen`}
           >
             <div
               className={`flex flex-col w-full max-w-2xl 2xl:max-w-3xl px-4 py-4 ${
@@ -281,7 +275,7 @@ export default function AIChatPage() {
                   </>
                 ) : (
                   // messages area
-                  <div className="flex flex-col gap-4 mb-6">
+                  <div className="flex flex-col gap-2 mb-6">
                     {messages.map((m) => messageFormatter(m))}
                   </div>
                 )}
@@ -291,26 +285,12 @@ export default function AIChatPage() {
               <div>
                 {/* Input Area */}
                 <div className="relative mb-6">
-                  <Textarea
+                  <AiChatInput
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        sendMessage();
-                      }
-                    }}
+                    onChange={(val: string) => setMessage(val)}
                     placeholder={`Ask anything about ${textbookTitle}`}
-                    className="bg-input !border-[var(--border)] h-[120px] pr-12 resize-none text-sm"
+                    onSend={sendMessage}
                   />
-                  <Button
-                    onClick={sendMessage}
-                    size="icon"
-                    variant="link"
-                    className="cursor-pointer absolute bottom-3 right-3 h-8 w-8 text-muted-foreground hover:text-gray-900 transition-colors"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
                 </div>
 
                 {/* Prompt Suggestions */}
@@ -328,7 +308,7 @@ export default function AIChatPage() {
                         .map((prompt, index) => (
                           <PromptCard
                             key={prompt.id || index}
-                            text={prompt.name}
+                            name={prompt.name}
                             onClick={() => {
                               setMessage(prompt.description || prompt.name);
                             }}
@@ -343,7 +323,7 @@ export default function AIChatPage() {
                   <Button
                     onClick={() => setShowLibrary(true)}
                     variant={"link"}
-                    className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-gray-900 transition-colors"
+                    className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-foreground transition-colors"
                   >
                     Prompt Library
                     <LibraryBig className="h-4 w-4" />
@@ -351,7 +331,7 @@ export default function AIChatPage() {
                   <Button
                     onClick={() => setSeeMore(!seeMore)}
                     variant={"link"}
-                    className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-gray-900 transition-colors"
+                    className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {seeMore ? "Show less" : "See more prompts"}
                     <ChevronDown
@@ -367,10 +347,9 @@ export default function AIChatPage() {
             <PromptLibraryModal
               open={showLibrary}
               onOpenChange={setShowLibrary}
-              prompts={prompts.map((p) => p.name)}
-              onSelectPrompt={(p) => {
-                const template = prompts.find((t) => t.name === p);
-                setMessage(template?.description || p);
+              prompts={prompts}
+              onSelectPrompt={(msg) => {
+                setMessage(msg);
               }}
             />
           </main>

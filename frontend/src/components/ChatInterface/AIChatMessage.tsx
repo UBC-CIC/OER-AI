@@ -184,9 +184,9 @@ export default function AIChatMessage({
           {sources && sources.length > 0 && (
             <div className="mt-4 border-t border-muted pt-2">
               <Button
-                variant="ghost"
+                variant="link"
                 size="sm"
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                className="flex items-center gap-1 text-xs cursor-pointer text-muted-foreground hover:text-foreground"
                 onClick={() => setShowSources(!showSources)}
               >
                 <BookOpen className="h-3 w-3" />
