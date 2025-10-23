@@ -31,13 +31,10 @@ export default function UserChatMessage({ text, onSave }: UserChatMessageProps) 
   }
 
   function handleSubmit() {
-    // Here you would call your API to save the prompt, for example:
-    // await fetch('/api/prompts', { method: 'POST', body: JSON.stringify({ name, prompt }) })
-    // or call your client library to persist it.
+    // mock api request here
 
-    // For now just close the dialog.
+    // for now close the dialog.
     setOpen(false);
-    // Optionally call external onSave handler
     if (onSave) onSave();
   }
   return (
