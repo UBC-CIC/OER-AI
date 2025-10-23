@@ -7,9 +7,11 @@ import {
 } from "@/components/ui/select";
 import { Menu, X } from "lucide-react";
 import { useSidebar } from "@/components/ChatInterface/SidebarContext";
+import { useMode } from "@/components/ModeContext";
 
 export default function Header() {
   const { mobileOpen, toggleMobile } = useSidebar();
+  const { mode, setMode } = useMode();
 
   return (
     <header className="z-50 h-[70px] fixed top-0 w-screen border-b border-white/10 bg-gradient-to-r from-[#2c5f7c] to-[#3d7a9a]">
@@ -30,7 +32,7 @@ export default function Header() {
           </button>
           <h1 className="text-xl font-semibold text-white">OpenED AI</h1>
         </div>
-        <Select defaultValue="student">
+        <Select value={mode} onValueChange={(v) => setMode(v as any)}>
           <SelectTrigger className="w-fit border-primary-foreground bg-transparent text-white  [&_svg:not([class*='text-'])]:text-primary-foreground hover:bg-white/10">
             <SelectValue placeholder="Select mode" />
           </SelectTrigger>
