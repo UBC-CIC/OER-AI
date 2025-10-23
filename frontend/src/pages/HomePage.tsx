@@ -36,8 +36,18 @@ export default function HomePage() {
   useEffect(() => {
     const fetchTextbooks = async () => {
       try {
+        // First get a public token if we don't have one
+        const tokenResponse = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
+        const { token } = await tokenResponse.json();
+        
+        // Use the token to fetch textbooks
         const response = await fetch(
-          `${import.meta.env.VITE_API_ENDPOINT}/textbooks`
+          `${import.meta.env.VITE_API_ENDPOINT}/textbooks`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          }
         );
         const data = await response.json();
         setTextbooks(data.textbooks || []);

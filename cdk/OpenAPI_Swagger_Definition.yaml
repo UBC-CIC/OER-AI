@@ -920,7 +920,8 @@ paths:
         - User
       summary: Get paginated list of available textbooks
       operationId: get_textbooks
-
+      security:
+        - userAuthorizer: []
       parameters:
         - name: limit
           in: query
