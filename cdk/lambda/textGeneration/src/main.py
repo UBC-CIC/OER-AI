@@ -170,7 +170,7 @@ def handler(event, context):
     path_params = event.get("pathParameters", {})
     logger.info(f"Request path parameters: {path_params}")
     
-    session_id = path_params.get("session_id", "")
+    chat_session_id = path_params.get("id", "")
     
     # Parse request body
     body = {} if event.get("body") is None else json.loads(event.get("body"))
@@ -267,22 +267,22 @@ def handler(event, context):
         try:
             # Log the interaction for analytics purposes
             with connection.cursor() as cur:
-                # Check if session_id is provided for the log
-                if session_id:
+                # Check if chat_session_id is provided for the log
+                if chat_session_id:
                     cur.execute(
                         """
                         INSERT INTO user_interactions
-                        (session_id, sender_role, query_text, response_text)
+                        (chat_session_id, sender_role, query_text, response_text)
                         VALUES (%s, %s, %s, %s)
                         """,
-                        (session_id, "user", question, response_data["response"])
+                        (chat_session_id, "user", question, response_data["response"])
                     )
                 else:
                     cur.execute(
                         """
                         INSERT INTO user_interactions
                         (sender_role, query_text, response_text)
-                        VALUES (%s, %s, %s, %s)
+                        VALUES (%s, %s, %s)
                         """,
                         ("user", question, response_data["response"])
                     )

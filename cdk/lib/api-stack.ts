@@ -21,6 +21,7 @@ import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 import * as bedrock from "aws-cdk-lib/aws-bedrock";
 import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 
 interface ApiGatewayStackProps extends cdk.StackProps {
   ecrRepositories: { [key: string]: ecr.Repository };
@@ -733,6 +734,19 @@ export class ApiGatewayStack extends cdk.Stack {
       }
     );
 
+    // Create DynamoDB table for session management with 30-day TTL
+    const sessionTable = new dynamodb.Table(this, `${id}-ConversationTable`, {
+      tableName: "DynamoDB-Conversation-Table",
+      partitionKey: {
+        name: "SessionId",
+        type: dynamodb.AttributeType.STRING,
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      timeToLiveAttribute: "ttl", // Enable TTL on the 'ttl' attribute
+      removalPolicy: cdk.RemovalPolicy.DESTROY, // Use RETAIN for production
+      pointInTimeRecovery: false, // Enable for production if needed
+    });
+
     const textGenLambdaDockerFunc = new lambda.DockerImageFunction(
       this,
       `${id}-TextGenLambdaDockerFunction`,
@@ -753,7 +767,7 @@ export class ApiGatewayStack extends cdk.Stack {
           REGION: this.region,
           BEDROCK_LLM_PARAM: bedrockLLMParameter.parameterName,
           EMBEDDING_MODEL_PARAM: embeddingModelParameter.parameterName,
-          //TABLE_NAME_PARAM: tableNameParameter.parameterName,
+          TABLE_NAME_PARAM: sessionTable.tableName,
           //GUARDRAIL_ID_PARAM: guardrailParameter.parameterName,
           //MESSAGE_LIMIT_PARAM: messageLimitParameter.parameterName,
           //APPSYNC_ENDPOINT: this.eventApi.graphqlUrl,
@@ -774,25 +788,22 @@ export class ApiGatewayStack extends cdk.Stack {
       sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/chat_sessions*`,
     });
 
-    // DynamoDB permissions
-    textGenLambdaDockerFunc.role?.attachInlinePolicy(
-      new iam.Policy(this, "DynamoDBReadWritePolicy", {
-        statements: [
-          new iam.PolicyStatement({
-            actions: [
-              "dynamodb:ListTables",
-              "dynamodb:CreateTable",
-              "dynamodb:DescribeTable",
-              "dynamodb:PutItem",
-              "dynamodb:GetItem",
-              "dynamodb:UpdateItem",
-              "dynamodb:Query",
-            ],
-            resources: [
-              `arn:aws:dynamodb:${this.region}:${this.account}:table/*`,
-            ],
-            effect: iam.Effect.ALLOW,
-          }),
+    // DynamoDB permissions for the conversation table - Put/Get/Update/Query operations
+    textGenLambdaDockerFunc.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "dynamodb:PutItem", // Put operation
+          "dynamodb:GetItem", // Get operation
+          "dynamodb:UpdateItem", // Update operation
+          "dynamodb:Query", // Query operation
+          "dynamodb:DescribeTable", // Describe table
+          "dynamodb:BatchGetItem", // Batch operations (if needed)
+          "dynamodb:BatchWriteItem", // Batch operations (if needed)
+        ],
+        resources: [
+          sessionTable.tableArn,
+          `${sessionTable.tableArn}/*`, // For GSI/LSI if any are added later
         ],
       })
     );
@@ -833,7 +844,6 @@ export class ApiGatewayStack extends cdk.Stack {
         resources: [
           bedrockLLMParameter.parameterArn,
           embeddingModelParameter.parameterArn,
-          //tableNameParameter.parameterArn,
           //guardrailParameter.parameterArn,
           //messageLimitParameter.parameterArn,
         ],
