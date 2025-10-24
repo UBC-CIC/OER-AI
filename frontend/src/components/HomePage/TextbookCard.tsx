@@ -20,7 +20,7 @@ function formatAuthors(authors: string[]) {
 
 export default function TextbookCard({ textbook }: { textbook: Textbook }) {
   const navigate = useNavigate();
-  const { userSessionId } = useUserSession();
+  const { userSessionId, isLoading: sessionLoading, getPublicToken } = useUserSession();
   const [isLoading, setIsLoading] = useState(false);
 
   const getOrCreateChatSession = async () => {
@@ -28,10 +28,10 @@ export default function TextbookCard({ textbook }: { textbook: Textbook }) {
     
     setIsLoading(true);
     try {
-      // Get public token
-      const tokenResponse = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
-      if (!tokenResponse.ok) throw new Error('Failed to get public token');
-      const { token } = await tokenResponse.json();
+      console.log('[TextbookCard] Starting flow for textbook:', textbook.id);
+      // Get public token (cached)
+      const token = await getPublicToken();
+      console.log('[TextbookCard] Got token');
 
       // First check for existing chat sessions for this textbook and user
       const existingResponse = await fetch(
@@ -45,6 +45,8 @@ export default function TextbookCard({ textbook }: { textbook: Textbook }) {
       );
 
       if (!existingResponse.ok) {
+        const errText = await existingResponse.text().catch(() => '');
+        console.error('[TextbookCard] Failed to check existing chat sessions', existingResponse.status, errText);
         throw new Error('Failed to check existing chat sessions');
       }
 
@@ -73,11 +75,13 @@ export default function TextbookCard({ textbook }: { textbook: Textbook }) {
         );
 
         if (!createResponse.ok) {
+          const errText = await createResponse.text().catch(() => '');
+          console.error('[TextbookCard] Failed to create chat session', createResponse.status, errText);
           throw new Error('Failed to create chat session');
         }
 
         chatSession = await createResponse.json();
-        console.log('Created new chat session:', chatSession.id);
+        console.log('[TextbookCard] Created new chat session:', chatSession.id);
       }
 
       // Navigate to chat interface with the chat session
@@ -87,9 +91,10 @@ export default function TextbookCard({ textbook }: { textbook: Textbook }) {
           chatSessionId: chatSession.id 
         } 
       });
+      console.log('[TextbookCard] Navigated to chat');
     } catch (error) {
-      console.error('Failed to get/create chat session:', error);
-      // TODO: Show error toast/message to user
+      console.error('[TextbookCard] Failed to get/create chat session:', error);
+      alert('Sorry, we could not open the chat. Please try again.');
     } finally {
       setIsLoading(false);
     }

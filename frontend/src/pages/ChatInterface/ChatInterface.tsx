@@ -8,7 +8,8 @@ import PromptLibraryModal from "@/components/ChatInterface/PromptLibraryModal";
 import Header from "@/components/Header";
 import StudentSideBar from "@/components/ChatInterface/StudentSideBar";
 import { SidebarProvider } from "@/providers/SidebarContext";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
+import { useUserSession } from "@/contexts/UserSessionContext";
 import { AiChatInput } from "@/components/ChatInterface/userInput";
 import type { PromptTemplate } from "@/types/Chat";
 
@@ -35,7 +36,7 @@ export default function AIChatPage() {
   // Hooks and location state
   const location = useLocation();
   const navigate = useNavigate();
-  const { sessionUuid } = useUserSession();
+  const { sessionUuid, getPublicToken } = useUserSession();
 
   const navTextbook = location.state?.textbook;
   const chatSessionId = location.state?.chatSessionId;
@@ -54,10 +55,8 @@ export default function AIChatPage() {
     const loadChatHistory = async () => {
       setIsLoadingHistory(true);
       try {
-        // Get public token
-        const tokenResponse = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
-        if (!tokenResponse.ok) throw new Error('Failed to get public token');
-        const { token } = await tokenResponse.json();
+  // Get public token (cached)
+  const token = await getPublicToken();
 
         // Get all interactions for this chat session
         const response = await fetch(
@@ -105,7 +104,7 @@ export default function AIChatPage() {
     };
 
     loadChatHistory();
-  }, [chatSessionId, navigate, sessionUuid]);
+  }, [chatSessionId, navigate, sessionUuid, getPublicToken]);
 
   // Fetch prompt templates from API
   useEffect(() => {
@@ -255,9 +254,8 @@ export default function AIChatPage() {
     setMessage("");
 
     try {
-      // Get fresh token for the request
-      const tokenResponse = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
-      const { token } = await tokenResponse.json();
+      // Get token for the request (cached)
+      const token = await getPublicToken();
 
       // Record the user's message as an interaction (if we have a session UUID)
       if (sessionUuid) {

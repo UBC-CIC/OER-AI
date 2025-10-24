@@ -8,10 +8,12 @@ function App() {
   return (
     <ModeProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/textbook/:id/chat" element={<AIChatPage />} />
-        </Routes>
+        <UserSessionProvider>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/textbook/:id/chat" element={<AIChatPage />} />
+          </Routes>
+        </UserSessionProvider>
       </BrowserRouter>
     </ModeProvider>
   )

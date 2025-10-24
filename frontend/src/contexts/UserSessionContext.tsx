@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 
 interface UserSessionContextType {
@@ -6,6 +6,7 @@ interface UserSessionContextType {
   sessionUuid?: string | null;
   isLoading: boolean;
   error: Error | null;
+  getPublicToken: () => Promise<string>;
 }
 
 const UserSessionContext = createContext<UserSessionContextType | undefined>(undefined);
@@ -16,14 +17,77 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const LOCAL_KEY = "oer_user_session";
+  const TOKEN_BUFFER_MS = 5 * 60 * 1000; // 5 min buffer before expiry
+
+  type Stored = {
+    sessionUuid: string;
+    userSessionId: string;
+    createdAt?: string;
+    token?: string;
+    tokenExpiresAt?: number;
+  };
+
+  const readStored = (): Stored | null => {
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY);
+      return raw ? (JSON.parse(raw) as Stored) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const writeStored = (obj: Stored) => {
+    try {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(obj));
+    } catch {}
+  };
+
+  const [memToken, setMemToken] = useState<string | null>(null);
+  const [memExp, setMemExp] = useState<number | null>(null);
+
+  const getPublicToken = useCallback(async (): Promise<string> => {
+    // prefer memory
+    if (memToken && memExp && Date.now() < memExp - TOKEN_BUFFER_MS) return memToken;
+
+    // check localStorage
+    const stored = readStored();
+    if (stored?.token && stored.tokenExpiresAt && Date.now() < stored.tokenExpiresAt - TOKEN_BUFFER_MS) {
+      setMemToken(stored.token);
+      setMemExp(stored.tokenExpiresAt);
+      return stored.token;
+    }
+
+    // fetch new
+    const resp = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
+    if (!resp.ok) throw new Error('Failed to get public token');
+    const { token } = await resp.json();
+
+    // Try to decode exp if present, else assume 2h
+    let expMs: number | null = null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1] || '')) as { exp?: number };
+      if (payload?.exp) expMs = payload.exp * 1000;
+    } catch {}
+    const expiresAt = expMs ?? (Date.now() + 2 * 60 * 60 * 1000);
+
+    setMemToken(token);
+    setMemExp(expiresAt);
+    const merged: Stored = {
+      sessionUuid: stored?.sessionUuid ?? '',
+      userSessionId: stored?.userSessionId ?? '',
+      createdAt: stored?.createdAt ?? new Date().toISOString(),
+      token,
+      tokenExpiresAt: expiresAt,
+    };
+    writeStored(merged);
+    return token;
+  }, [memToken, memExp]);
 
   useEffect(() => {
     const validateSession = async (stored: { sessionUuid: string; userSessionId: string; createdAt?: string }) => {
       try {
-        // get public token
-        const tokenResp = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
-        if (!tokenResp.ok) return false;
-        const { token } = await tokenResp.json();
+        // get public token (cached)
+        const token = await getPublicToken();
 
         // Call a lightweight endpoint to validate session exists. Using interactions endpoint with limit=1.
         const validateResp = await fetch(
@@ -44,10 +108,8 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
 
     const createUserSession = async () => {
       try {
-        // First get a public token
-        const tokenResponse = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
-        if (!tokenResponse.ok) throw new Error('Failed to get public token');
-        const { token } = await tokenResponse.json();
+        // First get a public token (cached)
+        const token = await getPublicToken();
 
         // Create a user session
         const response = await fetch(
@@ -65,13 +127,18 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
         }
 
         const data = await response.json();
-        const payload = { sessionUuid: data.sessionId, userSessionId: data.userSessionId, createdAt: new Date().toISOString() };
-        try {
-          localStorage.setItem(LOCAL_KEY, JSON.stringify(payload));
-        } catch {}
+        const current = readStored();
+        const updated: Stored = {
+          sessionUuid: data.sessionId,
+          userSessionId: data.userSessionId,
+          createdAt: current?.createdAt ?? new Date().toISOString(),
+          token: memToken ?? current?.token,
+          tokenExpiresAt: memExp ?? current?.tokenExpiresAt,
+        };
+        writeStored(updated);
 
-        setSessionUuid(payload.sessionUuid);
-        setUserSessionId(payload.userSessionId);
+        setSessionUuid(updated.sessionUuid);
+        setUserSessionId(updated.userSessionId);
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to create user session'));
       } finally {
@@ -81,10 +148,9 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
 
     const bootstrap = async () => {
       try {
-        const raw = localStorage.getItem(LOCAL_KEY);
-        if (raw) {
+        const parsed = readStored();
+        if (parsed) {
           try {
-            const parsed = JSON.parse(raw) as { sessionUuid: string; userSessionId: string; createdAt?: string };
             // basic expiry: 30 days
             const createdAt = parsed.createdAt ? new Date(parsed.createdAt) : null;
             const expired = createdAt ? (Date.now() - createdAt.getTime()) > 1000 * 60 * 60 * 24 * 30 : false;
@@ -94,6 +160,10 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
               if (ok) {
                 setSessionUuid(parsed.sessionUuid);
                 setUserSessionId(parsed.userSessionId);
+                if (parsed.token && parsed.tokenExpiresAt) {
+                  setMemToken(parsed.token);
+                  setMemExp(parsed.tokenExpiresAt);
+                }
                 setIsLoading(false);
                 return;
               }
@@ -115,7 +185,7 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
   }, []); // Only run once when the app starts
 
   return (
-    <UserSessionContext.Provider value={{ userSessionId, sessionUuid, isLoading, error }}>
+    <UserSessionContext.Provider value={{ userSessionId, sessionUuid, isLoading, error, getPublicToken }}>
       {children}
     </UserSessionContext.Provider>
   );
