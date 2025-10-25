@@ -309,8 +309,7 @@ def handler(event, context):
             "body": json.dumps({
                 "textbook_id": textbook_id,
                 "response": response_data["response"],
-                "sources": response_data["sources_used"],
-                "context": response_data["context"]
+                "sources": response_data["sources_used"]
             })
         }
         
