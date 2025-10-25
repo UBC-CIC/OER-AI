@@ -265,7 +265,7 @@ def get_response(query: str, textbook_id: str, llm: ChatBedrock, retriever, chat
         logger.info(f"RAG chain result: {json.dumps(result, indent=2, default=str)[:1000]}...")  # Truncate to avoid too much output
         
         response_text = result["answer"]
-        
+        docs = result["context"]
         end_time = time.time()
         logger.info(f"Response generated in {end_time - start_time:.2f} seconds")
         logger.info(f"Response length: {len(response_text)} characters")
@@ -287,7 +287,6 @@ def get_response(query: str, textbook_id: str, llm: ChatBedrock, retriever, chat
         return {
             "response": response_text,
             "sources_used": sources_used,
-            "context": result["context"]
         }
         
     except Exception as e:
