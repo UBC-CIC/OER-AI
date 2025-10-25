@@ -3,8 +3,12 @@ import boto3
 import os
 import time
 from langchain_aws import ChatBedrock, BedrockLLM
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain, create_history_aware_retriever
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_community.chat_message_histories import DynamoDBChatMessageHistory
+from langchain_core.pydantic_v1 import BaseModel, Field
 import logging
 import json
 import traceback
@@ -12,6 +16,12 @@ import traceback
 # Set up logging for this module
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+# Validate required environment variables
+TABLE_NAME = os.environ.get("TABLE_NAME_PARAM")
+if not TABLE_NAME:
+    logger.error("TABLE_NAME_PARAM environment variable is not set")
+    raise ValueError("TABLE_NAME_PARAM environment variable is required for chat history functionality")
 
 def get_bedrock_llm(
     bedrock_llm_id: str,
@@ -106,23 +116,30 @@ def get_textbook_prompt(textbook_id: str, connection) -> str:
         return None
 
 
-def get_response(query: str, textbook_id: str, llm: ChatBedrock, retriever, connection=None) -> dict:
+def get_response(query: str, textbook_id: str, llm: ChatBedrock, retriever, chat_session_id: str, connection=None) -> dict:
     """
-    Generate a response to a query using the provided retriever and LLM.
+    Generate a response to a query using the provided retriever and LLM with chat history support.
     
     Args:
         query: The user's question
         textbook_id: The ID of the textbook being queried
         llm: The language model to use for generation
         retriever: The retriever to use for getting relevant document chunks
+        chat_session_id: The session ID for maintaining chat history in DynamoDB
         connection: Database connection for fetching custom prompts (can be None)
         
     Returns:
         A dictionary containing the response and sources_used
     """
+    # Validate required parameters
+    if not chat_session_id:
+        logger.warning("No chat_session_id provided, chat history will not be maintained")
+        chat_session_id = f"default-{int(time.time())}"  # Fallback session ID
     logger.info(f"Processing query for textbook ID: {textbook_id}")
     logger.info(f"Query: '{query[:100]}...' (truncated)")
     logger.info(f"LLM model: {getattr(llm, 'model_id', 'Unknown model')}")
+    
+    start_time = time.time()
     
     try:
         # Log retriever info
@@ -160,26 +177,98 @@ def get_response(query: str, textbook_id: str, llm: ChatBedrock, retriever, conn
             system_message = """You are a helpful assistant that answers questions about textbooks. 
                               Provide accurate information based only on the content provided.
                               If the context doesn't contain relevant information to fully answer the question, acknowledge this limitation.
-                              When appropriate, reference specific sections or page numbers from the textbook."""
+                              When appropriate, reference specific sections or page numbers from the textbook.
+                              """
+
+        # Initialize chat history with proper error handling
+        try:
+            chat_history = DynamoDBChatMessageHistory(
+                table_name=TABLE_NAME,
+                session_id=chat_session_id,
+                ttl=3600*24*30 # 30 days expiration (matches DynamoDB table TTL configuration)
+            )
+            
+            # Retrieve existing messages for logging
+            messages = chat_history.messages
+            logger.info(f"Current conversation has {len(messages)} messages in history")
+            for i, msg in enumerate(messages[-4:]):  # Log last 4 messages for context
+                logger.info(f"History[{i}]: {msg.type} - {msg.content[:50]}...")
+                
+        except Exception as history_error:
+            logger.error(f"Error initializing DynamoDB chat history: {history_error}")
+            logger.warning("Proceeding without chat history due to DynamoDB error")
+            # In case of DynamoDB issues, we can still provide a response without history
+            chat_history = None
         
-        # Set up prompt template
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_message),
-            ("human", "{input}\n\nContext from textbook:\n{context}")
+        contextualize_q_system_prompt = """Given a chat history and the latest user question \
+                                            which might reference context in the chat history, formulate a standalone question \
+                                            which can be understood without the chat history. Do NOT answer the question, \
+                                            just reformulate it if needed and otherwise return it as is."""
+        
+        contextualize_q_prompt = ChatPromptTemplate.from_messages([
+            ("system", contextualize_q_system_prompt),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
         ])
-        
+
+        # Create history-aware retriever
+        history_aware_retriever_chain = create_history_aware_retriever(
+            llm, retriever, contextualize_q_prompt
+        )
+
+        qa_system_prompt = f"""{system_message}
+
+                            Use the following retrieved context to answer the question. If you don't know the answer, just say that you don't know.
+
+                            {{context}}"""
+
+        qa_prompt = ChatPromptTemplate.from_messages([
+            ("system", qa_system_prompt),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
+        ])
+
         # Create document chain
-        logger.info("Creating document chain...")
-        document_chain = create_stuff_documents_chain(llm, prompt)
+        question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
+
+
+        # Create the full RAG chain
+        rag_chain = create_retrieval_chain(history_aware_retriever_chain, question_answer_chain)
         
-        # Generate response
-        logger.info("Invoking LLM to generate response...")
-        start_time = time.time()
-        result = document_chain.invoke({"context": docs, "input": query})
+        # Create conversational RAG chain with or without message history
+        if chat_history is not None:
+            # Use conversational chain with history
+            conversational_rag_chain = RunnableWithMessageHistory(
+                rag_chain,
+                lambda session_id: DynamoDBChatMessageHistory(
+                    table_name=TABLE_NAME,
+                    session_id=session_id,  # This session_id comes from the lambda parameter
+                    ttl=3600*24*30 # 30 days expiration
+                ),
+                input_messages_key="input",
+                history_messages_key="chat_history",
+                output_messages_key="answer",
+            )
+            
+            result = conversational_rag_chain.invoke(
+                {"input": query},
+                config={"configurable": {"session_id": chat_session_id}}
+            )
+        else:
+            # Fallback: use basic RAG chain without history
+            logger.info("Using RAG chain without chat history due to DynamoDB error")
+            result = rag_chain.invoke({"input": query})
+        
+        # Log the complete result object structure for debugging
+        logger.info(f"RAG chain result type: {type(result)}")
+        logger.info(f"RAG chain result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
+        logger.info(f"RAG chain result: {json.dumps(result, indent=2, default=str)[:1000]}...")  # Truncate to avoid too much output
+        
+        response_text = result["answer"]
+        
         end_time = time.time()
-        
         logger.info(f"Response generated in {end_time - start_time:.2f} seconds")
-        logger.info(f"Response length: {len(result)} characters")
+        logger.info(f"Response length: {len(response_text)} characters")
         
         # Extract sources used
         sources_used = []
@@ -196,7 +285,7 @@ def get_response(query: str, textbook_id: str, llm: ChatBedrock, retriever, conn
         logger.info(f"Sources used: {sources_used}")
         
         return {
-            "response": result,
+            "response": response_text,
             "sources_used": sources_used
         }
         

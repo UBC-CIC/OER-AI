@@ -17,7 +17,6 @@ REGION = os.environ["REGION"]
 RDS_PROXY_ENDPOINT = os.environ["RDS_PROXY_ENDPOINT"]
 BEDROCK_LLM_PARAM = os.environ.get("BEDROCK_LLM_PARAM")
 EMBEDDING_MODEL_PARAM = os.environ.get("EMBEDDING_MODEL_PARAM")
-TABLE_NAME_PARAM = os.environ.get("TABLE_NAME_PARAM")
 GUARDRAIL_ID_PARAM = os.environ.get("GUARDRAIL_ID_PARAM")
 
 # AWS Clients
@@ -29,7 +28,6 @@ connection = None
 db_secret = None
 BEDROCK_LLM_ID = None
 EMBEDDING_MODEL_ID = None
-TABLE_NAME = None
 GUARDRAIL_ID = None
 embeddings = None
 
@@ -98,7 +96,7 @@ def connect_to_db():
 
 
 # This function is now a wrapper for the helper function in chat.py
-def process_query(query, textbook_id, retriever, connection=None):
+def process_query(query, textbook_id, retriever, chat_session_id, connection=None):
     """
     Process a query using the chat helper function
     
@@ -140,6 +138,7 @@ def process_query(query, textbook_id, retriever, connection=None):
             textbook_id=textbook_id,
             llm=llm,
             retriever=retriever,
+            chat_session_id=chat_session_id,
             connection=connection
         )
     except Exception as e:
@@ -255,7 +254,8 @@ def handler(event, context):
                 query=question,
                 textbook_id=textbook_id,
                 retriever=retriever,
-                connection=connection
+                connection=connection,
+                chat_session_id=chat_session_id
             )
         except Exception as query_error:
             logger.error(f"Error processing query: {str(query_error)}", exc_info=True)
