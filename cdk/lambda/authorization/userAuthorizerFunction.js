@@ -25,10 +25,16 @@ exports.handler = async (event) => {
 
     const decoded = jwt.verify(token, cachedSecret);
 
+    // Extract API Gateway ARN parts to create wildcard resource
+    // methodArn format: arn:aws:execute-api:region:account:apiId/stage/method/resource
+    const arnParts = event.methodArn.split('/');
+    const apiGatewayArnPrefix = arnParts.slice(0, 2).join('/'); // arn:aws:execute-api:region:account:apiId/stage
+    const wildcardResource = `${apiGatewayArnPrefix}/*/*`; // Allow all methods and resources
+
     const policy = generatePolicy(
       decoded.sub || "user",
       "Allow",
-      event.methodArn
+      wildcardResource
     );
     policy.context = {
       userId: decoded.sub || "user",

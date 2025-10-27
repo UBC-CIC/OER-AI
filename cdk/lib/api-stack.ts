@@ -272,7 +272,7 @@ export class ApiGatewayStack extends cdk.Stack {
       cloudWatchRole: true,
       deployOptions: {
         stageName: "prod",
-        loggingLevel: apigateway.MethodLoggingLevel.ERROR,
+        loggingLevel: apigateway.MethodLoggingLevel.INFO,
         dataTraceEnabled: true,
         metricsEnabled: true,
         accessLogDestination: new apigateway.LogGroupLogDestination(
@@ -963,6 +963,36 @@ export class ApiGatewayStack extends cdk.Stack {
     const cfnLambda_textbook = lambdaTextbookFunction.node
       .defaultChild as lambda.CfnFunction;
     cfnLambda_textbook.overrideLogicalId("textbookFunction");
+
+    const lambdaChatSessionFunction = new lambda.Function(
+      this,
+      `${id}-chatSessionFunction`,
+      {
+        runtime: lambda.Runtime.NODEJS_20_X,
+        code: lambda.Code.fromAsset("lambda"),
+        handler: "handlers/chatSessionHandler.handler",
+        timeout: Duration.seconds(300),
+        vpc: vpcStack.vpc,
+        environment: {
+          SM_DB_CREDENTIALS: db.secretPathUser.secretName,
+          RDS_PROXY_ENDPOINT: db.rdsProxyEndpoint,
+        },
+        functionName: `${id}-chatSessionFunction`,
+        memorySize: 512,
+        layers: [postgres],
+        role: lambdaRole,
+      }
+    );
+
+    lambdaChatSessionFunction.addPermission("AllowApiGatewayInvoke", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+      action: "lambda:InvokeFunction",
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/textbooks/*/chat_sessions*`,
+    });
+
+    const cfnLambda_chatSession = lambdaChatSessionFunction.node
+      .defaultChild as lambda.CfnFunction;
+    cfnLambda_chatSession.overrideLogicalId("chatSessionFunction");
 
     const lambdaAdminFunction = new lambda.Function(
       this,

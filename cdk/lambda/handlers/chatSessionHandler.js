@@ -84,15 +84,21 @@ exports.handler = async (event) => {
         const chatTotal = parseInt(chatTotalResult[0].total);
         
         const chatSessions = await sqlConnection`
-          SELECT id, user_sessions_session_id, textbook_id, context, created_at, metadata
+          SELECT id, user_session_id, textbook_id, context, created_at, metadata
           FROM chat_sessions
           WHERE textbook_id = ${chatTextbookId}
           ORDER BY created_at DESC
           LIMIT ${chatLimit} OFFSET ${chatOffset}
         `;
         
+        // Backward-compatible shape: include both user_session_id and user_sessions_session_id
+        const chatSessionsCompat = chatSessions.map((row) => ({
+          ...row,
+          user_sessions_session_id: row.user_session_id,
+        }));
+
         data = {
-          chat_sessions: chatSessions,
+          chat_sessions: chatSessionsCompat,
           pagination: {
             page: chatPage,
             limit: chatLimit,
@@ -114,13 +120,18 @@ exports.handler = async (event) => {
         }
         
         const userChatSessions = await sqlConnection`
-          SELECT id, user_sessions_session_id, textbook_id, context, created_at, metadata
+          SELECT id, user_session_id, textbook_id, context, created_at, metadata
           FROM chat_sessions
-          WHERE textbook_id = ${userChatTextbookId} AND user_sessions_session_id = ${userSessionId}
+          WHERE textbook_id = ${userChatTextbookId} AND user_session_id = ${userSessionId}
           ORDER BY created_at DESC
         `;
         
-        data = userChatSessions;
+        const userChatSessionsCompat = userChatSessions.map((row) => ({
+          ...row,
+          user_sessions_session_id: row.user_session_id,
+        }));
+
+        data = userChatSessionsCompat;
         response.body = JSON.stringify(data);
         break;
         
@@ -159,13 +170,13 @@ exports.handler = async (event) => {
         }
         
         const newChatSession = await sqlConnection`
-          INSERT INTO chat_sessions (user_sessions_session_id, textbook_id, context)
+          INSERT INTO chat_sessions (user_session_id, textbook_id, context)
           VALUES (${user_sessions_session_id}, ${postChatTextbookId}, ${context || {}})
-          RETURNING id, user_sessions_session_id, textbook_id, context, created_at, metadata
+          RETURNING id, user_session_id, textbook_id, context, created_at, metadata
         `;
         
         response.statusCode = 201;
-        data = newChatSession[0];
+        data = { ...newChatSession[0], user_sessions_session_id: newChatSession[0].user_session_id };
         response.body = JSON.stringify(data);
         break;
         

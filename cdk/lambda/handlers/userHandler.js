@@ -77,17 +77,17 @@ exports.handler = async (event) => {
         break;
 
       case "POST /user_sessions":
-        const sessionId = crypto.randomUUID();
-
+        // After schema refactor, user_sessions no longer has a separate session_id column.
+        // Create a new session row and use its primary key (id) as the public session UUID.
         const result = await sqlConnection`
-          INSERT INTO user_sessions (session_id, created_at, last_active_at)
-          VALUES (${sessionId}, NOW(), NOW())
-          RETURNING id, session_id, created_at
+          INSERT INTO user_sessions (created_at, last_active_at)
+          VALUES (NOW(), NOW())
+          RETURNING id, created_at
         `;
 
         data = {
-          sessionId: result[0].session_id,
-          userSessionId: result[0].id,
+          sessionId: result[0].id, // public session UUID
+          userSessionId: result[0].id, // internal id is the same UUID
         };
         response.body = JSON.stringify(data);
         break;
@@ -100,9 +100,9 @@ exports.handler = async (event) => {
           break;
         }
 
-        // First, get the user_sessions.id from the session_id parameter
+        // Validate user session exists by primary key (id)
         const userSession1 = await sqlConnection`
-          SELECT id FROM user_sessions WHERE session_id = ${sessionId1}
+          SELECT id FROM user_sessions WHERE id = ${sessionId1}
         `;
 
         if (userSession1.length === 0) {
@@ -118,13 +118,23 @@ exports.handler = async (event) => {
         );
         const offset = parseInt(event.queryStringParameters?.offset) || 0;
 
+        // Fetch interactions across all chat sessions for this user session
         const interactionsResult = await sqlConnection`
           SELECT 
-            id, session_id, sender_role, query_text, response_text, message_meta, source_chunks, created_at, order_index,
+            ui.id,
+            ui.chat_session_id,
+            ui.sender_role,
+            ui.query_text,
+            ui.response_text,
+            ui.message_meta,
+            ui.source_chunks,
+            ui.created_at,
+            ui.order_index,
             COUNT(*) OVER() as total_count
-          FROM user_interactions
-          WHERE session_id = ${userSessionId1}
-          ORDER BY order_index ASC, created_at ASC
+          FROM user_interactions ui
+          JOIN chat_sessions cs ON ui.chat_session_id = cs.id
+          WHERE cs.user_session_id = ${userSessionId1}
+          ORDER BY ui.order_index ASC NULLS LAST, ui.created_at ASC
           LIMIT ${limit} OFFSET ${offset}
         `;
 
@@ -132,9 +142,11 @@ exports.handler = async (event) => {
           interactionsResult.length > 0
             ? parseInt(interactionsResult[0].total_count)
             : 0;
-        const interactions = interactionsResult.map(
-          ({ total_count, ...interaction }) => interaction
-        );
+        const interactions = interactionsResult.map(({ total_count, ...interaction }) => ({
+          ...interaction,
+          // Back-compat alias: legacy field name
+          session_id: interaction.chat_session_id,
+        }));
 
         data = {
           interactions,
@@ -156,9 +168,9 @@ exports.handler = async (event) => {
           break;
         }
 
-        // First, get the user_sessions.id from the session_id parameter
+        // Validate user session by primary key
         const userSession2 = await sqlConnection`
-          SELECT id FROM user_sessions WHERE session_id = ${sessionId2}
+          SELECT id FROM user_sessions WHERE id = ${sessionId2}
         `;
 
         if (userSession2.length === 0) {
@@ -170,6 +182,7 @@ exports.handler = async (event) => {
         const userSessionId2 = userSession2[0].id;
         const createData = parseBody(event.body);
         const {
+          chat_session_id,
           sender_role,
           query_text,
           response_text,
@@ -184,18 +197,34 @@ exports.handler = async (event) => {
           break;
         }
 
+        if (!chat_session_id) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "chat_session_id is required" });
+          break;
+        }
+
+        // Ensure the chat session belongs to the provided user session
+        const chatSessionCheck = await sqlConnection`
+          SELECT id FROM chat_sessions WHERE id = ${chat_session_id} AND user_session_id = ${userSessionId2}
+        `;
+        if (chatSessionCheck.length === 0) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Invalid chat_session_id for this session" });
+          break;
+        }
+
         const newInteraction = await sqlConnection`
-          INSERT INTO user_interactions (session_id, sender_role, query_text, response_text, message_meta, source_chunks, order_index)
-          VALUES (${userSessionId2}, ${sender_role}, ${query_text || null}, ${
+          INSERT INTO user_interactions (chat_session_id, sender_role, query_text, response_text, message_meta, source_chunks, order_index)
+          VALUES (${chat_session_id}, ${sender_role}, ${query_text || null}, ${
           response_text || null
         }, ${message_meta || {}}, ${source_chunks || []}, ${
           order_index || null
         })
-          RETURNING id, session_id, sender_role, query_text, response_text, message_meta, source_chunks, created_at, order_index
+          RETURNING id, chat_session_id, sender_role, query_text, response_text, message_meta, source_chunks, created_at, order_index
         `;
 
-        response.statusCode = 201;
-        data = newInteraction[0];
+  response.statusCode = 201;
+  data = { ...newInteraction[0], session_id: newInteraction[0].chat_session_id };
         response.body = JSON.stringify(data);
         break;
 
@@ -210,7 +239,7 @@ exports.handler = async (event) => {
         }
 
         const interaction = await sqlConnection`
-          SELECT id, session_id, sender_role, query_text, response_text, message_meta, source_chunks, created_at, order_index
+          SELECT id, chat_session_id, sender_role, query_text, response_text, message_meta, source_chunks, created_at, order_index
           FROM user_interactions
           WHERE id = ${interactionId}
         `;
@@ -221,7 +250,7 @@ exports.handler = async (event) => {
           break;
         }
 
-        data = interaction[0];
+  data = { ...interaction[0], session_id: interaction[0].chat_session_id };
         response.body = JSON.stringify(data);
         break;
 
@@ -252,7 +281,7 @@ exports.handler = async (event) => {
           updateSourceChunks || []
         }, order_index = ${updateOrderIndex}
           WHERE id = ${updateInteractionId}
-          RETURNING id, session_id, sender_role, query_text, response_text, message_meta, source_chunks, created_at, order_index
+          RETURNING id, chat_session_id, sender_role, query_text, response_text, message_meta, source_chunks, created_at, order_index
         `;
 
         if (updated.length === 0) {
@@ -261,7 +290,7 @@ exports.handler = async (event) => {
           break;
         }
 
-        data = updated[0];
+  data = { ...updated[0], session_id: updated[0].chat_session_id };
         response.body = JSON.stringify(data);
         break;
 
@@ -297,9 +326,9 @@ exports.handler = async (event) => {
           break;
         }
 
-        // First, get the user_sessions.id from the session_id parameter
+        // Validate user session by primary key
         const userSessionAnalytics = await sqlConnection`
-          SELECT id FROM user_sessions WHERE session_id = ${analyticsSessionId}
+          SELECT id FROM user_sessions WHERE id = ${analyticsSessionId}
         `;
 
         if (userSessionAnalytics.length === 0) {
@@ -354,9 +383,9 @@ exports.handler = async (event) => {
           break;
         }
 
-        // First, get the user_sessions.id from the session_id parameter
+        // Validate user session by primary key
         const userSessionCreate = await sqlConnection`
-          SELECT id FROM user_sessions WHERE session_id = ${createAnalyticsSessionId}
+          SELECT id FROM user_sessions WHERE id = ${createAnalyticsSessionId}
         `;
 
         if (userSessionCreate.length === 0) {
