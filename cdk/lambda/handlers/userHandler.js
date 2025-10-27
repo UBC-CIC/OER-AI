@@ -92,11 +92,59 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "GET /user_sessions/{session_id}/interactions":
+      case "GET /user_sessions/{session_id}":
+        const sessionId = event.pathParameters?.session_id;
+        if (!sessionId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Session ID is required" });
+          break;
+        }
+
+        // Validate and get user session by primary key (id)
+        const userSession = await sqlConnection`
+          SELECT id, session_title, context, created_at, last_active_at, expires_at, metadata
+          FROM user_sessions 
+          WHERE id = ${sessionId}
+        `;
+
+        if (userSession.length === 0) {
+          response.statusCode = 404;
+          response.body = JSON.stringify({ error: "User session not found" });
+          break;
+        }
+
+        // Update last_active_at timestamp
+        await sqlConnection`
+          UPDATE user_sessions 
+          SET last_active_at = NOW() 
+          WHERE id = ${sessionId}
+        `;
+
+        data = {
+          id: userSession[0].id,
+          session_title: userSession[0].session_title,
+          context: userSession[0].context,
+          created_at: userSession[0].created_at,
+          last_active_at: new Date().toISOString(), // Return updated timestamp
+          expires_at: userSession[0].expires_at,
+          metadata: userSession[0].metadata,
+        };
+        response.body = JSON.stringify(data);
+        break;
+
+      case "GET /user_sessions/{session_id}/chat_sessions/{chat_session_id}/interactions":
         const sessionId1 = event.pathParameters?.session_id;
+        const chatSessionId1 = event.pathParameters?.chat_session_id;
         if (!sessionId1) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Session ID is required" });
+          break;
+        }
+        if (!chatSessionId1) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({
+            error: "Chat Session ID is required",
+          });
           break;
         }
 
@@ -111,30 +159,28 @@ exports.handler = async (event) => {
           break;
         }
 
-        const userSessionId1 = userSession1[0].id;
         const limit = Math.min(
           parseInt(event.queryStringParameters?.limit) || 20,
           100
         );
         const offset = parseInt(event.queryStringParameters?.offset) || 0;
 
-        // Fetch interactions across all chat sessions for this user session
+        // Fetch interactions for the specific chat session
         const interactionsResult = await sqlConnection`
           SELECT 
-            ui.id,
-            ui.chat_session_id,
-            ui.sender_role,
-            ui.query_text,
-            ui.response_text,
-            ui.message_meta,
-            ui.source_chunks,
-            ui.created_at,
-            ui.order_index,
+            id,
+            chat_session_id,
+            sender_role,
+            query_text,
+            response_text,
+            message_meta,
+            source_chunks,
+            created_at,
+            order_index,
             COUNT(*) OVER() as total_count
-          FROM user_interactions ui
-          JOIN chat_sessions cs ON ui.chat_session_id = cs.id
-          WHERE cs.user_session_id = ${userSessionId1}
-          ORDER BY ui.order_index ASC NULLS LAST, ui.created_at ASC
+          FROM user_interactions
+          WHERE chat_session_id = ${chatSessionId1}
+          ORDER BY created_at ASC
           LIMIT ${limit} OFFSET ${offset}
         `;
 
@@ -142,11 +188,13 @@ exports.handler = async (event) => {
           interactionsResult.length > 0
             ? parseInt(interactionsResult[0].total_count)
             : 0;
-        const interactions = interactionsResult.map(({ total_count, ...interaction }) => ({
-          ...interaction,
-          // Back-compat alias: legacy field name
-          session_id: interaction.chat_session_id,
-        }));
+        const interactions = interactionsResult.map(
+          ({ total_count, ...interaction }) => ({
+            ...interaction,
+            // Back-compat alias: legacy field name
+            session_id: interaction.chat_session_id,
+          })
+        );
 
         data = {
           interactions,
@@ -199,7 +247,9 @@ exports.handler = async (event) => {
 
         if (!chat_session_id) {
           response.statusCode = 400;
-          response.body = JSON.stringify({ error: "chat_session_id is required" });
+          response.body = JSON.stringify({
+            error: "chat_session_id is required",
+          });
           break;
         }
 
@@ -209,7 +259,9 @@ exports.handler = async (event) => {
         `;
         if (chatSessionCheck.length === 0) {
           response.statusCode = 400;
-          response.body = JSON.stringify({ error: "Invalid chat_session_id for this session" });
+          response.body = JSON.stringify({
+            error: "Invalid chat_session_id for this session",
+          });
           break;
         }
 
@@ -223,8 +275,11 @@ exports.handler = async (event) => {
           RETURNING id, chat_session_id, sender_role, query_text, response_text, message_meta, source_chunks, created_at, order_index
         `;
 
-  response.statusCode = 201;
-  data = { ...newInteraction[0], session_id: newInteraction[0].chat_session_id };
+        response.statusCode = 201;
+        data = {
+          ...newInteraction[0],
+          session_id: newInteraction[0].chat_session_id,
+        };
         response.body = JSON.stringify(data);
         break;
 
@@ -250,7 +305,10 @@ exports.handler = async (event) => {
           break;
         }
 
-  data = { ...interaction[0], session_id: interaction[0].chat_session_id };
+        data = {
+          ...interaction[0],
+          session_id: interaction[0].chat_session_id,
+        };
         response.body = JSON.stringify(data);
         break;
 
@@ -290,7 +348,7 @@ exports.handler = async (event) => {
           break;
         }
 
-  data = { ...updated[0], session_id: updated[0].chat_session_id };
+        data = { ...updated[0], session_id: updated[0].chat_session_id };
         response.body = JSON.stringify(data);
         break;
 

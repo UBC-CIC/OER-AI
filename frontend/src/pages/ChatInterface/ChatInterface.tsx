@@ -21,8 +21,6 @@ type Message = {
   time: number;
 };
 
-
-
 export default function AIChatPage() {
   // State
   const [message, setMessage] = useState("");
@@ -48,7 +46,7 @@ export default function AIChatPage() {
   // Load chat history and redirect if no chat session ID
   useEffect(() => {
     if (!chatSessionId) {
-      navigate('/');
+      navigate("/");
       return;
     }
 
@@ -56,22 +54,26 @@ export default function AIChatPage() {
       setIsLoadingHistory(true);
       try {
         // Get public token
-        const tokenResponse = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
-        if (!tokenResponse.ok) throw new Error('Failed to get public token');
+        const tokenResponse = await fetch(
+          `${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`
+        );
+        if (!tokenResponse.ok) throw new Error("Failed to get public token");
         const { token } = await tokenResponse.json();
 
-        // Get all interactions for this chat session
+        // Get interactions for the specific chat session
         const response = await fetch(
-          `${import.meta.env.VITE_API_ENDPOINT}/user_sessions/${sessionUuid}/interactions`,
+          `${
+            import.meta.env.VITE_API_ENDPOINT
+          }/user_sessions/${sessionUuid}/chat_sessions/${chatSessionId}/interactions`,
           {
             headers: {
-              'Authorization': `Bearer ${token}`,
-            }
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
 
-        if (!response.ok) throw new Error('Failed to load chat history');
-        
+        if (!response.ok) throw new Error("Failed to load chat history");
+
         interface Interaction {
           id: string;
           chat_session_id: string;
@@ -83,23 +85,41 @@ export default function AIChatPage() {
         }
 
         const data: { interactions: Interaction[] } = await response.json();
-        const chatMessages = data.interactions
-          // Filter for just this chat session's messages
-          .filter(interaction => interaction.chat_session_id === chatSessionId)
-          // Convert to Message format
-          .map(interaction => ({
-            id: interaction.id,
-            sender: interaction.sender_role.toLowerCase() === 'user' ? 'user' as const : 'bot' as const,
-            text: interaction.sender_role === 'User' ? interaction.query_text || '' : interaction.response_text || '',
-            sources_used: interaction.source_chunks || [],
-            time: new Date(interaction.created_at).getTime()
-          }))
-          // Sort by creation time
-          .sort((a, b) => a.time - b.time);
+        const chatMessages: Message[] = [];
+
+        // Each interaction contains both user query and AI response
+        data.interactions.forEach((interaction) => {
+          const baseTime = new Date(interaction.created_at).getTime();
+
+          // Add user message if query_text exists
+          if (interaction.query_text) {
+            chatMessages.push({
+              id: `${interaction.id}-user`,
+              sender: "user" as const,
+              text: interaction.query_text,
+              sources_used: [],
+              time: baseTime,
+            });
+          }
+
+          // Add AI response if response_text exists
+          if (interaction.response_text) {
+            chatMessages.push({
+              id: `${interaction.id}-ai`,
+              sender: "bot" as const,
+              text: interaction.response_text,
+              sources_used: interaction.source_chunks || [],
+              time: baseTime + 1, // Ensure AI response comes after user message
+            });
+          }
+        });
+
+        // Sort by creation time
+        chatMessages.sort((a, b) => a.time - b.time);
 
         setMessages(chatMessages);
       } catch (error) {
-        console.error('Failed to load chat history:', error);
+        console.error("Failed to load chat history:", error);
       } finally {
         setIsLoadingHistory(false);
       }
@@ -113,15 +133,17 @@ export default function AIChatPage() {
     const fetchPrompts = async () => {
       try {
         // Acquire public token then call the endpoint with Authorization
-        const tokenResponse = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
-        if (!tokenResponse.ok) throw new Error('Failed to get public token');
+        const tokenResponse = await fetch(
+          `${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`
+        );
+        if (!tokenResponse.ok) throw new Error("Failed to get public token");
         const { token } = await tokenResponse.json();
 
         const response = await fetch(
           `${import.meta.env.VITE_API_ENDPOINT}/prompt_templates`,
           {
             headers: {
-              'Authorization': `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
             },
           }
         );
@@ -267,43 +289,30 @@ export default function AIChatPage() {
 
     try {
       // Get fresh token for the request
-      const tokenResponse = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
+      const tokenResponse = await fetch(
+        `${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`
+      );
       const { token } = await tokenResponse.json();
 
-      // Record the user's message as an interaction (if we have a session UUID)
-      if (sessionUuid) {
-        try {
-          await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user_sessions/${sessionUuid}/interactions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              chat_session_id: chatSessionId,
-              sender_role: 'User',
-              query_text: text,
-            }),
-          });
-        } catch (e) {
-          console.warn('Failed to persist user interaction', e);
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_ENDPOINT
+        }/chat_sessions/${chatSessionId}/text_generation`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            textbook_id: navTextbook.id,
+            query: text,
+          }),
         }
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/chat_sessions/${chatSessionId}/text_generation`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          textbook_id: navTextbook.id,
-          query: text,
-        }),
-      });
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to generate response');
+        throw new Error("Failed to generate response");
       }
 
       const data = await response.json();
@@ -316,26 +325,6 @@ export default function AIChatPage() {
         time: Date.now(),
       };
       setMessages((m) => [...m, botMsg]);
-
-      // Persist AI response as an interaction as well
-      if (sessionUuid) {
-        try {
-          await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user_sessions/${sessionUuid}/interactions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              chat_session_id: chatSessionId,
-              sender_role: 'AI',
-              response_text: data.response || null,
-            }),
-          });
-        } catch (e) {
-          console.warn('Failed to persist AI interaction', e);
-        }
-      }
     } catch (error) {
       console.error("Error generating text:", error);
       const errorMsg: Message = {
@@ -396,7 +385,9 @@ export default function AIChatPage() {
                   <div className="flex flex-col gap-4 mb-6">
                     {isLoadingHistory ? (
                       <div className="flex items-center justify-center py-8">
-                        <p className="text-muted-foreground">Loading chat history...</p>
+                        <p className="text-muted-foreground">
+                          Loading chat history...
+                        </p>
                       </div>
                     ) : (
                       messages.map((m) => messageFormatter(m))
