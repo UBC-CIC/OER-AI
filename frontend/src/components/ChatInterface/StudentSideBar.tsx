@@ -56,7 +56,7 @@ export default function StudentSideBar({
       </nav>
 
       <div className="border-t border-gray-200 pt-4">
-        <h4 className="font-semibold text-sm px-3">Tutor</h4>
+        <h4 className="font-semibold text-sm px-3">Study Companion</h4>
       </div>
     </>
   );

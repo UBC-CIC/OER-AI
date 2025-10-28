@@ -54,11 +54,11 @@ export default function AIChatPage() {
         if (!tokenResponse.ok) throw new Error("Failed to get public token");
         const { token } = await tokenResponse.json();
 
-        // Get all interactions for this chat session
+        // Get interactions for the specific chat session
         const response = await fetch(
           `${
             import.meta.env.VITE_API_ENDPOINT
-          }/user_sessions/${sessionUuid}/interactions`,
+          }/user_sessions/${sessionUuid}/chat_sessions/${chatSessionId}/interactions`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -79,27 +79,37 @@ export default function AIChatPage() {
         }
 
         const data: { interactions: Interaction[] } = await response.json();
-        const chatMessages = data.interactions
-          // Filter for just this chat session's messages
-          .filter(
-            (interaction) => interaction.chat_session_id === chatSessionId
-          )
-          // Convert to Message format
-          .map((interaction) => ({
-            id: interaction.id,
-            sender:
-              interaction.sender_role.toLowerCase() === "user"
-                ? ("user" as const)
-                : ("bot" as const),
-            text:
-              interaction.sender_role === "User"
-                ? interaction.query_text || ""
-                : interaction.response_text || "",
-            sources_used: interaction.source_chunks || [],
-            time: new Date(interaction.created_at).getTime(),
-          }))
-          // Sort by creation time
-          .sort((a, b) => a.time - b.time);
+        const chatMessages: Message[] = [];
+
+        // Each interaction contains both user query and AI response
+        data.interactions.forEach((interaction) => {
+          const baseTime = new Date(interaction.created_at).getTime();
+
+          // Add user message if query_text exists
+          if (interaction.query_text) {
+            chatMessages.push({
+              id: `${interaction.id}-user`,
+              sender: "user" as const,
+              text: interaction.query_text,
+              sources_used: [],
+              time: baseTime,
+            });
+          }
+
+          // Add AI response if response_text exists
+          if (interaction.response_text) {
+            chatMessages.push({
+              id: `${interaction.id}-ai`,
+              sender: "bot" as const,
+              text: interaction.response_text,
+              sources_used: interaction.source_chunks || [],
+              time: baseTime + 1, // Ensure AI response comes after user message
+            });
+          }
+        });
+
+        // Sort by creation time
+        chatMessages.sort((a, b) => a.time - b.time);
 
         setMessages(chatMessages);
       } catch (error) {
@@ -278,31 +288,6 @@ export default function AIChatPage() {
       );
       const { token } = await tokenResponse.json();
 
-      // Record the user's message as an interaction (if we have a session UUID)
-      if (sessionUuid) {
-        try {
-          await fetch(
-            `${
-              import.meta.env.VITE_API_ENDPOINT
-            }/user_sessions/${sessionUuid}/interactions`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                chat_session_id: chatSessionId,
-                sender_role: "User",
-                query_text: text,
-              }),
-            }
-          );
-        } catch (e) {
-          console.warn("Failed to persist user interaction", e);
-        }
-      }
-
       const response = await fetch(
         `${
           import.meta.env.VITE_API_ENDPOINT
@@ -334,31 +319,6 @@ export default function AIChatPage() {
         time: Date.now(),
       };
       setMessages((m) => [...m, botMsg]);
-
-      // Persist AI response as an interaction as well
-      if (sessionUuid) {
-        try {
-          await fetch(
-            `${
-              import.meta.env.VITE_API_ENDPOINT
-            }/user_sessions/${sessionUuid}/interactions`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                chat_session_id: chatSessionId,
-                sender_role: "AI",
-                response_text: data.response || null,
-              }),
-            }
-          );
-        } catch (e) {
-          console.warn("Failed to persist AI interaction", e);
-        }
-      }
     } catch (error) {
       console.error("Error generating text:", error);
       const errorMsg: Message = {
