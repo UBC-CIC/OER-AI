@@ -82,7 +82,7 @@ exports.handler = async (event) => {
             id, title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, created_at, updated_at, metadata,
             COUNT(*) OVER() as total_count
           FROM shared_user_prompts
-          WHERE textbook_id = ${textbookId}
+          WHERE textbook_id = ${sharedTextbookId}
           ORDER BY created_at DESC
           LIMIT ${limit} OFFSET ${offset}
         `;
@@ -121,7 +121,7 @@ exports.handler = async (event) => {
         
         const newPrompt = await sqlConnection`
           INSERT INTO shared_user_prompts (title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, metadata)
-          VALUES (${title || null}, ${prompt_text}, ${owner_session_id || null}, ${owner_user_id || null}, ${postTextbookId}, ${visibility || 'public'}, ${tags || []}, ${metadata || {}})
+          VALUES (${title || null}, ${prompt_text}, ${owner_session_id || null}, ${owner_user_id || null}, ${postSharedTextbookId}, ${visibility || 'public'}, ${tags || []}, ${metadata || {}})
           RETURNING id, title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, created_at, updated_at, metadata
         `;
         

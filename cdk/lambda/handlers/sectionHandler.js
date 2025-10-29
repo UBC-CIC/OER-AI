@@ -77,7 +77,7 @@ exports.handler = async (event) => {
         const sections = await sqlConnection`
           SELECT id, textbook_id, parent_section_id, title, order_index, page_start, page_end, summary, created_at
           FROM sections
-          WHERE textbook_id = ${sectionsTextbookId}
+          WHERE textbook_id = ${sectionTextbookId}
           ORDER BY order_index ASC
         `;
         
@@ -102,7 +102,7 @@ exports.handler = async (event) => {
         }
         
         const sectionTextbookExists = await sqlConnection`
-          SELECT id FROM textbooks WHERE id = ${postSectionsTextbookId}
+          SELECT id FROM textbooks WHERE id = ${postSectionTextbookId}
         `;
         if (sectionTextbookExists.length === 0) {
           response.statusCode = 404;
@@ -112,7 +112,7 @@ exports.handler = async (event) => {
         
         const newSection = await sqlConnection`
           INSERT INTO sections (textbook_id, parent_section_id, title, order_index, page_start, page_end, summary)
-          VALUES (${postSectionsTextbookId}, ${parent_section_id || null}, ${sectionTitle}, ${order_index || null}, ${sectionPageStart || null}, ${sectionPageEnd || null}, ${sectionSummary || null})
+          VALUES (${postSectionTextbookId}, ${parent_section_id || null}, ${sectionTitle}, ${order_index || null}, ${sectionPageStart || null}, ${sectionPageEnd || null}, ${sectionSummary || null})
           RETURNING id, textbook_id, parent_section_id, title, order_index, page_start, page_end, summary, created_at
         `;
         
