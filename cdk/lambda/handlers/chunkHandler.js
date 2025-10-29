@@ -66,9 +66,9 @@ exports.handler = async (event) => {
     const pathData = event.httpMethod + " " + event.resource;
     
     switch (pathData) {
-      case "GET /textbooks/{id}/chunks":
-        const chunksTextbookId = event.pathParameters?.id;
-        if (!chunksTextbookId) {
+      case "GET /textbooks/{textbook_id}/chunks":
+        const chunkTextbookId = event.pathParameters?.textbook_id;
+        if (!chunkTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
           break;
@@ -127,8 +127,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "POST /textbooks/{id}/chunks":
-        const postChunkTextbookId = event.pathParameters?.id;
+      case "POST /textbooks/{textbook_id}/chunks":
+        const postChunkTextbookId = event.pathParameters?.textbook_id;
         if (!postChunkTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });

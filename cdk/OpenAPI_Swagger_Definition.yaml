@@ -1260,7 +1260,7 @@ paths:
         type: aws_proxy
       x-amazon-apigateway-request-validator: all
 
-  /textbooks/{id}:
+  /textbooks/{textbook_id}:
     <<: *commonOptions
     get:
       tags:
@@ -1270,7 +1270,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1336,7 +1336,7 @@ paths:
       security:
         - adminAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1431,7 +1431,7 @@ paths:
       security:
         - adminAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1454,7 +1454,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/faq:
+  /textbooks/{textbook_id}/faq:
     <<: *commonOptions
     get:
       tags:
@@ -1464,7 +1464,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1514,7 +1514,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1715,7 +1715,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/chat_sessions:
+  /textbooks/{textbook_id}/chat_sessions:
     <<: *commonOptions
     get:
       tags:
@@ -1725,7 +1725,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1807,7 +1807,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1867,7 +1867,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/chat_sessions/user/{user_session_id}:
+  /textbooks/{textbook_id}/chat_sessions/user/{user_session_id}:
     <<: *commonOptions
     get:
       tags:
@@ -1877,7 +1877,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1930,7 +1930,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/sections:
+  /textbooks/{textbook_id}/sections:
     <<: *commonOptions
     get:
       tags:
@@ -1940,7 +1940,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1999,7 +1999,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -2242,7 +2242,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/media_items:
+  /textbooks/{textbook_id}/media_items:
     <<: *commonOptions
     get:
       tags:
@@ -2252,7 +2252,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -2325,7 +2325,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -2631,7 +2631,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/chunks:
+  /textbooks/{textbook_id}/chunks:
     <<: *commonOptions
     get:
       tags:
@@ -2641,7 +2641,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -2728,7 +2728,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -3338,7 +3338,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/shared_prompts:
+  /textbooks/{textbook_id}/shared_prompts:
     <<: *commonOptions
     get:
       tags:
@@ -3348,7 +3348,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -3447,7 +3447,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
