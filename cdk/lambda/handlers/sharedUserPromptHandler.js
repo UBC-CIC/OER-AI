@@ -66,9 +66,9 @@ exports.handler = async (event) => {
     const pathData = event.httpMethod + " " + event.resource;
     
     switch (pathData) {
-      case "GET /textbooks/{id}/shared_prompts":
-        const textbookId = event.pathParameters?.id;
-        if (!textbookId) {
+      case "GET /textbooks/{textbook_id}/shared_prompts":
+        const sharedTextbookId = event.pathParameters?.textbook_id;
+        if (!sharedTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
           break;
@@ -82,7 +82,7 @@ exports.handler = async (event) => {
             id, title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, created_at, updated_at, metadata,
             COUNT(*) OVER() as total_count
           FROM shared_user_prompts
-          WHERE textbook_id = ${textbookId}
+          WHERE textbook_id = ${sharedTextbookId}
           ORDER BY created_at DESC
           LIMIT ${limit} OFFSET ${offset}
         `;
@@ -102,9 +102,9 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "POST /textbooks/{id}/shared_prompts":
-        const postTextbookId = event.pathParameters?.id;
-        if (!postTextbookId) {
+      case "POST /textbooks/{textbook_id}/shared_prompts":
+        const postSharedTextbookId = event.pathParameters?.textbook_id;
+        if (!postSharedTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
           break;
@@ -121,7 +121,7 @@ exports.handler = async (event) => {
         
         const newPrompt = await sqlConnection`
           INSERT INTO shared_user_prompts (title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, metadata)
-          VALUES (${title || null}, ${prompt_text}, ${owner_session_id || null}, ${owner_user_id || null}, ${postTextbookId}, ${visibility || 'public'}, ${tags || []}, ${metadata || {}})
+          VALUES (${title || null}, ${prompt_text}, ${owner_session_id || null}, ${owner_user_id || null}, ${postSharedTextbookId}, ${visibility || 'public'}, ${tags || []}, ${metadata || {}})
           RETURNING id, title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, created_at, updated_at, metadata
         `;
         
@@ -130,8 +130,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "GET /shared_prompts/{id}":
-        const promptId = event.pathParameters?.id;
+      case "GET /shared_prompts/{shared_prompt_id}":
+        const promptId = event.pathParameters?.shared_prompt_id;
         if (!promptId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Prompt ID is required" });
@@ -154,8 +154,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "PUT /shared_prompts/{id}":
-        const updatePromptId = event.pathParameters?.id;
+      case "PUT /shared_prompts/{shared_prompt_id}":
+        const updatePromptId = event.pathParameters?.shared_prompt_id;
         if (!updatePromptId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Prompt ID is required" });
@@ -183,8 +183,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "DELETE /shared_prompts/{id}":
-        const deletePromptId = event.pathParameters?.id;
+      case "DELETE /shared_prompts/{shared_prompt_id}":
+        const deletePromptId = event.pathParameters?.shared_prompt_id;
         if (!deletePromptId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Prompt ID is required" });

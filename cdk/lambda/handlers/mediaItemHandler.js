@@ -66,8 +66,8 @@ exports.handler = async (event) => {
     const pathData = event.httpMethod + " " + event.resource;
     
     switch (pathData) {
-      case "GET /textbooks/{id}/media_items":
-        const mediaTextbookId = event.pathParameters?.id;
+      case "GET /textbooks/{textbook_id}/media_items":
+        const mediaTextbookId = event.pathParameters?.textbook_id;
         if (!mediaTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
@@ -85,8 +85,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "POST /textbooks/{id}/media_items":
-        const postMediaTextbookId = event.pathParameters?.id;
+      case "POST /textbooks/{textbook_id}/media_items":
+        const postMediaTextbookId = event.pathParameters?.textbook_id;
         if (!postMediaTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
@@ -121,8 +121,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "GET /media_items/{id}":
-        const getMediaId = event.pathParameters?.id;
+      case "GET /media_items/{media_item_id}":
+        const getMediaId = event.pathParameters?.media_item_id;
         if (!getMediaId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Media item ID is required" });
@@ -145,8 +145,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "PUT /media_items/{id}":
-        const putMediaId = event.pathParameters?.id;
+      case "PUT /media_items/{media_item_id}":
+        const putMediaId = event.pathParameters?.media_item_id;
         if (!putMediaId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Media item ID is required" });
@@ -173,8 +173,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "DELETE /media_items/{id}":
-        const deleteMediaId = event.pathParameters?.id;
+      case "DELETE /media_items/{media_item_id}":
+        const deleteMediaId = event.pathParameters?.media_item_id;
         if (!deleteMediaId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Media item ID is required" });

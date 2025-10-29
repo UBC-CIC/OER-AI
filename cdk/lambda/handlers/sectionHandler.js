@@ -66,9 +66,9 @@ exports.handler = async (event) => {
     const pathData = event.httpMethod + " " + event.resource;
     
     switch (pathData) {
-      case "GET /textbooks/{id}/sections":
-        const sectionsTextbookId = event.pathParameters?.id;
-        if (!sectionsTextbookId) {
+      case "GET /textbooks/{textbook_id}/sections":
+        const sectionTextbookId = event.pathParameters?.textbook_id;
+        if (!sectionTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
           break;
@@ -77,7 +77,7 @@ exports.handler = async (event) => {
         const sections = await sqlConnection`
           SELECT id, textbook_id, parent_section_id, title, order_index, page_start, page_end, summary, created_at
           FROM sections
-          WHERE textbook_id = ${sectionsTextbookId}
+          WHERE textbook_id = ${sectionTextbookId}
           ORDER BY order_index ASC
         `;
         
@@ -85,9 +85,9 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "POST /textbooks/{id}/sections":
-        const postSectionsTextbookId = event.pathParameters?.id;
-        if (!postSectionsTextbookId) {
+      case "POST /textbooks/{textbook_id}/sections":
+        const postSectionTextbookId = event.pathParameters?.textbook_id;
+        if (!postSectionTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
           break;
@@ -102,7 +102,7 @@ exports.handler = async (event) => {
         }
         
         const sectionTextbookExists = await sqlConnection`
-          SELECT id FROM textbooks WHERE id = ${postSectionsTextbookId}
+          SELECT id FROM textbooks WHERE id = ${postSectionTextbookId}
         `;
         if (sectionTextbookExists.length === 0) {
           response.statusCode = 404;
@@ -112,7 +112,7 @@ exports.handler = async (event) => {
         
         const newSection = await sqlConnection`
           INSERT INTO sections (textbook_id, parent_section_id, title, order_index, page_start, page_end, summary)
-          VALUES (${postSectionsTextbookId}, ${parent_section_id || null}, ${sectionTitle}, ${order_index || null}, ${sectionPageStart || null}, ${sectionPageEnd || null}, ${sectionSummary || null})
+          VALUES (${postSectionTextbookId}, ${parent_section_id || null}, ${sectionTitle}, ${order_index || null}, ${sectionPageStart || null}, ${sectionPageEnd || null}, ${sectionSummary || null})
           RETURNING id, textbook_id, parent_section_id, title, order_index, page_start, page_end, summary, created_at
         `;
         
@@ -121,8 +121,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "GET /sections/{id}":
-        const getSectionId = event.pathParameters?.id;
+      case "GET /sections/{section_id}":
+        const getSectionId = event.pathParameters?.section_id;
         if (!getSectionId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Section ID is required" });
@@ -145,8 +145,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "PUT /sections/{id}":
-        const putSectionId = event.pathParameters?.id;
+      case "PUT /sections/{section_id}":
+        const putSectionId = event.pathParameters?.section_id;
         if (!putSectionId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Section ID is required" });
@@ -173,8 +173,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "DELETE /sections/{id}":
-        const deleteSectionId = event.pathParameters?.id;
+      case "DELETE /sections/{section_id}":
+        const deleteSectionId = event.pathParameters?.section_id;
         if (!deleteSectionId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Section ID is required" });

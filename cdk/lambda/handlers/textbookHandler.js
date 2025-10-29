@@ -101,8 +101,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "GET /textbooks/{id}":
-        const textbookId = event.pathParameters?.id;
+      case "GET /textbooks/{textbook_id}":
+        const textbookId = event.pathParameters?.textbook_id;
         if (!textbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
@@ -164,8 +164,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "PUT /textbooks/{id}":
-        const updateId = event.pathParameters?.id;
+      case "PUT /textbooks/{textbook_id}":
+        const updateId = event.pathParameters?.textbook_id;
         if (!updateId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
@@ -205,8 +205,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "DELETE /textbooks/{id}":
-        const deleteId = event.pathParameters?.id;
+      case "DELETE /textbooks/{textbook_id}":
+        const deleteId = event.pathParameters?.textbook_id;
         if (!deleteId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });

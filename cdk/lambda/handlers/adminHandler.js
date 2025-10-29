@@ -131,9 +131,9 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      // DELETE /chat_sessions/{id} - Delete specific chat session (admin only)
-      case "DELETE /chat_sessions/{id}":
-        const chatSessionId = event.pathParameters?.id;
+      // DELETE /chat_sessions/{chat_session_id} - Delete specific chat session (admin only)
+      case "DELETE /chat_sessions/{chat_session_id}":
+        const chatSessionId = event.pathParameters?.chat_session_id;
         if (!chatSessionId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Chat session ID is required" });
