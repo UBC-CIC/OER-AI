@@ -1,30 +1,36 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface GenerateFormProps {
   onGenerate: (formData: any) => void;
 }
 
 export function GenerateForm({ onGenerate }: GenerateFormProps) {
-  const [materialType, setMaterialType] = useState('mcq');
-  const [topic, setTopic] = useState('');
-  const [numQuestions, setNumQuestions] = useState('5');
-  const [numOptions, setNumOptions] = useState('4');
-  const [difficulty, setDifficulty] = useState('intermediate');
+  const [materialType, setMaterialType] = useState("mcq");
+  const [topic, setTopic] = useState("");
+  const [numQuestions, setNumQuestions] = useState("5");
+  const [numOptions, setNumOptions] = useState("4");
+  const [difficulty, setDifficulty] = useState("intermediate");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    //generation logic handled my parent 
+    //generation logic handled my parent
     onGenerate({
       materialType,
       topic,
@@ -37,9 +43,12 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Generate Practice Materials</CardTitle>
+        <CardTitle className="text-2xl font-medium">
+          Generate Practice Materials
+        </CardTitle>
         <CardDescription>
-          Fill out the details below to generate practice materials around the currently selected book
+          Fill out the details below to generate practice materials around the
+          currently selected book
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -47,7 +56,7 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
           <div className="space-y-2">
             <Label htmlFor="material-type">Material Type</Label>
             <Select value={materialType} onValueChange={setMaterialType}>
-              <SelectTrigger id="material-type">
+              <SelectTrigger className="border-grey w-full" id="material-type">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
@@ -69,7 +78,7 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
           </div>
 
           {/* Conditional Fields based on Material Type */}
-          {materialType === 'mcq' && (
+          {materialType === "mcq" && (
             <>
               {/* Number of Questions */}
               <div className="space-y-2">
@@ -105,7 +114,7 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
               <div className="space-y-2">
                 <Label htmlFor="difficulty">Difficulty</Label>
                 <Select value={difficulty} onValueChange={setDifficulty}>
-                  <SelectTrigger id="difficulty">
+                  <SelectTrigger className="border-grey w-full" id="difficulty">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
