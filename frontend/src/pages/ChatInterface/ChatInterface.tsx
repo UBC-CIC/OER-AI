@@ -6,7 +6,6 @@ import UserChatMessage from "@/components/ChatInterface/UserChatMessage";
 import { Button } from "@/components/ui/button";
 import PromptLibraryModal from "@/components/ChatInterface/PromptLibraryModal";
 import { useTextbook } from "@/providers/textbook";
-import { useLocation, useNavigate } from "react-router";
 import { AiChatInput } from "@/components/ChatInterface/userInput";
 import type { PromptTemplate } from "@/types/Chat";
 import { useUserSession } from "@/contexts/UserSessionContext";
@@ -29,18 +28,36 @@ export default function AIChatPage() {
   const [showLibrary, setShowLibrary] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-  const { textbook } = useTextbook();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const { 
+    textbook, 
+    activeChatSessionId, 
+    chatSessions,
+    createNewChatSession,
+    isLoadingChatSessions 
+  } = useTextbook();
   const { sessionUuid } = useUserSession();
 
-  const chatSessionId = location.state?.chatSessionId;
   const textbookTitle = textbook?.title ?? "Calculus: Volume 3";
 
-  // Load chat history and redirect if no chat session ID
+  // Initialize chat session if needed
   useEffect(() => {
-    if (!chatSessionId) {
-      navigate("/");
+    const initializeChatSession = async () => {
+      // Wait for chat sessions to load
+      if (isLoadingChatSessions) return;
+
+      // If no active chat session and no existing sessions, create one
+      if (!activeChatSessionId && chatSessions.length === 0) {
+        console.log('No chat sessions found, creating new one');
+        await createNewChatSession();
+      }
+    };
+
+    initializeChatSession();
+  }, [activeChatSessionId, chatSessions.length, isLoadingChatSessions, createNewChatSession]);
+
+  // Load chat history when chat session changes
+  useEffect(() => {
+    if (!activeChatSessionId) {
       return;
     }
 
@@ -58,7 +75,7 @@ export default function AIChatPage() {
         const response = await fetch(
           `${
             import.meta.env.VITE_API_ENDPOINT
-          }/user_sessions/${sessionUuid}/chat_sessions/${chatSessionId}/interactions`,
+          }/user_sessions/${sessionUuid}/chat_sessions/${activeChatSessionId}/interactions`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -120,7 +137,7 @@ export default function AIChatPage() {
     };
 
     loadChatHistory();
-  }, [chatSessionId, navigate, sessionUuid]);
+  }, [activeChatSessionId, sessionUuid]);
 
   // Fetch prompt templates from API
   useEffect(() => {
@@ -268,7 +285,7 @@ export default function AIChatPage() {
 
   async function sendMessage() {
     const text = message.trim();
-    if (!text || !chatSessionId) return;
+    if (!text || !activeChatSessionId || !textbook) return;
 
     const userMsg: Message = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -291,7 +308,7 @@ export default function AIChatPage() {
       const response = await fetch(
         `${
           import.meta.env.VITE_API_ENDPOINT
-        }/chat_sessions/${chatSessionId}/text_generation`,
+        }/chat_sessions/${activeChatSessionId}/text_generation`,
         {
           method: "POST",
           headers: {
@@ -299,7 +316,7 @@ export default function AIChatPage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            textbook_id: textbook?.id,
+            textbook_id: textbook.id,
             query: text,
           }),
         }
