@@ -78,6 +78,17 @@ export function MCQQuiz({ title, questions }: MCQQuizProps) {
     );
   };
 
+  const handleResetAll = () => {
+    setAnswers((prev) =>
+      prev.map((answer) => ({
+        ...answer,
+        selectedOption: null,
+        isCorrect: null,
+        hasSubmitted: false,
+      }))
+    );
+  };
+
   const allSubmitted = answers.every((a) => a.hasSubmitted);
   const hasAnsweredAll = answers.every((a) => a.selectedOption !== null);
 
@@ -96,10 +107,9 @@ export function MCQQuiz({ title, questions }: MCQQuizProps) {
           )}
         </div>
       </CardHeader>
-
+      {/* Questions */}
       {isExpanded && (
         <CardContent className="space-y-6">
-          {/* Questions */}
           {questions.map((question, index) => {
             const answer = answers.find((a) => a.questionId === question.id)!;
             return (
@@ -115,9 +125,9 @@ export function MCQQuiz({ title, questions }: MCQQuizProps) {
             );
           })}
 
-          {/* Submit All Button */}
-          {!allSubmitted && (
-            <div className="flex justify-end">
+          {/* Submit All / Reset All Button */}
+          <div className="flex justify-end">
+            {!allSubmitted ? (
               <Button
                 onClick={handleSubmitAll}
                 disabled={!hasAnsweredAll}
@@ -125,8 +135,16 @@ export function MCQQuiz({ title, questions }: MCQQuizProps) {
               >
                 Submit All Answers
               </Button>
-            </div>
-          )}
+            ) : (
+              <Button
+                onClick={handleResetAll}
+                className="w-fit"
+                variant="outline"
+              >
+                Reset All & Retry
+              </Button>
+            )}
+          </div>
         </CardContent>
       )}
     </Card>
