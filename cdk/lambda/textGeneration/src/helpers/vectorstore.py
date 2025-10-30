@@ -32,7 +32,7 @@ def get_vectorstore_retriever(llm, vectorstore_config_dict: Dict[str, str], embe
         # This helps filter out irrelevant content and keeps responses focused on textbook material
         search_kwargs = {
             "k": 5,  # Retrieve up to 5 documents
-            "score_threshold": 0.7  # Only return documents with similarity >= 0.7
+            "score_threshold": 0.3  # Only return documents with similarity >= 0.3
         }
         retriever = vectorstore.as_retriever(
             search_type="similarity_score_threshold",
