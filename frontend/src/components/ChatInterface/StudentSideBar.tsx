@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/providers/sidebar";
 import { useNavigate, useLocation } from "react-router";
-import {Separator } from "@/components/ui/separator";
+import { Separator } from "@/components/ui/separator";
 
 type StudentSideBarProps = {
   textbookTitle: string;
@@ -43,10 +43,14 @@ export default function StudentSideBar({
         <Button
           variant={"link"}
           className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
-            location.pathname === "/" 
-              ? "text-foreground font-medium" 
+            location.pathname === "/"
+              ? "text-foreground font-medium"
               : "text-muted-foreground hover:text-foreground"
           }`}
+          onClick={() => {
+            navigate(`/textbook/${textbookId}/faq`);
+            setMobileOpen(false);
+          }}
         >
           FAQ Cache
         </Button>
@@ -57,8 +61,8 @@ export default function StudentSideBar({
             setMobileOpen(false);
           }}
           className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
-            location.pathname.includes('/practice')
-              ? "text-foreground font-medium" 
+            location.pathname.includes("/practice")
+              ? "text-foreground font-medium"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -66,7 +70,7 @@ export default function StudentSideBar({
         </Button>
       </nav>
 
-      <Separator className="mb-4"/>
+      <Separator className="mb-4" />
 
       <Button
         variant={"link"}
@@ -75,8 +79,8 @@ export default function StudentSideBar({
           setMobileOpen(false);
         }}
         className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
-          location.pathname.includes('/chat')
-            ? "text-foreground font-medium" 
+          location.pathname.includes("/chat")
+            ? "text-foreground font-medium"
             : "text-muted-foreground hover:text-foreground"
         }`}
       >
