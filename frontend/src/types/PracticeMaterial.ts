@@ -11,6 +11,11 @@ export interface MCQQuestion {
   correctAnswer: string;
 }
 
+export interface MCQQuizData {
+  title: string;
+  questions: MCQQuestion[];
+}
+
 export interface QuestionAnswer {
   questionId: string;
   selectedOption: string | null;

@@ -1,32 +1,35 @@
 import { GenerateForm } from '@/components/PracticeMaterialPage/GenerateForm';
 import { MCQQuiz } from '@/components/PracticeMaterialPage/MCQQuiz';
-import type { MCQQuestion } from '@/types/PracticeMaterial';
+import type { MCQQuizData } from '@/types/PracticeMaterial';
 
 // Dummy MCQ data
-const dummyMCQs: MCQQuestion[] = [
-  {
-    id: '1',
-    questionText: 'What is the derivative of x²?',
-    options: [
-      { id: 'a', text: 'x', explanation: 'Incorrect. The derivative of x² is 2x, not x.' },
-      { id: 'b', text: '2x', explanation: 'Correct! Using the power rule, d/dx(x²) = 2x.' },
-      { id: 'c', text: 'x²', explanation: 'Incorrect. This is the original function, not its derivative.' },
-      { id: 'd', text: '2', explanation: 'Incorrect. This would be the derivative of 2x, not x².' }
-    ],
-    correctAnswer: 'b'
-  },
-  {
-    id: '2',
-    questionText: 'What is the integral of 2x?',
-    options: [
-      { id: 'a', text: 'x² + C', explanation: 'Correct! The integral of 2x is x² + C.' },
-      { id: 'b', text: '2x² + C', explanation: 'Incorrect. This would be the integral of 4x.' },
-      { id: 'c', text: 'x + C', explanation: 'Incorrect. This would be the integral of 1.' },
-      { id: 'd', text: '2 + C', explanation: 'Incorrect. This would be the integral of a constant.' }
-    ],
-    correctAnswer: 'a'
-  }
-];
+const dummyQuiz: MCQQuizData = {
+  title: 'Calculus Practice Quiz',
+  questions: [
+    {
+      id: '1',
+      questionText: 'What is the derivative of x²?',
+      options: [
+        { id: 'a', text: 'x', explanation: 'Incorrect. The derivative of x² is 2x, not x.' },
+        { id: 'b', text: '2x', explanation: 'Correct! Using the power rule, d/dx(x²) = 2x.' },
+        { id: 'c', text: 'x²', explanation: 'Incorrect. This is the original function, not its derivative.' },
+        { id: 'd', text: '2', explanation: 'Incorrect. This would be the derivative of 2x, not x².' }
+      ],
+      correctAnswer: 'b'
+    },
+    {
+      id: '2',
+      questionText: 'What is the integral of 2x?',
+      options: [
+        { id: 'a', text: 'x² + C', explanation: 'Correct! The integral of 2x is x² + C.' },
+        { id: 'b', text: '2x² + C', explanation: 'Incorrect. This would be the integral of 4x.' },
+        { id: 'c', text: 'x + C', explanation: 'Incorrect. This would be the integral of 1.' },
+        { id: 'd', text: '2 + C', explanation: 'Incorrect. This would be the integral of a constant.' }
+      ],
+      correctAnswer: 'a'
+    }
+  ]
+};
 
 export default function PracticeMaterialPage() {
   const handleGenerate = (formData: unknown) => {
@@ -44,8 +47,8 @@ export default function PracticeMaterialPage() {
         <div className="w-full md:w-[70%] space-y-6">
           <h2 className="text-2xl font-semibold">Practice Questions</h2>
           <MCQQuiz
-            title="Calculus Practice Quiz"
-            questions={dummyMCQs}
+            title={dummyQuiz.title}
+            questions={dummyQuiz.questions}
           />
         </div>
       </div>
