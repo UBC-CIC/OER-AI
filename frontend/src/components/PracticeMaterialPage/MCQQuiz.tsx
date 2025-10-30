@@ -131,14 +131,14 @@ export function MCQQuiz({ title, questions }: MCQQuizProps) {
               <Button
                 onClick={handleSubmitAll}
                 disabled={!hasAnsweredAll}
-                className="w-fit"
+                className="w-fit cursor-pointer disabled:cursor-not-allowed"
               >
                 Submit All Answers
               </Button>
             ) : (
               <Button
                 onClick={handleResetAll}
-                className="w-fit"
+                className="w-fit cursor-pointer"
                 variant="outline"
               >
                 Reset All & Retry
