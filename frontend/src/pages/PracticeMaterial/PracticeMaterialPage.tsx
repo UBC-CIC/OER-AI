@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { GenerateForm } from '@/components/PracticeMaterialPage/GenerateForm';
 import { MCQQuiz } from '@/components/PracticeMaterialPage/MCQQuiz';
 import type { MCQQuizData } from '@/types/PracticeMaterial';
@@ -32,8 +33,14 @@ const dummyQuiz: MCQQuizData = {
 };
 
 export default function PracticeMaterialPage() {
+  const [quizzes, setQuizzes] = useState<MCQQuizData[]>([dummyQuiz]);
+
   const handleGenerate = (formData: unknown) => {
     console.log('Generate form data:', formData);
+  };
+
+  const handleDeleteQuiz = (index: number) => {
+    setQuizzes((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -46,10 +53,14 @@ export default function PracticeMaterialPage() {
 
         <div className="w-full md:w-[70%] space-y-6">
           <h2 className="text-2xl font-semibold">Practice Questions</h2>
-          <MCQQuiz
-            title={dummyQuiz.title}
-            questions={dummyQuiz.questions}
-          />
+          {quizzes.map((quiz, index) => (
+            <MCQQuiz
+              key={index}
+              title={quiz.title}
+              questions={quiz.questions}
+              onDelete={() => handleDeleteQuiz(index)}
+            />
+          ))}
         </div>
       </div>
     </div>

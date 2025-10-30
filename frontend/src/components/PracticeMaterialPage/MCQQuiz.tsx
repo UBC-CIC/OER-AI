@@ -3,14 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MCQQuestionComponent } from "./MCQComponent";
 import type { MCQQuestion, QuestionAnswer } from "@/types/PracticeMaterial";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 
 interface MCQQuizProps {
   title: string;
   questions: MCQQuestion[];
+  onDelete?: () => void;
 }
 
-export function MCQQuiz({ title, questions }: MCQQuizProps) {
+export function MCQQuiz({ title, questions, onDelete }: MCQQuizProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [answers, setAnswers] = useState<QuestionAnswer[]>(
     questions.map((q) => ({
@@ -94,16 +95,31 @@ export function MCQQuiz({ title, questions }: MCQQuizProps) {
 
   return (
     <Card className="w-full">
-      <CardHeader
-        className="cursor-pointer hover:bg-muted/50 transition-colors"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
+      <CardHeader className="gap-0">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xl font-semibold">{title}</CardTitle>
-          {isExpanded ? (
-            <ChevronUp className="w-5 h-5 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          <div 
+            className="flex items-center gap-2 flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            {isExpanded ? (
+              <ChevronUp className="w-5 h-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+            )}
+            <CardTitle className="text-xl font-semibold">{title}</CardTitle>
+          </div>
+          {onDelete && (
+            <Button
+              variant="link"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="cursor-pointer h-8 w-8 text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           )}
         </div>
       </CardHeader>
