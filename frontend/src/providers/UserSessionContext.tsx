@@ -1,16 +1,7 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { UserSessionContext } from "./usersession";
 
-interface UserSessionContextType {
-  userSessionId: string | null;
-  sessionUuid?: string | null;
-  isLoading: boolean;
-  error: Error | null;
-}
-
-const UserSessionContext = createContext<UserSessionContextType | undefined>(
-  undefined
-);
 
 export function UserSessionProvider({ children }: { children: ReactNode }) {
   const [userSessionId, setUserSessionId] = useState<string | null>(null);
@@ -48,6 +39,7 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
 
         return validateResp.ok;
       } catch (e) {
+        console.error("Error validating user session:", e);
         return false;
       }
     };
@@ -84,7 +76,9 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
         };
         try {
           localStorage.setItem(LOCAL_KEY, JSON.stringify(payload));
-        } catch {}
+        } catch {
+          console.warn("Failed to store user session in localStorage");
+        }
 
         setSessionUuid(payload.sessionUuid);
         setUserSessionId(payload.userSessionId);
@@ -127,6 +121,7 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
               }
             }
           } catch (e) {
+            console.error("Error parsing stored user session:", e);
             // parsing error — treat as missing
           }
         }
@@ -153,10 +148,4 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useUserSession() {
-  const context = useContext(UserSessionContext);
-  if (context === undefined) {
-    throw new Error("useUserSession must be used within a UserSessionProvider");
-  }
-  return context;
-}
+
