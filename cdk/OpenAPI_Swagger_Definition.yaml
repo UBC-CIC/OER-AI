@@ -3458,6 +3458,13 @@ paths:
             type: integer
             minimum: 0
             default: 0
+        - name: role
+          in: query
+          description: Filter prompts by the role of the user session that created them (student or instructor)
+          required: false
+          schema:
+            type: string
+            enum: ["student", "instructor"]
       responses:
         "200":
           description: List of shared user prompts for textbook
@@ -3490,6 +3497,10 @@ paths:
                         visibility:
                           type: string
                           enum: ["private", "org", "public"]
+                        role:
+                          type: string
+                          enum: ["student", "instructor"]
+                          description: Role of the user session that created this prompt
                         tags:
                           type: array
                           items:
@@ -3669,6 +3680,10 @@ paths:
                   visibility:
                     type: string
                     enum: ["private", "org", "public"]
+                  role:
+                    type: string
+                    enum: ["student", "instructor"]
+                    description: Role of the user session that created this prompt
                   tags:
                     type: array
                     items:
@@ -3756,6 +3771,10 @@ paths:
                   visibility:
                     type: string
                     enum: ["private", "org", "public"]
+                  role:
+                    type: string
+                    enum: ["student", "instructor"]
+                    description: Role of the user session that created this prompt
                   tags:
                     type: array
                     items:

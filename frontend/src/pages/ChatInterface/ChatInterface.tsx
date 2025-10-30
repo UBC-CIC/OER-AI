@@ -168,7 +168,6 @@ export default function AIChatPage() {
   useEffect(() => {
     const fetchSharedPrompts = async () => {
       if (!navTextbook?.id) return; // Need textbook_id
-      
       try {
         // Acquire public token
         const tokenResponse = await fetch(
@@ -177,8 +176,9 @@ export default function AIChatPage() {
         if (!tokenResponse.ok) throw new Error("Failed to get public token");
         const { token } = await tokenResponse.json();
 
+        // Pass role as query param to backend
         const response = await fetch(
-          `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${navTextbook.id}/shared_prompts`,
+          `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${navTextbook.id}/shared_prompts?role=${mode}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -187,13 +187,7 @@ export default function AIChatPage() {
         );
         const data = await response.json();
         const allSharedPrompts = data.prompts || [];
-        
-        // Filter by current mode/role
-        const filteredPrompts = allSharedPrompts.filter(
-          (prompt: any) => prompt.role === mode
-        );
-        
-        setSharedPrompts(filteredPrompts);
+        setSharedPrompts(allSharedPrompts);
       } catch (error) {
         console.error("Error fetching shared prompts:", error);
         setSharedPrompts([]);

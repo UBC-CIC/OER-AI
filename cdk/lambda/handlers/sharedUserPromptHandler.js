@@ -66,30 +66,40 @@ exports.handler = async (event) => {
     const pathData = event.httpMethod + " " + event.resource;
     
     switch (pathData) {
-      case "GET /textbooks/{textbook_id}/shared_prompts":
+      case "GET /textbooks/{textbook_id}/shared_prompts": {
         const sharedTextbookId = event.pathParameters?.textbook_id;
         if (!sharedTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
           break;
         }
-        
+
         const limit = Math.min(parseInt(event.queryStringParameters?.limit) || 20, 100);
         const offset = parseInt(event.queryStringParameters?.offset) || 0;
-        
+        const role = event.queryStringParameters?.role;
+
+        // Build dynamic WHERE clause
+        let whereClause = sqlConnection`sup.textbook_id = ${sharedTextbookId}`;
+        if (role) {
+          whereClause = sqlConnection`sup.textbook_id = ${sharedTextbookId} AND us.role = ${role}`;
+        }
+
         const result = await sqlConnection`
           SELECT 
-            id, title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, created_at, updated_at, metadata,
+            sup.id, sup.title, sup.prompt_text, sup.owner_session_id, sup.owner_user_id, 
+            sup.textbook_id, sup.visibility, sup.tags, sup.created_at, sup.updated_at, sup.metadata,
+            us.role,
             COUNT(*) OVER() as total_count
-          FROM shared_user_prompts
-          WHERE textbook_id = ${sharedTextbookId}
-          ORDER BY created_at DESC
+          FROM shared_user_prompts sup
+          LEFT JOIN user_sessions us ON us.id = sup.owner_session_id
+          WHERE ${whereClause}
+          ORDER BY sup.created_at DESC
           LIMIT ${limit} OFFSET ${offset}
         `;
-        
+
         const total = result.length > 0 ? parseInt(result[0].total_count) : 0;
-        const prompts = result.map(({total_count, ...prompt}) => prompt);
-        
+        const prompts = result.map(({ total_count, ...prompt }) => prompt);
+
         data = {
           prompts,
           pagination: {
@@ -101,6 +111,7 @@ exports.handler = async (event) => {
         };
         response.body = JSON.stringify(data);
         break;
+      }
         
       case "POST /textbooks/{textbook_id}/shared_prompts":
         const postSharedTextbookId = event.pathParameters?.textbook_id;
@@ -139,9 +150,13 @@ exports.handler = async (event) => {
         }
         
         const prompt = await sqlConnection`
-          SELECT id, title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, created_at, updated_at, metadata
-          FROM shared_user_prompts
-          WHERE id = ${promptId}
+          SELECT 
+            sup.id, sup.title, sup.prompt_text, sup.owner_session_id, sup.owner_user_id, 
+            sup.textbook_id, sup.visibility, sup.tags, sup.created_at, sup.updated_at, sup.metadata,
+            us.role
+          FROM shared_user_prompts sup
+          LEFT JOIN user_sessions us ON us.id = sup.owner_session_id
+          WHERE sup.id = ${promptId}
         `;
         
         if (prompt.length === 0) {
@@ -170,7 +185,7 @@ exports.handler = async (event) => {
           SET title = ${updateTitle}, prompt_text = ${updatePromptText}, visibility = ${updateVisibility}, 
               tags = ${updateTags}, metadata = ${updateMetadata || {}}, updated_at = NOW()
           WHERE id = ${updatePromptId}
-          RETURNING id, title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, created_at, updated_at, metadata
+          RETURNING id
         `;
         
         if (updated.length === 0) {
@@ -178,8 +193,19 @@ exports.handler = async (event) => {
           response.body = JSON.stringify({ error: "Prompt not found" });
           break;
         }
+
+        // Fetch the updated prompt with role via JOIN
+        const updatedWithRole = await sqlConnection`
+          SELECT 
+            sup.id, sup.title, sup.prompt_text, sup.owner_session_id, sup.owner_user_id, 
+            sup.textbook_id, sup.visibility, sup.tags, sup.created_at, sup.updated_at, sup.metadata,
+            us.role
+          FROM shared_user_prompts sup
+          LEFT JOIN user_sessions us ON us.id = sup.owner_session_id
+          WHERE sup.id = ${updatePromptId}
+        `;
         
-        data = updated[0];
+        data = updatedWithRole[0];
         response.body = JSON.stringify(data);
         break;
         
