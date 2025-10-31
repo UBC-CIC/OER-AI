@@ -48,7 +48,9 @@ export class ApiGatewayStack extends cdk.Stack {
     (this.layerList[name] = layer);
   public getLayers = () => this.layerList;
   private readonly webSocketApi?: apigatewayv2.WebSocketApi;
+  private readonly wsStage?: apigatewayv2.CfnStage;
   public getWebSocketUrl = () => this.webSocketApi?.apiEndpoint ?? "";
+  public getStageName = () => this.wsStage?.stageName ?? "";
 
   constructor(
     scope: Construct,
@@ -1190,6 +1192,7 @@ export class ApiGatewayStack extends cdk.Stack {
 
     // Connect Lambda
     const connectFunction = new lambda.Function(this, `${id}-ConnectFunction`, {
+      functionName: `${id}-ConnectFunction`,
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: "connect.handler",
       code: lambda.Code.fromAsset("lambda/websocket"),
@@ -1201,6 +1204,7 @@ export class ApiGatewayStack extends cdk.Stack {
       this,
       `${id}-DisconnectFunction`,
       {
+        functionName: `${id}-DisconnectFunction`,
         runtime: lambda.Runtime.NODEJS_20_X,
         handler: "disconnect.handler",
         code: lambda.Code.fromAsset("lambda/websocket"),
@@ -1217,6 +1221,7 @@ export class ApiGatewayStack extends cdk.Stack {
       environment: {
         TEXT_GEN_FUNCTION_NAME: textGenLambdaDockerFunc.functionName,
       },
+      functionName: `${id}-DefaultFunction`,
     });
 
     // Grant permissions to post to connections
@@ -1263,17 +1268,38 @@ export class ApiGatewayStack extends cdk.Stack {
       ),
     });
 
-    // Stage
-    const wsStage = new apigatewayv2.WebSocketStage(this, `${id}-ProdStage`, {
-      webSocketApi: this.webSocketApi,
+    // Create CloudWatch Log Group for WebSocket access logs
+    const wsAccessLogGroup = new logs.LogGroup(
+      this,
+      `${id}-WebSocketAccessLogs`,
+      {
+        retention: logs.RetentionDays.ONE_WEEK,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }
+    );
+
+    // Stage (using CfnStage to enable access log settings for WebSocket API)
+    this.wsStage = new apigatewayv2.CfnStage(this, `${id}-ProdCfnStage`, {
+      apiId: this.webSocketApi?.apiId,
       stageName: "prod",
       autoDeploy: true,
+      accessLogSettings: {
+        destinationArn: wsAccessLogGroup.logGroupArn,
+        format: JSON.stringify({
+          requestId: "$context.requestId",
+          requestTime: "$context.requestTime",
+          routeKey: "$context.routeKey",
+          connectionId: "$context.connectionId",
+          message: "$context.message",
+          status: "$context.status",
+        }),
+      },
     });
 
-    // Add environment variable to text generation function
+    // Add environment variable to text generation function (include stage name)
     textGenLambdaDockerFunc.addEnvironment(
       "WEBSOCKET_API_ENDPOINT",
-      this.webSocketApi.apiEndpoint
+      `${this.webSocketApi.apiEndpoint}/${this.wsStage.stageName}`
     );
 
     // Add WebSocket URL as stack output

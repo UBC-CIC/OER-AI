@@ -1,6 +1,6 @@
-const AWS = require("aws-sdk");
+const { LambdaClient, InvokeCommand } = require("@aws-sdk/client-lambda");
 
-const lambda = new AWS.Lambda();
+const lambda = new LambdaClient({});
 
 exports.handler = async (event) => {
   console.log("WebSocket message received:", {
@@ -36,13 +36,13 @@ exports.handler = async (event) => {
         textGenPayload
       );
 
-      const result = await lambda
-        .invoke({
+      const result = await lambda.send(
+        new InvokeCommand({
           FunctionName: process.env.TEXT_GEN_FUNCTION_NAME,
           InvocationType: "Event", // Asynchronous invocation
           Payload: JSON.stringify(textGenPayload),
         })
-        .promise();
+      );
 
       console.log("Text generation function invoked successfully:", result);
 

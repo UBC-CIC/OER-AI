@@ -311,14 +311,16 @@ def handler(event, context):
             if is_websocket:
                 # For WebSocket, use streaming response
                 connection_id = event['requestContext']['connectionId']
-                
+                domain_name = event['requestContext']['domainName']
+                stage = event['requestContext']['stage']
+                websocket_endpoint = f"https://{domain_name}/{stage}"
                 response_data = process_query_streaming(
                     query=question,
                     textbook_id=textbook_id,
                     retriever=retriever,
                     connection=connection,
                     chat_session_id=chat_session_id,
-                    websocket_endpoint=WEBSOCKET_API_ENDPOINT,
+                    websocket_endpoint=websocket_endpoint,
                     connection_id=connection_id
                 )
             else:
