@@ -101,7 +101,7 @@ export default function StudentSideBar({
         className={`md:hidden pt-[10px] fixed inset-0 z-40 transition-opacity ${
           mobileOpen ? "visible" : "pointer-events-none invisible"
         }`}
-        aria-hidden={!mobileOpen}
+        inert={!mobileOpen ? true : undefined}
       >
         {/*mobile backdrop */}
         <div
