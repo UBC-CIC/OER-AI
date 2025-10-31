@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import PromptLibraryModal from "@/components/ChatInterface/PromptLibraryModal";
 import { useTextbookView } from "@/providers/textbookView";
 import { AiChatInput } from "@/components/ChatInterface/userInput";
-import type { PromptTemplate } from "@/types/Chat";
+import type { PromptTemplate, SharedUserPrompt } from "@/types/Chat";
 import { useUserSession } from "@/providers/usersession";
+import { useMode } from "@/providers/mode";
 
 type Message = {
   id: string;
@@ -37,6 +38,7 @@ export default function AIChatPage() {
     isLoadingChatSessions 
   } = useTextbookView();
   const { sessionUuid } = useUserSession();
+  const { mode } = useMode();
 
   const textbookTitle = textbook?.title ?? "Calculus: Volume 3";
 
@@ -176,7 +178,7 @@ export default function AIChatPage() {
   // Fetch shared prompts from API filtered by current mode
   useEffect(() => {
     const fetchSharedPrompts = async () => {
-      if (!navTextbook?.id) return; // Need textbook_id
+      if (!textbook?.id) return; // Need textbook_id
       try {
         // Acquire public token
         const tokenResponse = await fetch(
@@ -187,7 +189,7 @@ export default function AIChatPage() {
 
         // Pass role as query param to backend
         const response = await fetch(
-          `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${navTextbook.id}/shared_prompts?role=${mode}`,
+          `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${textbook.id}/shared_prompts?role=${mode}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -204,7 +206,7 @@ export default function AIChatPage() {
     };
 
     fetchSharedPrompts();
-  }, [navTextbook?.id, mode]); // Re-fetch when textbook id or mode changes
+  }, [textbook?.id, mode]); // Re-fetch when textbook id or mode changes
 
   async function sendMessage() {
     const text = message.trim();
@@ -391,6 +393,7 @@ export default function AIChatPage() {
           open={showLibrary}
           onOpenChange={setShowLibrary}
           prompts={prompts}
+          sharedPrompts={sharedPrompts}
           onSelectPrompt={(msg) => {
             setMessage(msg);
           }}
