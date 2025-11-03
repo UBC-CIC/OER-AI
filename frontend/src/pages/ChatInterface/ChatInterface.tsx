@@ -5,14 +5,11 @@ import AIChatMessage from "@/components/ChatInterface/AIChatMessage";
 import UserChatMessage from "@/components/ChatInterface/UserChatMessage";
 import { Button } from "@/components/ui/button";
 import PromptLibraryModal from "@/components/ChatInterface/PromptLibraryModal";
-import Header from "@/components/Header";
-import StudentSideBar from "@/components/ChatInterface/StudentSideBar";
-import { SidebarProvider } from "@/providers/SidebarContext";
-import { useLocation, useNavigate } from "react-router";
-import { useUserSession } from "@/contexts/UserSessionContext";
+import { useTextbookView } from "@/providers/textbookView";
 import { AiChatInput } from "@/components/ChatInterface/userInput";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import type { PromptTemplate } from "@/types/Chat";
+import { useUserSession } from "@/providers/usersession";
 
 type Message = {
   id: string;
@@ -30,23 +27,44 @@ export default function AIChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [seeMore, setSeeMore] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
+
+  const {
+    textbook,
+    activeChatSessionId,
+    chatSessions,
+    createNewChatSession,
+    isLoadingChatSessions,
+  } = useTextbookView();
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
     null
   );
 
-  // Hooks and location state
-  const location = useLocation();
-  const navigate = useNavigate();
   const { sessionUuid } = useUserSession();
 
-  const navTextbook = location.state?.textbook;
-  const chatSessionId = location.state?.chatSessionId;
-  const textbookTitle = navTextbook?.title ?? "Calculus: Volume 3";
-  const textbookAuthor = navTextbook?.author
-    ? navTextbook.author.join(", ")
-    : "OpenStax";
+  const textbookTitle = textbook?.title ?? "Calculus: Volume 3";
+
+  // Initialize chat session if needed
+  useEffect(() => {
+    const initializeChatSession = async () => {
+      // Wait for chat sessions to load
+      if (isLoadingChatSessions) return;
+
+      // If no active chat session and no existing sessions, create one
+      if (!activeChatSessionId && chatSessions.length === 0) {
+        console.log("No chat sessions found, creating new one");
+        await createNewChatSession();
+      }
+    };
+
+    initializeChatSession();
+  }, [
+    activeChatSessionId,
+    chatSessions.length,
+    isLoadingChatSessions,
+    createNewChatSession,
+  ]);
 
   // WebSocket configuration
   const webSocketUrl = useMemo(() => import.meta.env.VITE_WEBSOCKET_URL, []);
@@ -126,8 +144,7 @@ export default function AIChatPage() {
 
   // Load chat history and redirect if no chat session ID
   useEffect(() => {
-    if (!chatSessionId) {
-      navigate("/");
+    if (!activeChatSessionId) {
       return;
     }
 
@@ -145,7 +162,7 @@ export default function AIChatPage() {
         const response = await fetch(
           `${
             import.meta.env.VITE_API_ENDPOINT
-          }/user_sessions/${sessionUuid}/chat_sessions/${chatSessionId}/interactions`,
+          }/user_sessions/${sessionUuid}/chat_sessions/${activeChatSessionId}/interactions`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -207,7 +224,7 @@ export default function AIChatPage() {
     };
 
     loadChatHistory();
-  }, [chatSessionId, navigate, sessionUuid]);
+  }, [activeChatSessionId, sessionUuid]);
 
   // Fetch prompt templates from API
   useEffect(() => {
@@ -230,121 +247,10 @@ export default function AIChatPage() {
         );
         const data = await response.json();
         const templates = data.templates || [];
-        setPrompts(
-          templates.length > 0
-            ? templates
-            : [
-                {
-                  id: "1",
-                  name: "Summarize a Chapter",
-                  description:
-                    "Provide a concise summary of a specific chapter",
-                  type: "RAG",
-                  visibility: "public",
-                  created_at: "",
-                },
-                {
-                  id: "2",
-                  name: "Define and explain a term",
-                  description:
-                    "Give a clear definition and explanation of a concept or term",
-                  type: "RAG",
-                  visibility: "public",
-                  created_at: "",
-                },
-                {
-                  id: "3",
-                  name: "Generate an example problem",
-                  description:
-                    "Create a practice problem with step-by-step solution",
-                  type: "RAG",
-                  visibility: "public",
-                  created_at: "",
-                },
-                {
-                  id: "4",
-                  name: "Explain a concept in simple terms",
-                  description:
-                    "Break down complex concepts into easy-to-understand language",
-                  type: "RAG",
-                  visibility: "public",
-                  created_at: "",
-                },
-                {
-                  id: "5",
-                  name: "Create practice questions",
-                  description: "Generate quiz questions to test understanding",
-                  type: "RAG",
-                  visibility: "public",
-                  created_at: "",
-                },
-                {
-                  id: "6",
-                  name: "Compare and contrast topics",
-                  description:
-                    "Analyze similarities and differences between related concepts",
-                  type: "RAG",
-                  visibility: "public",
-                  created_at: "",
-                },
-              ]
-        );
+        setPrompts(templates);
       } catch (error) {
         console.error("Error fetching prompt templates:", error);
-        // Fallback to default prompts
-        setPrompts([
-          {
-            id: "1",
-            name: "Summarize a Chapter",
-            description: "Provide a concise summary of a specific chapter",
-            type: "RAG",
-            visibility: "public",
-            created_at: "",
-          },
-          {
-            id: "2",
-            name: "Define and explain a term",
-            description:
-              "Give a clear definition and explanation of a concept or term",
-            type: "RAG",
-            visibility: "public",
-            created_at: "",
-          },
-          {
-            id: "3",
-            name: "Generate an example problem",
-            description: "Create a practice problem with step-by-step solution",
-            type: "RAG",
-            visibility: "public",
-            created_at: "",
-          },
-          {
-            id: "4",
-            name: "Explain a concept in simple terms",
-            description:
-              "Break down complex concepts into easy-to-understand language",
-            type: "RAG",
-            visibility: "public",
-            created_at: "",
-          },
-          {
-            id: "5",
-            name: "Create practice questions",
-            description: "Generate quiz questions to test understanding",
-            type: "RAG",
-            visibility: "public",
-            created_at: "",
-          },
-          {
-            id: "6",
-            name: "Compare and contrast topics",
-            description:
-              "Analyze similarities and differences between related concepts",
-            type: "RAG",
-            visibility: "public",
-            created_at: "",
-          },
-        ]);
+        setPrompts([]);
       } finally {
         setLoading(false);
       }
@@ -355,7 +261,7 @@ export default function AIChatPage() {
 
   async function sendMessage() {
     const text = message.trim();
-    if (!text || !chatSessionId) return;
+    if (!text || !activeChatSessionId || !textbook) return;
 
     const userMsg: Message = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -383,15 +289,15 @@ export default function AIChatPage() {
     if (isConnected && webSocketUrl) {
       console.log("[WebSocket] Sending message via WebSocket:", {
         action: "generate_text",
-        textbook_id: navTextbook.id,
+        textbook_id: textbook.id,
         query: text,
-        chat_session_id: chatSessionId,
+        chat_session_id: activeChatSessionId,
       });
       const success = sendWebSocketMessage({
         action: "generate_text",
-        textbook_id: navTextbook.id,
+        textbook_id: textbook.id,
         query: text,
-        chat_session_id: chatSessionId,
+        chat_session_id: activeChatSessionId,
       });
 
       if (success) {
@@ -421,7 +327,7 @@ export default function AIChatPage() {
       const response = await fetch(
         `${
           import.meta.env.VITE_API_ENDPOINT
-        }/chat_sessions/${chatSessionId}/text_generation`,
+        }/chat_sessions/${activeChatSessionId}/text_generation`,
         {
           method: "POST",
           headers: {
@@ -429,7 +335,7 @@ export default function AIChatPage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            textbook_id: navTextbook.id,
+            textbook_id: textbook.id,
             query: text,
           }),
         }
@@ -487,132 +393,124 @@ export default function AIChatPage() {
   }
 
   return (
-    <SidebarProvider>
-      <div className="flex flex-col min-h-screen bg-background">
-        <Header />
-        <div className="pt-[70px] flex-1 flex">
-          <StudentSideBar
-            textbookTitle={textbookTitle}
-            textbookAuthor={textbookAuthor}
-          />
-
-          <main
-            className={`md:ml-64 flex flex-col flex-1 items-center justify-center max-w-screen`}
-          >
-            <div
-              className={`flex flex-col w-full max-w-2xl 2xl:max-w-3xl px-4 py-4 ${
-                messages.length === 0
-                  ? "justify-center"
-                  : "justify-between min-h-[90vh]"
-              }`}
-            >
-              {/* top section */}
-              <div>
-                {messages.length === 0 ? (
-                  <>
-                    {/* Hero title */}
-                    <h1 className="text-4xl font-bold text-center mb-12 leading-tight max-w-full break-words">
-                      What can I help with?
-                    </h1>
-                  </>
+    <div className="w-full max-w-2xl 2xl:max-w-3xl px-4 py-4">
+      <div
+        className={`flex flex-col w-full ${
+          messages.length === 0
+            ? "justify-center"
+            : "justify-between min-h-[90vh]"
+        }`}
+      >
+        <div
+          className={`flex flex-col w-full max-w-2xl 2xl:max-w-3xl px-4 py-4 ${
+            messages.length === 0
+              ? "justify-center"
+              : "justify-between min-h-[90vh]"
+          }`}
+        >
+          {/* top section */}
+          <div>
+            {messages.length === 0 ? (
+              <>
+                {/* Hero title */}
+                <h1 className="text-4xl font-bold text-center mb-12 leading-tight max-w-full break-words">
+                  What can I help with?
+                </h1>
+              </>
+            ) : (
+              /* messages area */
+              <div className="flex flex-col gap-4 mb-6">
+                {isLoadingHistory ? (
+                  <div className="flex items-center justify-center py-8">
+                    <p className="text-muted-foreground">
+                      Loading chat history...
+                    </p>
+                  </div>
                 ) : (
-                  /* messages area */
-                  <div className="flex flex-col gap-4 mb-6">
-                    {isLoadingHistory ? (
-                      <div className="flex items-center justify-center py-8">
-                        <p className="text-muted-foreground">
-                          Loading chat history...
-                        </p>
-                      </div>
-                    ) : (
-                      messages.map((m) => messageFormatter(m))
-                    )}
-                  </div>
+                  messages.map((m) => messageFormatter(m))
                 )}
               </div>
+            )}
+          </div>
 
-              {/* thebottom section */}
-              <div>
-                {/* Input Area */}
-                <div className="relative mb-6">
-                  <AiChatInput
-                    value={message}
-                    onChange={(val: string) => setMessage(val)}
-                    placeholder={`Ask anything about ${textbookTitle}`}
-                    onSend={sendMessage}
-                  />
-                  {/* Connection Status Indicator (for debugging) */}
-                  {import.meta.env.DEV && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      WebSocket: {connectionState} {isConnected && "🟢"}{" "}
-                      {connectionState === "connecting" && "🟡"}{" "}
-                      {connectionState === "disconnected" && "🔴"}
-                    </div>
-                  )}
+          {/* thebottom section */}
+          <div>
+            {/* Input Area */}
+            <div className="relative mb-6">
+              <AiChatInput
+                value={message}
+                onChange={(val: string) => setMessage(val)}
+                placeholder={`Ask anything about ${textbookTitle}`}
+                onSend={sendMessage}
+              />
+              {/* Connection Status Indicator (for debugging) */}
+              {import.meta.env.DEV && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  WebSocket: {connectionState} {isConnected && "🟢"}{" "}
+                  {connectionState === "connecting" && "🟡"}{" "}
+                  {connectionState === "disconnected" && "🔴"}
                 </div>
-
-                {/* Prompt Suggestions */}
-                {(messages.length === 0 || seeMore) && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-                    {loading ? (
-                      <div className="col-span-full text-center py-4">
-                        <p className="text-muted-foreground">
-                          Loading prompts...
-                        </p>
-                      </div>
-                    ) : (
-                      prompts
-                        .slice(0, messages.length === 0 && !seeMore ? 3 : 12)
-                        .map((prompt, index) => (
-                          <PromptCard
-                            key={prompt.id || index}
-                            name={prompt.name}
-                            onClick={() => {
-                              setMessage(prompt.description || prompt.name);
-                            }}
-                          />
-                        ))
-                    )}
-                  </div>
-                )}
-
-                {/* Prompt Options*/}
-                <div className="w-full gap-4 flex justify-end items-center">
-                  <Button
-                    onClick={() => setShowLibrary(true)}
-                    variant={"link"}
-                    className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Prompt Library
-                    <LibraryBig className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    onClick={() => setSeeMore(!seeMore)}
-                    variant={"link"}
-                    className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {seeMore ? "Show less" : "See more prompts"}
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform ${
-                        seeMore ? "rotate-180" : ""
-                      }`}
-                    />
-                  </Button>
-                </div>
-              </div>
+              )}
             </div>
-            {/* Prompt Library Modal */}
-            <PromptLibraryModal
-              open={showLibrary}
-              onOpenChange={setShowLibrary}
-              prompts={prompts}
-              onSelectPrompt={(msg) => {
-                setMessage(msg);
-              }}
-            />
-          </main>
+
+            {/* Prompt Suggestions */}
+            {(messages.length === 0 || seeMore) && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                {loading ? (
+                  <div className="col-span-full text-center py-4">
+                    <p className="text-muted-foreground">Loading prompts...</p>
+                  </div>
+                ) : (
+                  prompts
+                    .slice(0, messages.length === 0 && !seeMore ? 3 : 12)
+                    .map((prompt, index) => (
+                      <PromptCard
+                        key={prompt.id || index}
+                        name={prompt.name}
+                        onClick={() => {
+                          setMessage(prompt.description || prompt.name);
+                        }}
+                      />
+                    ))
+                )}
+              </div>
+            )}
+
+            {/* Prompt Options*/}
+            <div className="w-full gap-4 flex justify-end items-center">
+              <Button
+                onClick={() => setShowLibrary(true)}
+                variant={"link"}
+                className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Prompt Library
+                <LibraryBig className="h-4 w-4" />
+              </Button>
+              <Button
+                onClick={() => setSeeMore(!seeMore)}
+                variant={"link"}
+                className="cursor-pointer gap-2 text-sm font-normal text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {seeMore ? "Show less" : "See more prompts"}
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${
+                    seeMore ? "rotate-180" : ""
+                  }`}
+                />
+              </Button>
+            </div>
+          </div>
         </div>
+        {/* Prompt Library Modal */}
+        <PromptLibraryModal
+          open={showLibrary}
+          onOpenChange={setShowLibrary}
+          prompts={prompts}
+          onSelectPrompt={(msg) => {
+            setMessage(msg);
+          }}
+        />
       </div>
-    </SidebarProvider>
+    </div>
   );
 }

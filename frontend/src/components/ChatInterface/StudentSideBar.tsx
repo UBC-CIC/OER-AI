@@ -1,23 +1,32 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/providers/sidebar";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
+import {Separator } from "@/components/ui/separator";
 
 type StudentSideBarProps = {
   textbookTitle: string;
   textbookAuthor: string;
+  textbookId?: string;
 };
 
 export default function StudentSideBar({
   textbookTitle,
   textbookAuthor,
+  textbookId,
 }: StudentSideBarProps) {
   const { mobileOpen, setMobileOpen } = useSidebar();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const SidebarContent = () => (
     <>
-      <Card className="cursor-pointer py-[10px] hover:bg-gray-50 gap-2 mb-6" onClick={() => {navigate("/")}}>
+      <Card
+        className="cursor-pointer py-[10px] hover:bg-gray-50 gap-2 mb-4"
+        onClick={() => {
+          navigate("/");
+        }}
+      >
         <CardContent
           className="line-clamp-2 leading-[1.25] overflow-hidden"
           style={{ minHeight: `calc(1em * 1.25 * 2)` }}
@@ -30,24 +39,49 @@ export default function StudentSideBar({
       </Card>
 
       {/* Menu Items */}
-      <nav className="space-y-2 mb-6">
+      <nav className="space-y-2 mb-4">
         <Button
           variant={"link"}
-          className="cursor-pointer w-full justify-start px-3 py-2 text-sm text-muted-foreground hover:text-foreground rounded-md transition-colors"
+          className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
+            location.pathname === "/" 
+              ? "text-foreground font-medium" 
+              : "text-muted-foreground hover:text-foreground"
+          }`}
         >
           FAQ Cache
         </Button>
         <Button
           variant={"link"}
-          className="cursor-pointer w-full justify-start px-3 py-2 text-sm text-muted-foreground hover:text-foreground rounded-md transition-colors"
+          onClick={() => {
+            navigate(`/textbook/${textbookId}/practice`);
+            setMobileOpen(false);
+          }}
+          className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
+            location.pathname.includes('/practice')
+              ? "text-foreground font-medium" 
+              : "text-muted-foreground hover:text-foreground"
+          }`}
         >
           Practice Material
         </Button>
       </nav>
 
-      <div className="border-t border-gray-200 pt-4">
-        <h4 className="font-semibold text-sm px-3">Study Companion</h4>
-      </div>
+      <Separator className="mb-4"/>
+
+      <Button
+        variant={"link"}
+        onClick={() => {
+          navigate(`/textbook/${textbookId}/chat`);
+          setMobileOpen(false);
+        }}
+        className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
+          location.pathname.includes('/chat')
+            ? "text-foreground font-medium" 
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        Study Companion
+      </Button>
     </>
   );
 

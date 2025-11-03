@@ -3,21 +3,10 @@ import TextbookCard from "@/components/HomePage/TextbookCard";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { Textbook } from "@/types/Textbook";
 
 // Define a custom UUID type to avoid the crypto module import
 type UUID = string;
-
-type Textbook = {
-  id: string;
-  title: string;
-  authors: string[];
-  publisher?: string;
-  year?: number;
-  summary?: string;
-  language?: string;
-  level?: string;
-  created_at: string;
-};
 
 type TextbookForCard = {
   id: UUID;

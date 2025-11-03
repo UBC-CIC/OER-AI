@@ -101,8 +101,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "GET /textbooks/{id}":
-        const textbookId = event.pathParameters?.id;
+      case "GET /textbooks/{textbook_id}":
+        const textbookId = event.pathParameters?.textbook_id;
         if (!textbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
@@ -110,7 +110,7 @@ exports.handler = async (event) => {
         }
 
         const textbook = await sqlConnection`
-          SELECT id, title, authors, license, source_url, publisher, year, summary, language, level, created_at, updated_at, metadata
+          SELECT id, title, authors, license, source_url, publisher, publish_date, summary, language, level, created_at, updated_at, metadata
           FROM textbooks
           WHERE id = ${textbookId}
         `;
@@ -133,7 +133,7 @@ exports.handler = async (event) => {
           license: createLicense,
           source_url: createSourceUrl,
           publisher: createPublisher,
-          year: createYear,
+          publish_date: createPublishDate,
           summary: createSummary,
           language: createLanguage,
           level: createLevel,
@@ -148,15 +148,15 @@ exports.handler = async (event) => {
         }
 
         const newTextbook = await sqlConnection`
-          INSERT INTO textbooks (title, authors, license, source_url, publisher, year, summary, language, level, created_by, metadata)
+          INSERT INTO textbooks (title, authors, license, source_url, publisher, publish_date, summary, language, level, created_by, metadata)
           VALUES (${createTitle}, ${createAuthors || []}, ${
           createLicense || null
         }, ${createSourceUrl || null}, ${createPublisher || null}, ${
-          createYear || null
+          createPublishDate || null
         }, ${createSummary || null}, ${createLanguage || null}, ${
           createLevel || null
         }, ${createCreatedBy || null}, ${createMetadata || {}})
-          RETURNING id, title, authors, license, source_url, publisher, year, summary, language, level, created_at, updated_at, metadata
+          RETURNING id, title, authors, license, source_url, publisher, publish_date, summary, language, level, created_at, updated_at, metadata
         `;
 
         response.statusCode = 201;
@@ -164,8 +164,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "PUT /textbooks/{id}":
-        const updateId = event.pathParameters?.id;
+      case "PUT /textbooks/{textbook_id}":
+        const updateId = event.pathParameters?.textbook_id;
         if (!updateId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
@@ -179,7 +179,7 @@ exports.handler = async (event) => {
           license,
           source_url,
           publisher,
-          year,
+          publish_date,
           summary,
           language,
           level,
@@ -189,10 +189,10 @@ exports.handler = async (event) => {
         const updated = await sqlConnection`
           UPDATE textbooks 
           SET title = ${title}, authors = ${authors}, license = ${license}, source_url = ${source_url}, 
-              publisher = ${publisher}, year = ${year}, summary = ${summary}, language = ${language}, 
+              publisher = ${publisher}, publish_date = ${publish_date}, summary = ${summary}, language = ${language}, 
               level = ${level}, metadata = ${metadata || {}}, updated_at = NOW()
           WHERE id = ${updateId}
-          RETURNING id, title, authors, license, source_url, publisher, year, summary, language, level, created_at, updated_at, metadata
+          RETURNING id, title, authors, license, source_url, publisher, publish_date, summary, language, level, created_at, updated_at, metadata
         `;
 
         if (updated.length === 0) {
@@ -205,8 +205,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "DELETE /textbooks/{id}":
-        const deleteId = event.pathParameters?.id;
+      case "DELETE /textbooks/{textbook_id}":
+        const deleteId = event.pathParameters?.textbook_id;
         if (!deleteId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });

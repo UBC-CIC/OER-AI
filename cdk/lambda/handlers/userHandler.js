@@ -283,8 +283,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "GET /interactions/{id}":
-        const interactionId = event.pathParameters?.id;
+      case "GET /interactions/{interaction_id}":
+        const interactionId = event.pathParameters?.interaction_id;
         if (!interactionId) {
           response.statusCode = 400;
           response.body = JSON.stringify({
@@ -312,8 +312,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "PUT /interactions/{id}":
-        const updateInteractionId = event.pathParameters?.id;
+      case "PUT /interactions/{interaction_id}":
+        const updateInteractionId = event.pathParameters?.interaction_id;
         if (!updateInteractionId) {
           response.statusCode = 400;
           response.body = JSON.stringify({
@@ -352,8 +352,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "DELETE /interactions/{id}":
-        const deleteInteractionId = event.pathParameters?.id;
+      case "DELETE /interactions/{interaction_id}":
+        const deleteInteractionId = event.pathParameters?.interaction_id;
         if (!deleteInteractionId) {
           response.statusCode = 400;
           response.body = JSON.stringify({
@@ -473,8 +473,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "GET /analytics/{id}":
-        const analyticsId = event.pathParameters?.id;
+      case "GET /analytics/{analytics_id}":
+        const analyticsId = event.pathParameters?.analytics_id;
         if (!analyticsId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Analytics ID is required" });
@@ -499,8 +499,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "PUT /analytics/{id}":
-        const updateAnalyticsId = event.pathParameters?.id;
+      case "PUT /analytics/{analytics_id}":
+        const updateAnalyticsId = event.pathParameters?.analytics_id;
         if (!updateAnalyticsId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Analytics ID is required" });
@@ -532,8 +532,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
 
-      case "DELETE /analytics/{id}":
-        const deleteAnalyticsId = event.pathParameters?.id;
+      case "DELETE /analytics/{analytics_id}":
+        const deleteAnalyticsId = event.pathParameters?.analytics_id;
         if (!deleteAnalyticsId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Analytics ID is required" });
