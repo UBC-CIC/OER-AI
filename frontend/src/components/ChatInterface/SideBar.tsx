@@ -2,7 +2,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/providers/sidebar";
 import { useNavigate, useLocation } from "react-router";
-import {Separator } from "@/components/ui/separator";
+import { Separator } from "@/components/ui/separator";
+import { useMode } from "@/providers/mode";
 
 type StudentSideBarProps = {
   textbookTitle: string;
@@ -10,7 +11,7 @@ type StudentSideBarProps = {
   textbookId?: string;
 };
 
-export default function StudentSideBar({
+export default function SideBar({
   textbookTitle,
   textbookAuthor,
   textbookId,
@@ -18,6 +19,7 @@ export default function StudentSideBar({
   const { mobileOpen, setMobileOpen } = useSidebar();
   const navigate = useNavigate();
   const location = useLocation();
+  const { mode } = useMode();
 
   const SidebarContent = () => (
     <>
@@ -39,34 +41,60 @@ export default function StudentSideBar({
       </Card>
 
       {/* Menu Items */}
-      <nav className="space-y-2 mb-4">
-        <Button
-          variant={"link"}
-          className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
-            location.pathname === "/" 
-              ? "text-foreground font-medium" 
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          FAQ Cache
-        </Button>
-        <Button
-          variant={"link"}
-          onClick={() => {
-            navigate(`/textbook/${textbookId}/practice`);
-            setMobileOpen(false);
-          }}
-          className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
-            location.pathname.includes('/practice')
-              ? "text-foreground font-medium" 
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Practice Material
-        </Button>
-      </nav>
 
-      <Separator className="mb-4"/>
+      {mode === "student" ? (
+        // student view content 
+        <nav className="space-y-2 mb-4">
+          <Button
+            variant={"link"}
+            className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
+              location.pathname === "/"
+                ? "text-foreground font-medium"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => {
+              navigate(`/textbook/${textbookId}/faq`);
+              setMobileOpen(false);
+            }}
+          >
+            FAQ Cache
+          </Button>
+          <Button
+            variant={"link"}
+            onClick={() => {
+              navigate(`/textbook/${textbookId}/practice`);
+              setMobileOpen(false);
+            }}
+            className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
+              location.pathname.includes("/practice")
+                ? "text-foreground font-medium"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Practice Material
+          </Button>
+        </nav>
+      ) : (
+        // instructor view content 
+        <nav className="space-y-2 mb-4">
+          <Button
+            variant={"link"}
+            onClick={() => {
+              navigate(`/textbook/${textbookId}/practice`);
+              setMobileOpen(false);
+            }}
+            className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
+              location.pathname.includes("/material-editor")
+                ? "text-foreground font-medium"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Material Editor
+          </Button>
+        </nav>
+      )}
+
+      <Separator className="mb-4" />
 
       <Button
         variant={"link"}
@@ -75,8 +103,8 @@ export default function StudentSideBar({
           setMobileOpen(false);
         }}
         className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
-          location.pathname.includes('/chat')
-            ? "text-foreground font-medium" 
+          location.pathname.includes("/chat")
+            ? "text-foreground font-medium"
             : "text-muted-foreground hover:text-foreground"
         }`}
       >
@@ -97,7 +125,7 @@ export default function StudentSideBar({
         className={`md:hidden pt-[10px] fixed inset-0 z-40 transition-opacity ${
           mobileOpen ? "visible" : "pointer-events-none invisible"
         }`}
-        aria-hidden={!mobileOpen}
+        inert={!mobileOpen ? true : undefined}
       >
         {/*mobile backdrop */}
         <div
