@@ -53,7 +53,6 @@ def get_bedrock_llm(
         # Default model parameters for most models
         model_kwargs = {
             "temperature": temperature,
-            "max_tokens": 4096
         }
         
         # Special handling for different model families
