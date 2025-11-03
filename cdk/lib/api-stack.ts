@@ -726,7 +726,7 @@ export class ApiGatewayStack extends cdk.Stack {
       {
         parameterName: `/${id}/OER/BedrockLLMId`,
         description: "Parameter containing the Bedrock LLM ID",
-        stringValue: "gpt-oss-120b-instruct-v1:0",
+        stringValue: "openai.gpt-oss-120b-1:0",
       }
     );
 
@@ -939,8 +939,7 @@ export class ApiGatewayStack extends cdk.Stack {
         "bedrock:ApplyGuardrail",
       ],
       resources: [
-        `arn:aws:bedrock:us-east-1::foundation-model/gpt-oss-120b-instruct-v1`,
-        `arn:aws:bedrock:us-east-1::foundation-model/gpt-oss-120b-instruct-v1:0`,
+        `arn:aws:bedrock:us-east-1::foundation-model/openai.gpt-oss-120b-1:0`,
         `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`,
         `arn:aws:bedrock:${this.region}:${this.account}:guardrail/${bedrockGuardrail.attrGuardrailId}`,
       ],

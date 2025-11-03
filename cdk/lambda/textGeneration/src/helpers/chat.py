@@ -61,7 +61,7 @@ def get_bedrock_llm(
             logger.info("Using GPT-OSS specific parameters")
             model_kwargs = {
                 "temperature": temperature,
-                "max_completion_tokens": 4096
+                "max_completion_tokens": 4096,
                 "stream": True
             }
         elif "llama" in bedrock_llm_id.lower():
