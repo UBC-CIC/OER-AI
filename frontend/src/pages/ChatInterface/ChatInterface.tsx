@@ -163,12 +163,15 @@ export default function AIChatPage() {
     onMessage: handleWebSocketMessage,
     onConnect: () => {
       console.log("[WebSocket] Connected to:", webSocketUrl);
+      console.log("Streaming: ", isStreaming);
     },
     onDisconnect: () => {
       console.log("[WebSocket] Disconnected from:", webSocketUrl);
+      console.log("Streaming: ", isStreaming);
     },
     onError: (error) => {
       console.error("[WebSocket] Error:", error, "URL:", webSocketUrl);
+      console.log("Streaming: ", isStreaming);
     },
   });
 
@@ -302,7 +305,9 @@ export default function AIChatPage() {
 
       // Pass role as query param to backend
       const response = await fetch(
-        `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${textbook.id}/shared_prompts?role=${mode}`,
+        `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${
+          textbook.id
+        }/shared_prompts?role=${mode}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
