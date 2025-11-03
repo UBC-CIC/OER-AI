@@ -726,7 +726,7 @@ export class ApiGatewayStack extends cdk.Stack {
       {
         parameterName: `/${id}/OER/BedrockLLMId`,
         description: "Parameter containing the Bedrock LLM ID",
-        stringValue: "amazon.nova-lite-v1:0",
+        stringValue: "amazon.nova-pro-v1:0",
       }
     );
 
@@ -939,8 +939,13 @@ export class ApiGatewayStack extends cdk.Stack {
         "bedrock:ApplyGuardrail",
       ],
       resources: [
-        `arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-lite-v1:0`,
+        // Nova Pro inference profile
+        `arn:aws:bedrock:us-east-1:784303385514:inference-profile/us.amazon.nova-pro-v1:0`,
+        // Nova Pro foundation model (what ChatBedrock actually calls)
+        `arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0`,
+        // Embedding model
         `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`,
+        // Guardrail
         `arn:aws:bedrock:${this.region}:${this.account}:guardrail/${bedrockGuardrail.attrGuardrailId}`,
       ],
     });

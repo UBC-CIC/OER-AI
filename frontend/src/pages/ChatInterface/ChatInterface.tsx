@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { ChevronDown, LibraryBig } from "lucide-react";
 import PromptCard from "@/components/ChatInterface/PromptCard";
 import AIChatMessage from "@/components/ChatInterface/AIChatMessage";
@@ -17,6 +17,7 @@ type Message = {
   text: string;
   sources_used?: string[];
   time: number;
+  isTyping?: boolean;
 };
 
 export default function AIChatPage() {
@@ -42,8 +43,18 @@ export default function AIChatPage() {
   );
 
   const { sessionUuid } = useUserSession();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const textbookTitle = textbook?.title ?? "Calculus: Volume 3";
+
+  // Auto-scroll to bottom when messages change or when typing starts
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
 
   // Initialize chat session if needed
   useEffect(() => {
@@ -78,6 +89,14 @@ export default function AIChatPage() {
       switch (message.type) {
         case "start":
           setIsStreaming(true);
+          // Update the streaming message to show typing indicator
+          if (streamingMessageId) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === streamingMessageId ? { ...msg, isTyping: true } : msg
+              )
+            );
+          }
           break;
 
         case "chunk":
@@ -85,7 +104,11 @@ export default function AIChatPage() {
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === streamingMessageId
-                  ? { ...msg, text: msg.text + message.content }
+                  ? {
+                      ...msg,
+                      text: msg.text + message.content,
+                      isTyping: false,
+                    }
                   : msg
               )
             );
@@ -99,7 +122,7 @@ export default function AIChatPage() {
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === streamingMessageId
-                  ? { ...msg, sources_used: message.sources }
+                  ? { ...msg, sources_used: message.sources, isTyping: false }
                   : msg
               )
             );
@@ -113,7 +136,11 @@ export default function AIChatPage() {
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === streamingMessageId
-                  ? { ...msg, text: message.message || "An error occurred" }
+                  ? {
+                      ...msg,
+                      text: message.message || "An error occurred",
+                      isTyping: false,
+                    }
                   : msg
               )
             );
@@ -277,6 +304,7 @@ export default function AIChatPage() {
       text: "",
       sources_used: [],
       time: Date.now() + 1,
+      isTyping: true, // Start with typing indicator
     };
 
     // append user and bot messages
@@ -317,6 +345,14 @@ export default function AIChatPage() {
 
     // Fallback to HTTP API if WebSocket is not available
     console.log("[WebSocket] Fallback: Sending message via HTTP API...");
+
+    // Show typing indicator for HTTP fallback
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === botMsg.id ? { ...msg, isTyping: true } : msg
+      )
+    );
+
     try {
       // Get fresh token for the request
       const tokenResponse = await fetch(
@@ -355,6 +391,7 @@ export default function AIChatPage() {
                 ...msg,
                 text: data.response || "Sorry, I couldn't generate a response.",
                 sources_used: data.sources || [],
+                isTyping: false,
               }
             : msg
         )
@@ -368,6 +405,7 @@ export default function AIChatPage() {
             ? {
                 ...msg,
                 text: "Sorry, there was an error processing your request.",
+                isTyping: false,
               }
             : msg
         )
@@ -387,6 +425,7 @@ export default function AIChatPage() {
           key={message.id}
           text={message.text}
           sources={message.sources_used}
+          isTyping={message.isTyping}
         />
       );
     }
@@ -427,7 +466,10 @@ export default function AIChatPage() {
                     </p>
                   </div>
                 ) : (
-                  messages.map((m) => messageFormatter(m))
+                  <>
+                    {messages.map((m) => messageFormatter(m))}
+                    <div ref={messagesEndRef} />
+                  </>
                 )}
               </div>
             )}
