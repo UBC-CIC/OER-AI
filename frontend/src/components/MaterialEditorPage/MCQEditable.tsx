@@ -1,9 +1,9 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { IH5PQuestion } from "@/types/MaterialEditor";
 import { Separator } from "../ui/separator";
+import { Label } from "../ui/label";
 
 interface MCQEditableProps {
   question: IH5PQuestion;
@@ -16,8 +16,6 @@ export function MCQEditable({
   questionNumber,
   onUpdate,
 }: MCQEditableProps) {
-  const [isEditingQuestion, setIsEditingQuestion] = useState(false);
-
   const handleQuestionChange = (newText: string) => {
     onUpdate({
       ...question,
@@ -71,32 +69,37 @@ export function MCQEditable({
         <CardTitle className="text-lg font-semibold mb-2">
           Question {questionNumber}
         </CardTitle>
-          <Textarea
-            value={question.params.question}
-            onChange={(e) => handleQuestionChange(e.target.value)}
-            onBlur={() => setIsEditingQuestion(false)}
-            autoFocus
-            className="text-sm py-1 border-text-muted-foreground min-h-fit"
-          />
+        <Textarea
+          value={question.params.question}
+          onChange={(e) => handleQuestionChange(e.target.value)}
+          autoFocus
+          className="text-sm py-1 border-text-muted-foreground min-h-fit"
+        />
       </CardHeader>
 
       <CardContent>
         {/* Answer Options */}
         {question.params.answers.map((answer, index) => (
-          <div key={index} className="flex flex-col items-start gap-2">
+          <>
+            <Label className="text-xs font-normal text-muted-foreground">
+              Answer
+            </Label>
+            <div key={index} className="flex flex-col items-start mt-1">
               <div className="flex-1 w-full">
                 <Input
                   value={answer.text}
-                  onChange={(e) => handleAnswerTextChange(index, e.target.value)}
+                  onChange={(e) =>
+                    handleAnswerTextChange(index, e.target.value)
+                  }
                   className="text-sm"
                 />
 
                 {/* Feedback fields */}
-                <div className="mt-2 space-y-2 pl-2 border-l-2 border-muted">
+                <div className="mt-2 space-y-4 pl-2 border-l-2 border-muted">
                   <div>
-                    <label className="text-xs text-muted-foreground">
+                    <Label className="text-xs font-normal text-muted-foreground">
                       Tip (optional)
-                    </label>
+                    </Label>
                     <Input
                       value={answer.tipsAndFeedback?.tip || ""}
                       onChange={(e) =>
@@ -108,9 +111,9 @@ export function MCQEditable({
                   </div>
 
                   <div>
-                    <label className="text-xs text-muted-foreground">
+                    <Label className="text-xs font-normal text-muted-foreground">
                       Chosen Feedback (optional)
-                    </label>
+                    </Label>
                     <Input
                       value={answer.tipsAndFeedback?.chosenFeedback || ""}
                       onChange={(e) =>
@@ -126,9 +129,9 @@ export function MCQEditable({
                   </div>
 
                   <div>
-                    <label className="text-xs text-muted-foreground">
+                    <Label className="text-xs font-normal text-muted-foreground">
                       Not Chosen Feedback (optional)
-                    </label>
+                    </Label>
                     <Input
                       value={answer.tipsAndFeedback?.notChosenFeedback || ""}
                       onChange={(e) =>
@@ -144,8 +147,9 @@ export function MCQEditable({
                   </div>
                 </div>
                 <Separator className="my-4" />
+              </div>
             </div>
-          </div>
+          </>
         ))}
       </CardContent>
     </Card>
