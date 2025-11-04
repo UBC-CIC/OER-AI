@@ -13,12 +13,14 @@ interface MCQEditableProps {
   question: IH5PQuestion;
   questionNumber: number;
   onUpdate: (updatedQuestion: IH5PQuestion) => void;
+  onDelete?: () => void;
 }
 
 export function MCQEditable({
   question,
   questionNumber,
   onUpdate,
+  onDelete,
 }: MCQEditableProps) {
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(
     null
@@ -156,9 +158,22 @@ export function MCQEditable({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold mb-2">
-          Question {questionNumber}
-        </CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-lg font-semibold mb-2">
+            Question {questionNumber}
+          </CardTitle>
+          {onDelete && (
+            <Button
+              variant="link"
+              size="icon"
+              onClick={onDelete}
+              aria-label="Delete question"
+              className="w-fit h-fit cursor-pointer text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
         <Textarea
           value={question.params.question}
           onChange={(e) => handleQuestionChange(e.target.value)}
@@ -170,7 +185,7 @@ export function MCQEditable({
       <CardContent>
         {/* Answer Options */}
         {question.params.answers.map((answer, index) => (
-          <>
+          <div key={index}>
             <div className="flex items-center justify-between w-full">
               <Label
                 className={cn(
@@ -198,7 +213,7 @@ export function MCQEditable({
               </Button>
             </div>
             
-            <div key={index} className="flex flex-col items-start mt-1">
+            <div className="flex flex-col items-start mt-1">
               <div className="flex-1 w-full">
                 <Input
                 placeholder="Answer option text"
@@ -264,7 +279,7 @@ export function MCQEditable({
                 <Separator className="my-4" />
               </div>
             </div>
-          </>
+          </div>
         ))}
         
         {/* Add Answer Button */}

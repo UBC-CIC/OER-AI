@@ -127,7 +127,7 @@ export function MaterialEditorForm({ onGenerate }: MaterialEditorFormProps) {
             </>
           )}
 
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="cursor-pointer w-full">
             Generate
           </Button>
         </form>

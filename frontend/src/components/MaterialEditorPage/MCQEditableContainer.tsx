@@ -4,16 +4,18 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input";
 import { MCQEditable } from "./MCQEditable";
 import type { IH5PMinimalQuestionSet, IH5PQuestion } from "@/types/MaterialEditor";
-import { ChevronDown, ChevronUp, Download } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
 
 interface MCQEditableContainerProps {
   initialQuestionSet: IH5PMinimalQuestionSet;
   onExport: (questionSet: IH5PMinimalQuestionSet) => void;
+  onDelete: () => void;
 }
 
 export function MCQEditableContainer({
   initialQuestionSet,
   onExport,
+  onDelete,
 }: MCQEditableContainerProps) {
   const [questionSet, setQuestionSet] = useState<IH5PMinimalQuestionSet>(initialQuestionSet);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -22,6 +24,42 @@ export function MCQEditableContainer({
   const handleQuestionUpdate = (index: number, updatedQuestion: IH5PQuestion) => {
     const newQuestions = [...questionSet.questions];
     newQuestions[index] = updatedQuestion;
+    setQuestionSet({ questions: newQuestions });
+  };
+
+  const handleAddQuestion = () => {
+    const newQuestion: IH5PQuestion = {
+      library: "H5P.MultiChoice 1.17",
+      params: {
+        question: "New question?",
+        answers: [
+          {
+            text: "",
+            correct: true,
+            tipsAndFeedback: {
+              tip: "",
+              chosenFeedback: "",
+              notChosenFeedback: "",
+            },
+          },
+          {
+            text: "",
+            correct: false,
+            tipsAndFeedback: {
+              tip: "",
+              chosenFeedback: "",
+              notChosenFeedback: "",
+            },
+          },
+        ],
+      },
+    };
+    setQuestionSet({ questions: [...questionSet.questions, newQuestion] });
+  };
+
+  const handleDeleteQuestion = (index: number) => {
+    if (questionSet.questions.length <= 1) return; // enforce at least 1
+    const newQuestions = questionSet.questions.filter((_, i) => i !== index);
     setQuestionSet({ questions: newQuestions });
   };
 
@@ -38,6 +76,13 @@ export function MCQEditableContainer({
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 pr-2">
+            {isExpanded ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
           <div className="flex items-center gap-3 flex-1">
             <div className="flex-1">
               <Input
@@ -54,14 +99,19 @@ export function MCQEditableContainer({
               </p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-            {isExpanded ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
+
+            <Button
+              variant="link"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              aria-label="Delete quiz"
+              className="w-fit h-fit text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
         </div>
       </CardHeader>
 
@@ -74,11 +124,16 @@ export function MCQEditableContainer({
                 question={question}
                 questionNumber={index + 1}
                 onUpdate={(updatedQuestion) => handleQuestionUpdate(index, updatedQuestion)}
+                onDelete={() => handleDeleteQuestion(index)}
               />
             ))}
           </CardContent>
 
-          <CardFooter className="flex justify-end">
+          <CardFooter className="flex flex-col sm:flex-row gap-2 justify-end">
+            <Button variant="outline" onClick={handleAddQuestion} className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Question
+            </Button>
             <Button
               onClick={handleExport}
             >

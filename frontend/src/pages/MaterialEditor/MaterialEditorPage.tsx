@@ -92,6 +92,12 @@ const dummyQuestionSet: IH5PMinimalQuestionSet = {
 export default function MaterialEditorPage() {
   const [questionSets, setQuestionSets] = useState<IH5PMinimalQuestionSet[]>([dummyQuestionSet]);
 
+
+  const handleQuizDelete = (index: number) => {
+    const newQuestionSets = questionSets.filter((_, i) => i !== index);
+    setQuestionSets(newQuestionSets);
+  }
+
   const handleGenerate = (formData: unknown) => {
     console.log("Generate form data:", formData);
     // TODO: Call API to generate new question set
@@ -124,6 +130,7 @@ export default function MaterialEditorPage() {
                 key={index}
                 initialQuestionSet={questionSet}
                 onExport={handleExportQuestionSet}
+                onDelete={() => {handleQuizDelete(index)}}
               />
             ))
           )}
