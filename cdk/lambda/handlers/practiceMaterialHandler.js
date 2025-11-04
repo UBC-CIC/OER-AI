@@ -47,47 +47,36 @@ function buildPrompt({ topic, difficulty, numQuestions, numOptions }) {
   return `
 You are an assistant that generates practice materials in strict JSON. Output ONLY valid JSON. No markdown, no commentary.
 
-Constraints:
-- topic: "${topic}"
-- difficulty: "${difficulty}" (one of: "introductory", "intermediate", "advanced")
-- num_questions: ${numQuestions}
-- num_options: ${numOptions}
-- For each question, options must have ids exactly: ["${optionIds}"] in that order.
-- correctAnswer must be one of these ids and match an existing option.
-- Do not include any fields other than specified below.
-- No trailing commas. Ensure valid JSON.
+Requirements:
+- Topic: "${topic}"
+- Difficulty: "${difficulty}" (beginner/intermediate/advanced difficulty of the question)
+- Generate exactly ${numQuestions} question(s) with exactly ${numOptions} option(s) each
+- Question IDs must be: q1, q2, q3, etc. (up to q${numQuestions})
+- Option IDs per question: ${optionIds}
+- Each question must be substantive and related to the topic
+- Each option must be a complete, meaningful answer choice (not just "option-a" or "option-b")
+- Each explanation must clearly explain why the option is correct or incorrect
+- correctAnswer must be one of the option IDs
+- The questions array MUST contain exactly ${numQuestions} question objects
+- Output valid JSON only, no extra text
 
-JSON schema (conceptual):
-{
-  "title": string,
-  "questions": [
-    {
-      "id": string,
-      "questionText": string,
-      "options": [
-        { "id": "a", "text": string, "explanation": string }
-      ],
-      "correctAnswer": "a"
-    }
-  ]
-}
-
-Template to follow (update values; lengths must match constraints):
+Expected JSON structure:
 {
   "title": "Practice Quiz: ${topic}",
   "questions": [
     {
       "id": "q1",
-      "questionText": "(${difficulty}) [${topic}] <question>?",
+      "questionText": "A complete, substantive question about ${topic}?",
       "options": [
-        { "id": "a", "text": "<option-a>", "explanation": "<explain-a>" }
+        { "id": "a", "text": "A complete, meaningful answer option", "explanation": "Detailed explanation of why this is correct/incorrect" },
+        { "id": "b", "text": "Another complete answer option", "explanation": "Another detailed explanation" }
       ],
       "correctAnswer": "a"
     }
   ]
 }
 
-Generate exactly ${numQuestions} questions and exactly ${numOptions} options per question. Output JSON only.
+CRITICAL: Generate exactly ${numQuestions} questions and exactly ${numOptions} options per question. The questions array must have ${numQuestions} items. Output JSON only.
 `.trim();
 }
 
@@ -98,8 +87,8 @@ async function invokeTitanJSON(prompt) {
   const payload = {
     inputText: prompt,
     textGenerationConfig: {
-      // High temperature for variety as requested
-      temperature: 0.9,
+      // Balanced temperature for focused but varied content
+      temperature: 0.6,
       maxTokenCount: 512,
       topP: 0.9,
     },
