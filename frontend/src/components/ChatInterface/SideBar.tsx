@@ -72,10 +72,10 @@ export default function SideBar({
             STUDY COMPANION
           </h3>
           <Button
-            variant="ghost"
+            variant="link"
             size="icon"
             onClick={handleNewChat}
-            className="cursor-pointer h-6 w-6"
+            className="text-muted-foreground hover:text-foreground cursor-pointer h-6 w-6"
             title="New chat"
           >
             <Plus className="h-4 w-4" />
