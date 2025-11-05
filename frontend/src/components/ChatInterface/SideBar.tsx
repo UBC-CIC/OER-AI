@@ -4,6 +4,8 @@ import { useSidebar } from "@/providers/sidebar";
 import { useNavigate, useLocation } from "react-router";
 import { Separator } from "@/components/ui/separator";
 import { useMode } from "@/providers/mode";
+import { useTextbookView } from "@/providers/textbookView";
+import { Plus, MessageSquare } from "lucide-react";
 
 type StudentSideBarProps = {
   textbookTitle: string;
@@ -20,6 +22,28 @@ export default function SideBar({
   const navigate = useNavigate();
   const location = useLocation();
   const { mode } = useMode();
+  const { 
+    chatSessions, 
+    activeChatSessionId, 
+    setActiveChatSessionId,
+    createNewChatSession 
+  } = useTextbookView();
+
+  const handleNewChat = async () => {
+    const newSession = await createNewChatSession();
+    if (newSession && textbookId) {
+      navigate(`/textbook/${textbookId}/chat`);
+      setMobileOpen(false);
+    }
+  };
+
+  const handleSelectSession = (sessionId: string) => {
+    setActiveChatSessionId(sessionId);
+    if (textbookId) {
+      navigate(`/textbook/${textbookId}/chat`);
+      setMobileOpen(false);
+    }
+  };
 
   const SidebarContent = () => (
     <>
@@ -42,6 +66,45 @@ export default function SideBar({
 
       {/* Menu Items */}
 
+      <div className="mb-2">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="px-3 text-xs font-semibold text-muted-foreground tracking-wide">
+            STUDY COMPANION
+          </h3>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleNewChat}
+            className="cursor-pointer h-6 w-6"
+            title="New chat"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        {/* Chat sessions list */}
+        <div className="pl-2 border-l-2 border-muted space-y-1 max-h-[300px] overflow-y-auto">
+          {chatSessions.map((session, index) => (
+            <Button
+              key={session.id}
+              variant="link"
+              onClick={() => handleSelectSession(session.id)}
+              className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
+                activeChatSessionId === session.id
+                  ? "text-foreground font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:underline"
+              }`}
+            >
+              <MessageSquare className="h-4 w-4 mr-2 flex-shrink-0" />
+              {/* temporary place holder for chat names */}
+              <span className="truncate">
+                Chat {chatSessions.length - index}
+              </span>
+            </Button>
+          ))}
+        </div>
+      </div>
+      <Separator className="mb-4" />
       {mode === "student" ? (
         // student view content 
         <nav className="space-y-2 mb-4">
@@ -94,22 +157,7 @@ export default function SideBar({
         </nav>
       )}
 
-      <Separator className="mb-4" />
 
-      <Button
-        variant={"link"}
-        onClick={() => {
-          navigate(`/textbook/${textbookId}/chat`);
-          setMobileOpen(false);
-        }}
-        className={`cursor-pointer w-full justify-start px-3 py-2 text-sm rounded-md transition-colors ${
-          location.pathname.includes("/chat")
-            ? "text-foreground font-medium"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        Study Companion
-      </Button>
     </>
   );
 
