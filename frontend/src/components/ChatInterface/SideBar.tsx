@@ -22,11 +22,11 @@ export default function SideBar({
   const navigate = useNavigate();
   const location = useLocation();
   const { mode } = useMode();
-  const { 
-    chatSessions, 
-    activeChatSessionId, 
+  const {
+    chatSessions,
+    activeChatSessionId,
     setActiveChatSessionId,
-    createNewChatSession 
+    createNewChatSession,
   } = useTextbookView();
 
   const handleNewChat = async () => {
@@ -81,7 +81,7 @@ export default function SideBar({
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-        
+
         {/* Chat sessions list */}
         <div className="pl-2 border-l-2 border-muted space-y-1 max-h-[300px] overflow-y-auto">
           {chatSessions.map((session, index) => (
@@ -106,7 +106,7 @@ export default function SideBar({
       </div>
       <Separator className="mb-4" />
       {mode === "student" ? (
-        // student view content 
+        // student view content
         <nav className="space-y-2 mb-4">
           <Button
             variant={"link"}
@@ -120,7 +120,7 @@ export default function SideBar({
               setMobileOpen(false);
             }}
           >
-            FAQ Cache
+            FAQ
           </Button>
           <Button
             variant={"link"}
@@ -138,7 +138,7 @@ export default function SideBar({
           </Button>
         </nav>
       ) : (
-        // instructor view content 
+        // instructor view content
         <nav className="space-y-2 mb-4">
           <Button
             variant={"link"}
@@ -156,8 +156,6 @@ export default function SideBar({
           </Button>
         </nav>
       )}
-
-
     </>
   );
 
