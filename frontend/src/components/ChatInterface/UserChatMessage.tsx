@@ -12,17 +12,25 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
+import { useUserSession } from "@/providers/usersession";
+import { useMode } from "@/providers/mode";
 
-// temporary props for future api calla
+// Props for saving a user's message as a shared prompt
 type UserChatMessageProps = {
   text: string;
-  onSave?: () => void;
+  textbookId: string; // textbook to associate the prompt with
+  onSaveSuccess?: (promptId: string) => void; // optional callback on success
+  onSaveError?: (error: Error) => void; // optional callback on error
 };
 
-export default function UserChatMessage({ text, onSave }: UserChatMessageProps) {
+export default function UserChatMessage({ text, textbookId, onSaveSuccess, onSaveError }: UserChatMessageProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState(text);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const { sessionUuid } = useUserSession();
+  const { mode } = useMode();
 
   function handleOpen() {
     setName("");
@@ -30,12 +38,57 @@ export default function UserChatMessage({ text, onSave }: UserChatMessageProps) 
     setOpen(true);
   }
 
-  function handleSubmit() {
-    // mock api request here
+  async function handleSubmit() {
+    setErrorMsg(null);
+    if (!textbookId) {
+      setErrorMsg("Missing textbookId");
+      return;
+    }
 
-    // for now close the dialog.
-    setOpen(false);
-    if (onSave) onSave();
+    try {
+      setIsSaving(true);
+      // Acquire public token
+      const tokenResp = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
+      if (!tokenResp.ok) throw new Error("Failed to get public token");
+      const { token } = await tokenResp.json();
+
+      // Create shared prompt
+      const createResp = await fetch(
+        `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${textbookId}/shared_prompts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: name || null,
+            prompt_text: prompt,
+            owner_session_id: sessionUuid || null,
+            role: mode,
+            visibility: "public",
+            tags: [],
+            metadata: {},
+          }),
+        }
+      );
+
+      if (!createResp.ok) {
+        const errText = await createResp.text();
+        throw new Error(errText || "Failed to save prompt");
+      }
+
+      const data = await createResp.json();
+      // Close dialog and notify
+      setOpen(false);
+      onSaveSuccess?.(data.id);
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error("Unknown error");
+      setErrorMsg(e.message);
+      onSaveError?.(e);
+    } finally {
+      setIsSaving(false);
+    }
   }
   return (
     // main msg container
@@ -84,11 +137,16 @@ export default function UserChatMessage({ text, onSave }: UserChatMessageProps) 
               />
             </div>
 
+            {errorMsg && (
+              <p className="text-sm text-red-500">{errorMsg}</p>
+            )}
             <DialogFooter>
               <Button variant="ghost" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit}>Save prompt</Button>
+              <Button onClick={handleSubmit} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save prompt"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

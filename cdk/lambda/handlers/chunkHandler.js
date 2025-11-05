@@ -66,9 +66,9 @@ exports.handler = async (event) => {
     const pathData = event.httpMethod + " " + event.resource;
     
     switch (pathData) {
-      case "GET /textbooks/{id}/chunks":
-        const chunksTextbookId = event.pathParameters?.id;
-        if (!chunksTextbookId) {
+      case "GET /textbooks/{textbook_id}/chunks":
+        const chunkTextbookId = event.pathParameters?.textbook_id;
+        if (!chunkTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
           break;
@@ -79,14 +79,14 @@ exports.handler = async (event) => {
         const chunksOffset = (chunksPage - 1) * chunksLimit;
         
         const chunksTotalResult = await sqlConnection`
-          SELECT COUNT(*) as total FROM document_chunks WHERE textbook_id = ${chunksTextbookId}
+          SELECT COUNT(*) as total FROM document_chunks WHERE textbook_id = ${chunkTextbookId}
         `;
         const chunksTotal = parseInt(chunksTotalResult[0].total);
         
         const chunks = await sqlConnection`
           SELECT id, textbook_id, section_id, media_item_id, chunk_text, chunk_meta, created_at
           FROM document_chunks
-          WHERE textbook_id = ${chunksTextbookId}
+          WHERE textbook_id = ${chunkTextbookId}
           ORDER BY created_at ASC
           LIMIT ${chunksLimit} OFFSET ${chunksOffset}
         `;
@@ -103,8 +103,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "GET /chunks/{id}":
-        const getChunkId = event.pathParameters?.id;
+      case "GET /chunks/{chunk_id}":
+        const getChunkId = event.pathParameters?.chunk_id;
         if (!getChunkId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Chunk ID is required" });
@@ -127,8 +127,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "POST /textbooks/{id}/chunks":
-        const postChunkTextbookId = event.pathParameters?.id;
+      case "POST /textbooks/{textbook_id}/chunks":
+        const postChunkTextbookId = event.pathParameters?.textbook_id;
         if (!postChunkTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
@@ -154,8 +154,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "PUT /chunks/{id}":
-        const putChunkId = event.pathParameters?.id;
+      case "PUT /chunks/{chunk_id}":
+        const putChunkId = event.pathParameters?.chunk_id;
         if (!putChunkId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Chunk ID is required" });
@@ -214,8 +214,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "DELETE /chunks/{id}":
-        const deleteChunkId = event.pathParameters?.id;
+      case "DELETE /chunks/{chunk_id}":
+        const deleteChunkId = event.pathParameters?.chunk_id;
         if (!deleteChunkId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Chunk ID is required" });

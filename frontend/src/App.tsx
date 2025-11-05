@@ -10,9 +10,9 @@ import MaterialEditorPage from "./pages/MaterialEditor/MaterialEditorPage";
 
 function App() {
   return (
-    <ModeProvider>
-      <BrowserRouter>
-        <UserSessionProvider>
+    <BrowserRouter>
+      <UserSessionProvider>
+        <ModeProvider>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/textbook/:id" element={<TextbookLayout />}>
@@ -22,9 +22,9 @@ function App() {
               <Route path="material-editor" element={<MaterialEditorPage />} />
             </Route>
           </Routes>
-        </UserSessionProvider>
+        </ModeProvider>
+      </UserSessionProvider>
       </BrowserRouter>
-    </ModeProvider>
   );
 }
 

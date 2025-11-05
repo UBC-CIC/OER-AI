@@ -73,6 +73,9 @@ export class AmplifyStack extends cdk.Stack {
         VITE_COGNITO_USER_POOL_CLIENT_ID: apiStack.getUserPoolClientId(),
         VITE_API_ENDPOINT: apiStack.getEndpointUrl(),
         VITE_IDENTITY_POOL_ID: apiStack.getIdentityPoolId(),
+        VITE_WEBSOCKET_URL: `${apiStack.getWebSocketUrl()}/${
+          apiStack.getStageName() ?? ""
+        }`,
       },
       buildSpec: BuildSpec.fromObjectToYaml(amplifyYaml),
     });
@@ -85,6 +88,7 @@ export class AmplifyStack extends cdk.Stack {
 
     amplifyApp.addBranch("main");
     amplifyApp.addBranch("api_endpoint_setup");
-    amplifyApp.addBranch("frontend");
+    amplifyApp.addBranch("dev");
+
   }
 }

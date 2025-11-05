@@ -66,8 +66,8 @@ exports.handler = async (event) => {
     const pathData = event.httpMethod + " " + event.resource;
     
     switch (pathData) {
-      case "GET /textbooks/{id}/faq":
-        const faqTextbookId = event.pathParameters?.id;
+      case "GET /textbooks/{textbook_id}/faq":
+        const faqTextbookId = event.pathParameters?.textbook_id;
         if (!faqTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
@@ -85,8 +85,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "POST /textbooks/{id}/faq":
-        const postFaqTextbookId = event.pathParameters?.id;
+      case "POST /textbooks/{textbook_id}/faq":
+        const postFaqTextbookId = event.pathParameters?.textbook_id;
         if (!postFaqTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
@@ -114,8 +114,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "GET /faq/{id}":
-        const faqId = event.pathParameters?.id;
+      case "GET /faq/{faq_id}":
+        const faqId = event.pathParameters?.faq_id;
         if (!faqId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "FAQ ID is required" });
@@ -138,8 +138,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "PUT /faq/{id}":
-        const putFaqId = event.pathParameters?.id;
+      case "PUT /faq/{faq_id}":
+        const putFaqId = event.pathParameters?.faq_id;
         if (!putFaqId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "FAQ ID is required" });
@@ -190,8 +190,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "DELETE /faq/{id}":
-        const deleteFaqId = event.pathParameters?.id;
+      case "DELETE /faq/{faq_id}":
+        const deleteFaqId = event.pathParameters?.faq_id;
         if (!deleteFaqId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "FAQ ID is required" });

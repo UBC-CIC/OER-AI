@@ -59,8 +59,10 @@ export function UserSessionProvider({ children }: { children: ReactNode }) {
           {
             method: "POST",
             headers: {
+              "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
+            body: JSON.stringify({ role: "student" }), // Default to student on creation
           }
         );
 

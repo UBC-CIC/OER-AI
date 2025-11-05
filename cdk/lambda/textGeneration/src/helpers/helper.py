@@ -19,7 +19,7 @@ def get_vectorstore(
     port: int
 ) -> Optional[PGVector]:
     """
-    Initialize and return a PGVector instance.
+    Initialize and return a PGVector instance. 
     
     Args:
     collection_name (str): The textbook ID.

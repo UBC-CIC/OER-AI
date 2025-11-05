@@ -27,11 +27,21 @@ def get_vectorstore_retriever(llm, vectorstore_config_dict: Dict[str, str], embe
             logger.error("Failed to initialize vectorstore")
             return None
             
-        search_kwargs = {"k": 5}
+        # Use similarity search with score threshold to ensure relevance
+        # Score threshold of 0.7 means we only return documents with similarity >= 0.7
+        # This helps filter out irrelevant content and keeps responses focused on textbook material
+        search_kwargs = {
+            "k": 5,  # Retrieve up to 5 documents
+            "score_threshold": 0.2  # Only return documents with similarity >= 0.3
+        }
         retriever = vectorstore.as_retriever(
-            search_type="similarity",
+            search_type="similarity_score_threshold",
             search_kwargs=search_kwargs
         )
+        
+        logger.info(f"Created retriever with similarity threshold: {search_kwargs['score_threshold']}")
+        logger.info(f"Maximum documents to retrieve: {search_kwargs['k']}")
+        
         return retriever
         
     except Exception as e:

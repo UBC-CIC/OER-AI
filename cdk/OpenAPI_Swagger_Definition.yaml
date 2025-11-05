@@ -112,7 +112,7 @@ paths:
         type: aws_proxy
       x-amazon-apigateway-request-validator: all
 
-  /chat_sessions/{id}: #this endpoint is just shorter than having all the extra data to slot it under textbooks.
+  /chat_sessions/{chat_session_id}: #this endpoint is just shorter than having all the extra data to slot it under textbooks.
     <<: *commonOptions
     delete:
       tags:
@@ -122,7 +122,7 @@ paths:
       security:
         - adminAuthorizer: []
       parameters:
-        - name: id
+        - name: chat_session_id
           in: path
           required: true
           description: Chat session UUID
@@ -145,7 +145,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /chat_sessions/{id}/text_generation:
+  /chat_sessions/{chat_session_id}/text_generation:
     <<: *commonOptions
     post:
       tags:
@@ -153,7 +153,7 @@ paths:
       summary: Generate text response for a chat session
       operationId: generate_text
       parameters:
-        - name: id
+        - name: chat_session_id
           in: path
           required: true
           description: Chat session UUID
@@ -260,6 +260,17 @@ paths:
       operationId: create_user_session
       security:
         - userAuthorizer: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: ["student", "instructor"]
+                  description: Role of the user session (defaults to 'student' if not provided)
       responses:
         "200":
           description: Session created successfully
@@ -274,6 +285,10 @@ paths:
                   userSessionId:
                     type: string
                     format: uuid
+                  role:
+                    type: string
+                    enum: ["student", "instructor"]
+                    description: Role of the user session
         "401":
           description: Unauthorized
         "500":
@@ -330,6 +345,77 @@ paths:
                     type: object
         "400":
           description: Invalid session ID
+        "404":
+          description: User session not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      tags:
+        - User
+      summary: Update user session role
+      operationId: update_user_session
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          description: User session UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+              properties:
+                role:
+                  type: string
+                  enum: ["student", "instructor"]
+                  description: New role for the user session
+      responses:
+        "200":
+          description: User session updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  session_title:
+                    type: string
+                  context:
+                    type: object
+                  role:
+                    type: string
+                    enum: ["student", "instructor"]
+                  created_at:
+                    type: string
+                    format: date-time
+                  last_active_at:
+                    type: string
+                    format: date-time
+                  expires_at:
+                    type: string
+                    format: date-time
+                  metadata:
+                    type: object
+        "400":
+          description: Invalid request or session ID
         "404":
           description: User session not found
         "401":
@@ -769,7 +855,7 @@ paths:
         type: aws_proxy
       x-amazon-apigateway-request-validator: all
 
-  /interactions/{id}:
+  /interactions/{interaction_id}:
     <<: *commonOptions
     get:
       tags:
@@ -779,7 +865,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: interaction_id
           in: path
           required: true
           description: Interaction UUID
@@ -836,7 +922,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: interaction_id
           in: path
           required: true
           description: Interaction UUID
@@ -913,7 +999,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: interaction_id
           in: path
           required: true
           description: Interaction UUID
@@ -936,7 +1022,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /analytics/{id}:
+  /analytics/{analytics_id}:
     <<: *commonOptions
     get:
       tags:
@@ -946,7 +1032,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: analytics_id
           in: path
           required: true
           description: Analytics event UUID
@@ -994,7 +1080,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: analytics_id
           in: path
           required: true
           description: Analytics event UUID
@@ -1054,7 +1140,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: analytics_id
           in: path
           required: true
           description: Analytics event UUID
@@ -1260,7 +1346,7 @@ paths:
         type: aws_proxy
       x-amazon-apigateway-request-validator: all
 
-  /textbooks/{id}:
+  /textbooks/{textbook_id}:
     <<: *commonOptions
     get:
       tags:
@@ -1270,7 +1356,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1336,7 +1422,7 @@ paths:
       security:
         - adminAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1431,7 +1517,7 @@ paths:
       security:
         - adminAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1454,7 +1540,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/faq:
+  /textbooks/{textbook_id}/faq:
     <<: *commonOptions
     get:
       tags:
@@ -1464,7 +1550,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1514,7 +1600,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1571,7 +1657,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /faq/{id}:
+  /faq/{faq_id}:
     <<: *commonOptions
     get:
       tags:
@@ -1581,7 +1667,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: faq_id
           in: path
           required: true
           description: FAQ entry UUID
@@ -1631,7 +1717,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: faq_id
           in: path
           required: true
           description: FAQ entry UUID
@@ -1692,7 +1778,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: faq_id
           in: path
           required: true
           description: FAQ entry UUID
@@ -1715,7 +1801,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/chat_sessions:
+  /textbooks/{textbook_id}/chat_sessions:
     <<: *commonOptions
     get:
       tags:
@@ -1725,7 +1811,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1807,7 +1893,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1867,7 +1953,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/chat_sessions/user/{user_session_id}:
+  /textbooks/{textbook_id}/chat_sessions/user/{user_session_id}:
     <<: *commonOptions
     get:
       tags:
@@ -1877,7 +1963,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1930,7 +2016,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/sections:
+  /textbooks/{textbook_id}/sections:
     <<: *commonOptions
     get:
       tags:
@@ -1940,7 +2026,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -1999,7 +2085,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -2074,7 +2160,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /sections/{id}:
+  /sections/{section_id}:
     <<: *commonOptions
     get:
       tags:
@@ -2084,7 +2170,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: section_id
           in: path
           required: true
           description: Section UUID
@@ -2141,7 +2227,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: section_id
           in: path
           required: true
           description: Section UUID
@@ -2219,7 +2305,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: section_id
           in: path
           required: true
           description: Section UUID
@@ -2242,7 +2328,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/media_items:
+  /textbooks/{textbook_id}/media_items:
     <<: *commonOptions
     get:
       tags:
@@ -2252,7 +2338,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -2325,7 +2411,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -2426,7 +2512,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /media_items/{id}:
+  /media_items/{media_item_id}:
     <<: *commonOptions
     get:
       tags:
@@ -2436,7 +2522,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: media_item_id
           in: path
           required: true
           description: Media item UUID
@@ -2505,7 +2591,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: media_item_id
           in: path
           required: true
           description: Media item UUID
@@ -2608,7 +2694,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: media_item_id
           in: path
           required: true
           description: Media item UUID
@@ -2631,7 +2717,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/chunks:
+  /textbooks/{textbook_id}/chunks:
     <<: *commonOptions
     get:
       tags:
@@ -2641,7 +2727,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -2728,7 +2814,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -2796,7 +2882,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /chunks/{id}:
+  /chunks/{chunk_id}:
     <<: *commonOptions
     get:
       tags:
@@ -2806,7 +2892,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: chunk_id
           in: path
           required: true
           description: Chunk UUID
@@ -2860,7 +2946,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: chunk_id
           in: path
           required: true
           description: Chunk UUID
@@ -2931,7 +3017,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: chunk_id
           in: path
           required: true
           description: Chunk UUID
@@ -3143,7 +3229,7 @@ paths:
         type: aws_proxy
       x-amazon-apigateway-request-validator: all
 
-  /prompt_templates/{id}:
+  /prompt_templates/{prompt_template_id}:
     <<: *commonOptions
     get:
       tags:
@@ -3153,7 +3239,7 @@ paths:
       security:
         - adminAuthorizer: []
       parameters:
-        - name: id
+        - name: prompt_template_id
           in: path
           required: true
           description: Template UUID
@@ -3220,7 +3306,7 @@ paths:
       security:
         - adminAuthorizer: []
       parameters:
-        - name: id
+        - name: prompt_template_id
           in: path
           required: true
           description: Template UUID
@@ -3315,7 +3401,7 @@ paths:
       security:
         - adminAuthorizer: []
       parameters:
-        - name: id
+        - name: prompt_template_id
           in: path
           required: true
           description: Template UUID
@@ -3338,7 +3424,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /textbooks/{id}/shared_prompts:
+  /textbooks/{textbook_id}/shared_prompts:
     <<: *commonOptions
     get:
       tags:
@@ -3348,7 +3434,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -3372,6 +3458,13 @@ paths:
             type: integer
             minimum: 0
             default: 0
+        - name: role
+          in: query
+          description: Filter prompts by the role of the user session that created them (student or instructor)
+          required: false
+          schema:
+            type: string
+            enum: ["student", "instructor"]
       responses:
         "200":
           description: List of shared user prompts for textbook
@@ -3404,6 +3497,10 @@ paths:
                         visibility:
                           type: string
                           enum: ["private", "org", "public"]
+                        role:
+                          type: string
+                          enum: ["student", "instructor"]
+                          description: Role of the user session that created this prompt
                         tags:
                           type: array
                           items:
@@ -3447,7 +3544,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: textbook_id
           in: path
           required: true
           description: Textbook UUID
@@ -3539,7 +3636,104 @@ paths:
         type: aws_proxy
       x-amazon-apigateway-request-validator: all
 
-  /shared_prompts/{id}:
+  /textbooks/{textbook_id}/practice_materials:
+    <<: *commonOptions
+    post:
+      tags:
+        - User
+      summary: Generate AI practice materials (MCQs) for a textbook
+      operationId: generate_practice_materials
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: textbook_id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - topic
+              properties:
+                topic:
+                  type: string
+                  description: Topic to generate questions about
+                  example: "derivatives and integrals"
+                material_type:
+                  type: string
+                  enum: [mcq]
+                  default: mcq
+                num_questions:
+                  type: integer
+                  minimum: 1
+                  maximum: 20
+                  default: 5
+                num_options:
+                  type: integer
+                  minimum: 2
+                  maximum: 6
+                  default: 4
+                difficulty:
+                  type: string
+                  enum: [beginner, intermediate, advanced]
+                  default: intermediate
+                chat_session_id:
+                  type: string
+                  format: uuid
+                  description: Optional chat session association for analytics
+      responses:
+        "200":
+          description: Practice material generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        questionText:
+                          type: string
+                        options:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              text:
+                                type: string
+                              explanation:
+                                type: string
+                        correctAnswer:
+                          type: string
+        "400":
+          description: Invalid request parameters
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${practiceMaterialFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /shared_prompts/{shared_prompt_id}:
     <<: *commonOptions
     get:
       tags:
@@ -3549,7 +3743,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: shared_prompt_id
           in: path
           required: true
           description: Shared prompt UUID
@@ -3583,6 +3777,10 @@ paths:
                   visibility:
                     type: string
                     enum: ["private", "org", "public"]
+                  role:
+                    type: string
+                    enum: ["student", "instructor"]
+                    description: Role of the user session that created this prompt
                   tags:
                     type: array
                     items:
@@ -3615,7 +3813,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: shared_prompt_id
           in: path
           required: true
           description: Shared prompt UUID
@@ -3670,6 +3868,10 @@ paths:
                   visibility:
                     type: string
                     enum: ["private", "org", "public"]
+                  role:
+                    type: string
+                    enum: ["student", "instructor"]
+                    description: Role of the user session that created this prompt
                   tags:
                     type: array
                     items:
@@ -3702,7 +3904,7 @@ paths:
       security:
         - userAuthorizer: []
       parameters:
-        - name: id
+        - name: shared_prompt_id
           in: path
           required: true
           description: Shared prompt UUID

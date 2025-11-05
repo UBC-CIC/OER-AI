@@ -115,8 +115,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "GET /prompt_templates/{id}":
-        const templateId = event.pathParameters?.id;
+      case "GET /prompt_templates/{prompt_template_id}":
+        const templateId = event.pathParameters?.prompt_template_id;
         if (!templateId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Template ID is required" });
@@ -139,8 +139,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "PUT /prompt_templates/{id}":
-        const updateId = event.pathParameters?.id;
+      case "PUT /prompt_templates/{prompt_template_id}":
+        const updateId = event.pathParameters?.prompt_template_id;
         if (!updateId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Template ID is required" });
@@ -169,8 +169,8 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
-      case "DELETE /prompt_templates/{id}":
-        const deleteId = event.pathParameters?.id;
+      case "DELETE /prompt_templates/{prompt_template_id}":
+        const deleteId = event.pathParameters?.prompt_template_id;
         if (!deleteId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Template ID is required" });
