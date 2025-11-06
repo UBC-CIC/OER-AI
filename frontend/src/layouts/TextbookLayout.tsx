@@ -3,7 +3,7 @@ import { Outlet, useParams, useNavigate } from "react-router";
 import { TextbookViewProvider } from "@/providers/TextbookViewContext";
 import { SidebarProvider } from "@/providers/SidebarContext";
 import Header from "@/components/Header";
-import StudentSideBar from "@/components/ChatInterface/StudentSideBar";
+import SideBar from "@/components/ChatInterface/SideBar";
 import type { Textbook } from "@/types/Textbook";
 import type { ChatSession } from "@/providers/textbookView";
 import { useUserSession } from "@/providers/usersession";
@@ -189,7 +189,7 @@ export default function TextbookLayout() {
         <div className="flex flex-col min-h-screen bg-background">
           <Header />
           <div className="pt-[70px] flex-1 flex">
-            <StudentSideBar
+            <SideBar
               textbookTitle={textbook?.title || ""}
               textbookAuthor={textbook?.authors?.join(", ") || ""}
               textbookId={id}
