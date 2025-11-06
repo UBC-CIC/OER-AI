@@ -120,7 +120,7 @@ exports.handler = async (event) => {
         }
         
         const userChatSessions = await sqlConnection`
-          SELECT id, user_session_id, textbook_id, context, created_at, metadata
+          SELECT id, user_session_id, textbook_id, context, created_at, metadata, name
           FROM chat_sessions
           WHERE textbook_id = ${userChatTextbookId} AND user_session_id = ${userSessionId}
           ORDER BY created_at DESC

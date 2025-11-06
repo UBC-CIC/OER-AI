@@ -98,7 +98,7 @@ export default function SideBar({
               <MessageSquare className="h-4 w-4 mr-2 flex-shrink-0" />
               {/* temporary place holder for chat names */}
               <span className="truncate">
-                Chat {chatSessions.length - index}
+                {session.name || `Chat ${chatSessions.length - index}`}
               </span>
             </Button>
           ))}

@@ -404,7 +404,8 @@ def handler(event, context):
             "body": json.dumps({
                 "textbook_id": textbook_id,
                 "response": response_data["response"],
-                "sources": response_data["sources_used"]
+                "sources": response_data["sources_used"],
+                "session_name":  session_name if chat_session_id and TABLE_NAME_PARAM else None
             })
         }
         
