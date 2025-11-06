@@ -8,8 +8,9 @@ import PromptLibraryModal from "@/components/ChatInterface/PromptLibraryModal";
 import { useTextbookView } from "@/providers/textbookView";
 import { AiChatInput } from "@/components/ChatInterface/userInput";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import type { PromptTemplate } from "@/types/Chat";
+import type { PromptTemplate, SharedUserPrompt } from "@/types/Chat";
 import { useUserSession } from "@/providers/usersession";
+import { useMode } from "@/providers/mode";
 
 type Message = {
   id: string;
@@ -24,6 +25,7 @@ export default function AIChatPage() {
   // State
   const [message, setMessage] = useState("");
   const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
+  const [sharedPrompts, setSharedPrompts] = useState<SharedUserPrompt[]>([]);
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [seeMore, setSeeMore] = useState(false);
@@ -44,6 +46,7 @@ export default function AIChatPage() {
 
   const { sessionUuid } = useUserSession();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { mode } = useMode();
 
   const textbookTitle = textbook?.title ?? "Calculus: Volume 3";
 
@@ -160,12 +163,15 @@ export default function AIChatPage() {
     onMessage: handleWebSocketMessage,
     onConnect: () => {
       console.log("[WebSocket] Connected to:", webSocketUrl);
+      console.log("Streaming: ", isStreaming);
     },
     onDisconnect: () => {
       console.log("[WebSocket] Disconnected from:", webSocketUrl);
+      console.log("Streaming: ", isStreaming);
     },
     onError: (error) => {
       console.error("[WebSocket] Error:", error, "URL:", webSocketUrl);
+      console.log("Streaming: ", isStreaming);
     },
   });
 
@@ -285,6 +291,37 @@ export default function AIChatPage() {
 
     fetchPrompts();
   }, []);
+
+  // Fetch shared prompts from API filtered by current mode
+  const fetchSharedPrompts = useCallback(async () => {
+    if (!textbook?.id) return; // Need textbook_id
+    try {
+      // Acquire public token
+      const tokenResponse = await fetch(
+        `${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`
+      );
+      if (!tokenResponse.ok) throw new Error("Failed to get public token");
+      const { token } = await tokenResponse.json();
+
+      // Pass role as query param to backend
+      const response = await fetch(
+        `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${
+          textbook.id
+        }/shared_prompts?role=${mode}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = await response.json();
+      const allSharedPrompts = data.prompts || [];
+      setSharedPrompts(allSharedPrompts);
+    } catch (error) {
+      console.error("Error fetching shared prompts:", error);
+      setSharedPrompts([]);
+    }
+  }, [textbook?.id, mode]);
 
   async function sendMessage() {
     const text = message.trim();
@@ -418,7 +455,13 @@ export default function AIChatPage() {
 
   function messageFormatter(message: Message) {
     if (message.sender === "user") {
-      return <UserChatMessage key={message.id} text={message.text} />;
+      return (
+        <UserChatMessage
+          key={message.id}
+          text={message.text}
+          textbookId={textbook?.id || ""}
+        />
+      );
     } else {
       return (
         <AIChatMessage
@@ -548,9 +591,11 @@ export default function AIChatPage() {
           open={showLibrary}
           onOpenChange={setShowLibrary}
           prompts={prompts}
+          sharedPrompts={sharedPrompts}
           onSelectPrompt={(msg) => {
             setMessage(msg);
           }}
+          onFetchSharedPrompts={fetchSharedPrompts}
         />
       </div>
     </div>

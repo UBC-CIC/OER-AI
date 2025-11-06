@@ -726,7 +726,7 @@ export class ApiGatewayStack extends cdk.Stack {
       {
         parameterName: `/${id}/OER/BedrockLLMId`,
         description: "Parameter containing the Bedrock LLM ID",
-        stringValue: "amazon.nova-pro-v1:0",
+        stringValue: "meta.llama3-70b-instruct-v1:0",
       }
     );
 
@@ -746,7 +746,7 @@ export class ApiGatewayStack extends cdk.Stack {
       {
         parameterName: `/${id}/OER/BedrockRegion`,
         description: "Parameter containing the Bedrock runtime region",
-        stringValue: "us-east-1",
+        stringValue: "ca-central-1",
       }
     );
 
@@ -939,11 +939,12 @@ export class ApiGatewayStack extends cdk.Stack {
         "bedrock:ApplyGuardrail",
       ],
       resources: [
-        // Nova Pro inference profile
+        /* Nova Pro inference profile
         `arn:aws:bedrock:us-east-1:784303385514:inference-profile/us.amazon.nova-pro-v1:0`,
         // Nova Pro foundation model (what ChatBedrock actually calls)
         `arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0`,
-        // Embedding model
+        */
+        `arn:aws:bedrock:${this.region}::foundation-model/meta.llama3-70b-instruct-v1:0`,
         `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`,
         // Guardrail
         `arn:aws:bedrock:${this.region}:${this.account}:guardrail/${bedrockGuardrail.attrGuardrailId}`,
@@ -1354,5 +1355,34 @@ export class ApiGatewayStack extends cdk.Stack {
     const cfnLambda_sharedUserPrompt = lambdaSharedUserPromptFunction.node
       .defaultChild as lambda.CfnFunction;
     cfnLambda_sharedUserPrompt.overrideLogicalId("sharedUserPromptFunction");
+
+    // Practice Material Lambda (Node.js)
+    const lambdaPracticeMaterialFunction = new lambda.Function(
+      this,
+      `${id}-practiceMaterialFunction`,
+      {
+        runtime: lambda.Runtime.NODEJS_22_X,
+        code: lambda.Code.fromAsset("lambda"),
+        handler: "handlers/practiceMaterialHandler.handler",
+        timeout: Duration.seconds(120),
+        vpc: vpcStack.vpc,
+        environment: {
+          REGION: this.region,
+        },
+        functionName: `${id}-practiceMaterialFunction`,
+        memorySize: 512,
+        role: lambdaRole,
+      }
+    );
+
+    lambdaPracticeMaterialFunction.addPermission("AllowApiGatewayInvoke", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+      action: "lambda:InvokeFunction",
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/textbooks/*/practice_materials*`,
+    });
+
+    const cfnLambda_practiceMaterial = lambdaPracticeMaterialFunction.node
+      .defaultChild as lambda.CfnFunction;
+    cfnLambda_practiceMaterial.overrideLogicalId("practiceMaterialFunction");
   }
 }

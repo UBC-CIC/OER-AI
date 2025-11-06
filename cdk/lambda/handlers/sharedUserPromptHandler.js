@@ -66,30 +66,47 @@ exports.handler = async (event) => {
     const pathData = event.httpMethod + " " + event.resource;
     
     switch (pathData) {
-      case "GET /textbooks/{textbook_id}/shared_prompts":
+      case "GET /textbooks/{textbook_id}/shared_prompts": {
         const sharedTextbookId = event.pathParameters?.textbook_id;
         if (!sharedTextbookId) {
           response.statusCode = 400;
           response.body = JSON.stringify({ error: "Textbook ID is required" });
           break;
         }
-        
+
         const limit = Math.min(parseInt(event.queryStringParameters?.limit) || 20, 100);
         const offset = parseInt(event.queryStringParameters?.offset) || 0;
-        
-        const result = await sqlConnection`
-          SELECT 
-            id, title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, created_at, updated_at, metadata,
-            COUNT(*) OVER() as total_count
-          FROM shared_user_prompts
-          WHERE textbook_id = ${sharedTextbookId}
-          ORDER BY created_at DESC
-          LIMIT ${limit} OFFSET ${offset}
-        `;
-        
+        const role = event.queryStringParameters?.role;
+
+        // Build query conditionally based on role filter
+        let result;
+        if (role) {
+          result = await sqlConnection`
+            SELECT 
+              id, title, prompt_text, owner_session_id, owner_user_id, 
+              textbook_id, role, visibility, tags, created_at, updated_at, metadata,
+              COUNT(*) OVER() as total_count
+            FROM shared_user_prompts
+            WHERE textbook_id = ${sharedTextbookId} AND role = ${role}
+            ORDER BY created_at DESC
+            LIMIT ${limit} OFFSET ${offset}
+          `;
+        } else {
+          result = await sqlConnection`
+            SELECT 
+              id, title, prompt_text, owner_session_id, owner_user_id, 
+              textbook_id, role, visibility, tags, created_at, updated_at, metadata,
+              COUNT(*) OVER() as total_count
+            FROM shared_user_prompts
+            WHERE textbook_id = ${sharedTextbookId}
+            ORDER BY created_at DESC
+            LIMIT ${limit} OFFSET ${offset}
+          `;
+        }
+
         const total = result.length > 0 ? parseInt(result[0].total_count) : 0;
-        const prompts = result.map(({total_count, ...prompt}) => prompt);
-        
+        const prompts = result.map(({ total_count, ...prompt }) => prompt);
+
         data = {
           prompts,
           pagination: {
@@ -101,6 +118,7 @@ exports.handler = async (event) => {
         };
         response.body = JSON.stringify(data);
         break;
+      }
         
       case "POST /textbooks/{textbook_id}/shared_prompts":
         const postSharedTextbookId = event.pathParameters?.textbook_id;
@@ -111,7 +129,7 @@ exports.handler = async (event) => {
         }
         
         const createData = parseBody(event.body);
-        const { title, prompt_text, owner_session_id, owner_user_id, visibility, tags, metadata } = createData;
+        const { title, prompt_text, owner_session_id, owner_user_id, role, visibility, tags, metadata } = createData;
         
         if (!prompt_text) {
           response.statusCode = 400;
@@ -120,9 +138,9 @@ exports.handler = async (event) => {
         }
         
         const newPrompt = await sqlConnection`
-          INSERT INTO shared_user_prompts (title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, metadata)
-          VALUES (${title || null}, ${prompt_text}, ${owner_session_id || null}, ${owner_user_id || null}, ${postSharedTextbookId}, ${visibility || 'public'}, ${tags || []}, ${metadata || {}})
-          RETURNING id, title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, created_at, updated_at, metadata
+          INSERT INTO shared_user_prompts (title, prompt_text, owner_session_id, owner_user_id, textbook_id, role, visibility, tags, metadata)
+          VALUES (${title || null}, ${prompt_text}, ${owner_session_id || null}, ${owner_user_id || null}, ${postSharedTextbookId}, ${role || null}, ${visibility || 'public'}, ${tags || []}, ${metadata || {}})
+          RETURNING id, title, prompt_text, owner_session_id, owner_user_id, textbook_id, role, visibility, tags, created_at, updated_at, metadata
         `;
         
         response.statusCode = 201;
@@ -139,7 +157,9 @@ exports.handler = async (event) => {
         }
         
         const prompt = await sqlConnection`
-          SELECT id, title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, created_at, updated_at, metadata
+          SELECT 
+            id, title, prompt_text, owner_session_id, owner_user_id, 
+            textbook_id, role, visibility, tags, created_at, updated_at, metadata
           FROM shared_user_prompts
           WHERE id = ${promptId}
         `;
@@ -170,7 +190,8 @@ exports.handler = async (event) => {
           SET title = ${updateTitle}, prompt_text = ${updatePromptText}, visibility = ${updateVisibility}, 
               tags = ${updateTags}, metadata = ${updateMetadata || {}}, updated_at = NOW()
           WHERE id = ${updatePromptId}
-          RETURNING id, title, prompt_text, owner_session_id, owner_user_id, textbook_id, visibility, tags, created_at, updated_at, metadata
+          RETURNING id, title, prompt_text, owner_session_id, owner_user_id, 
+                    textbook_id, role, visibility, tags, created_at, updated_at, metadata
         `;
         
         if (updated.length === 0) {
@@ -178,7 +199,8 @@ exports.handler = async (event) => {
           response.body = JSON.stringify({ error: "Prompt not found" });
           break;
         }
-        
+
+        // Use the returned row directly to avoid extra SELECT
         data = updated[0];
         response.body = JSON.stringify(data);
         break;

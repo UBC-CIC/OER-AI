@@ -88,6 +88,7 @@ export class AmplifyStack extends cdk.Stack {
 
     amplifyApp.addBranch("main");
     amplifyApp.addBranch("api_endpoint_setup");
-    amplifyApp.addBranch("frontend");
+    amplifyApp.addBranch("dev");
+
   }
 }

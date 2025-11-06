@@ -260,6 +260,17 @@ paths:
       operationId: create_user_session
       security:
         - userAuthorizer: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: ["student", "instructor"]
+                  description: Role of the user session (defaults to 'student' if not provided)
       responses:
         "200":
           description: Session created successfully
@@ -274,6 +285,10 @@ paths:
                   userSessionId:
                     type: string
                     format: uuid
+                  role:
+                    type: string
+                    enum: ["student", "instructor"]
+                    description: Role of the user session
         "401":
           description: Unauthorized
         "500":
@@ -330,6 +345,77 @@ paths:
                     type: object
         "400":
           description: Invalid session ID
+        "404":
+          description: User session not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${userFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      tags:
+        - User
+      summary: Update user session role
+      operationId: update_user_session
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          description: User session UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+              properties:
+                role:
+                  type: string
+                  enum: ["student", "instructor"]
+                  description: New role for the user session
+      responses:
+        "200":
+          description: User session updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  session_title:
+                    type: string
+                  context:
+                    type: object
+                  role:
+                    type: string
+                    enum: ["student", "instructor"]
+                  created_at:
+                    type: string
+                    format: date-time
+                  last_active_at:
+                    type: string
+                    format: date-time
+                  expires_at:
+                    type: string
+                    format: date-time
+                  metadata:
+                    type: object
+        "400":
+          description: Invalid request or session ID
         "404":
           description: User session not found
         "401":
@@ -3372,6 +3458,13 @@ paths:
             type: integer
             minimum: 0
             default: 0
+        - name: role
+          in: query
+          description: Filter prompts by the role of the user session that created them (student or instructor)
+          required: false
+          schema:
+            type: string
+            enum: ["student", "instructor"]
       responses:
         "200":
           description: List of shared user prompts for textbook
@@ -3404,6 +3497,10 @@ paths:
                         visibility:
                           type: string
                           enum: ["private", "org", "public"]
+                        role:
+                          type: string
+                          enum: ["student", "instructor"]
+                          description: Role of the user session that created this prompt
                         tags:
                           type: array
                           items:
@@ -3539,6 +3636,103 @@ paths:
         type: aws_proxy
       x-amazon-apigateway-request-validator: all
 
+  /textbooks/{textbook_id}/practice_materials:
+    <<: *commonOptions
+    post:
+      tags:
+        - User
+      summary: Generate AI practice materials (MCQs) for a textbook
+      operationId: generate_practice_materials
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: textbook_id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - topic
+              properties:
+                topic:
+                  type: string
+                  description: Topic to generate questions about
+                  example: "derivatives and integrals"
+                material_type:
+                  type: string
+                  enum: [mcq]
+                  default: mcq
+                num_questions:
+                  type: integer
+                  minimum: 1
+                  maximum: 20
+                  default: 5
+                num_options:
+                  type: integer
+                  minimum: 2
+                  maximum: 6
+                  default: 4
+                difficulty:
+                  type: string
+                  enum: [beginner, intermediate, advanced]
+                  default: intermediate
+                chat_session_id:
+                  type: string
+                  format: uuid
+                  description: Optional chat session association for analytics
+      responses:
+        "200":
+          description: Practice material generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        questionText:
+                          type: string
+                        options:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              text:
+                                type: string
+                              explanation:
+                                type: string
+                        correctAnswer:
+                          type: string
+        "400":
+          description: Invalid request parameters
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${practiceMaterialFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
   /shared_prompts/{shared_prompt_id}:
     <<: *commonOptions
     get:
@@ -3583,6 +3777,10 @@ paths:
                   visibility:
                     type: string
                     enum: ["private", "org", "public"]
+                  role:
+                    type: string
+                    enum: ["student", "instructor"]
+                    description: Role of the user session that created this prompt
                   tags:
                     type: array
                     items:
@@ -3670,6 +3868,10 @@ paths:
                   visibility:
                     type: string
                     enum: ["private", "org", "public"]
+                  role:
+                    type: string
+                    enum: ["student", "instructor"]
+                    description: Role of the user session that created this prompt
                   tags:
                     type: array
                     items:
