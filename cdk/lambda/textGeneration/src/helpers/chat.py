@@ -802,7 +802,7 @@ def update_session_name(table_name: str, session_id: str, bedrock_llm_id: str, d
             try:
                 with db_connection.cursor() as cur:
                     cur.execute(
-                        'UPDATE chat_sessions SET name = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s',
+                        'UPDATE chat_sessions SET name = %s WHERE id = %s',
                         (session_name, session_id)
                     )
                 db_connection.commit()
