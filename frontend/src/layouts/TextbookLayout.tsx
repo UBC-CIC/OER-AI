@@ -13,13 +13,15 @@ export default function TextbookLayout() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { userSessionId } = useUserSession();
-  
+
   const [textbook, setTextbook] = useState<Textbook | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  
+
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
-  const [activeChatSessionId, setActiveChatSessionId] = useState<string | null>(null);
+  const [activeChatSessionId, setActiveChatSessionId] = useState<string | null>(
+    null
+  );
   const [isLoadingChatSessions, setIsLoadingChatSessions] = useState(true);
 
   // Fetch textbook data
@@ -77,7 +79,9 @@ export default function TextbookLayout() {
       const { token } = await tokenResponse.json();
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${id}/chat_sessions/user/${userSessionId}`,
+        `${
+          import.meta.env.VITE_API_ENDPOINT
+        }/textbooks/${id}/chat_sessions/user/${userSessionId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -156,11 +160,20 @@ export default function TextbookLayout() {
     await fetchChatSessions();
   };
 
+  // Update chat session name locally
+  const updateChatSessionName = (sessionId: string, name: string) => {
+    setChatSessions((prev) =>
+      prev.map((session) =>
+        session.id === sessionId ? { ...session, name } : session
+      )
+    );
+  };
+
   // Show loading screen while fetching initial data
   if (loading || isLoadingChatSessions) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        <HomePageHeader  />
+        <HomePageHeader />
         <div className="pt-[70px] flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -172,17 +185,18 @@ export default function TextbookLayout() {
   }
 
   return (
-    <TextbookViewProvider 
-      value={{ 
-        textbook, 
-        loading, 
+    <TextbookViewProvider
+      value={{
+        textbook,
+        loading,
         error,
         chatSessions,
         activeChatSessionId,
         setActiveChatSessionId,
         isLoadingChatSessions,
         createNewChatSession,
-        refreshChatSessions
+        refreshChatSessions,
+        updateChatSessionName,
       }}
     >
       <SidebarProvider>

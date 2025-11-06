@@ -37,6 +37,7 @@ export default function AIChatPage() {
     chatSessions,
     createNewChatSession,
     isLoadingChatSessions,
+    updateChatSessionName,
   } = useTextbookView();
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -130,6 +131,10 @@ export default function AIChatPage() {
               )
             );
           }
+          // Handle session name update
+          if (message.session_name && activeChatSessionId) {
+            updateChatSessionName(activeChatSessionId, message.session_name);
+          }
           break;
 
         case "error":
@@ -151,7 +156,7 @@ export default function AIChatPage() {
           break;
       }
     },
-    [streamingMessageId]
+    [streamingMessageId, activeChatSessionId, updateChatSessionName]
   ); // Only recreate when streamingMessageId changes
 
   const {
@@ -433,6 +438,11 @@ export default function AIChatPage() {
             : msg
         )
       );
+
+      // Handle session name update for HTTP fallback
+      if (data.session_name && activeChatSessionId) {
+        updateChatSessionName(activeChatSessionId, data.session_name);
+      }
     } catch (error) {
       console.error("Error generating text:", error);
       // Update the bot message with error
