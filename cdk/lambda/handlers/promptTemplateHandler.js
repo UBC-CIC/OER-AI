@@ -191,6 +191,45 @@ exports.handler = async (event) => {
         response.body = "";
         break;
         
+      case "GET /prompt_templates/{prompt_template_id}/questions":
+        const templateId = event.pathParameters?.prompt_template_id;
+        if (!templateId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Template ID is required" });
+          break;
+        }
+        
+        const questions = await sqlConnection`
+          SELECT id, question_text, order_index, created_at
+          FROM guided_prompt_questions
+          WHERE prompt_template_id = ${templateId}
+          ORDER BY order_index ASC
+        `;
+        
+        response.body = JSON.stringify({ questions });
+        break;
+        
+      case "POST /prompt_templates/{prompt_template_id}/questions":
+        const newTemplateId = event.pathParameters?.prompt_template_id;
+        const questionData = parseBody(event.body);
+        const { question_text, order_index } = questionData;
+        
+        if (!newTemplateId || !question_text || order_index === undefined) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Template ID, question text, and order index are required" });
+          break;
+        }
+        
+        const newQuestion = await sqlConnection`
+          INSERT INTO guided_prompt_questions (prompt_template_id, question_text, order_index)
+          VALUES (${newTemplateId}, ${question_text}, ${order_index})
+          RETURNING id, question_text, order_index, created_at
+        `;
+        
+        response.statusCode = 201;
+        response.body = JSON.stringify(newQuestion[0]);
+        break;
+        
       default:
         throw new Error(`Unsupported route: "${pathData}"`);
     }

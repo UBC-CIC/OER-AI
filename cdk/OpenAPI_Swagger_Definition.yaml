@@ -3424,6 +3424,59 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
+  /prompt_templates/{prompt_template_id}/questions:
+    <<: *commonOptions
+    get:
+      tags:
+        - User
+      summary: Get questions for a guided prompt template
+      operationId: get_guided_prompt_questions
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: prompt_template_id
+          in: path
+          required: true
+          description: Template UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of questions for guided prompt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        question_text:
+                          type: string
+                        order_index:
+                          type: integer
+                        created_at:
+                          type: string
+                          format: date-time
+        "404":
+          description: Template not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${promptTemplateFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
   /textbooks/{textbook_id}/shared_prompts:
     <<: *commonOptions
     get:
