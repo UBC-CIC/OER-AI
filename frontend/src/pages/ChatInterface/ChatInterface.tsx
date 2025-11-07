@@ -457,22 +457,21 @@ export default function AIChatPage() {
   };
 
   async function sendMessage() {
-    const text = message.trim();
+    let text = message.trim();
     if (!text || !activeChatSessionId || !textbook) return;
 
-    const userMsg: Message = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      sender: "user",
-      text,
-      time: Date.now(),
-    };
-
-    // Handle guided conversation
+    // Handle guided conversation state
     if (guidedState.isActive) {
       const newAnswers = [...guidedState.answers, text];
       const nextIndex = guidedState.currentIndex + 1;
 
-      // Add user message
+      // Add user's answer to chat
+      const userMsg: Message = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        sender: "user",
+        text,
+        time: Date.now(),
+      };
       setMessages((prev) => [...prev, userMsg]);
       setMessage("");
 
@@ -491,16 +490,15 @@ export default function AIChatPage() {
             totalQuestions: guidedState.questions.length,
           },
         };
-
         setMessages((prev) => [...prev, aiMsg]);
         setGuidedState((prev) => ({
           ...prev,
           currentIndex: nextIndex,
           answers: newAnswers,
         }));
+        return;
       } else {
-        // All questions answered, generate final input to send to text gen
-        // TODO: Format with the original prompt template text
+        // All questions answered - construct final prompt
         const finalPrompt = `Answers: ${newAnswers
           .map(
             (answer, i) =>
@@ -516,19 +514,18 @@ export default function AIChatPage() {
           answers: [],
         });
 
-        // Continue with regular message flow using final prompt
-        const finalUserMsg: Message = {
-          id: `${Date.now()}-final`,
-          sender: "user",
-          text: finalPrompt,
-          time: Date.now() + 2,
-        };
-        setMessages((prev) => [...prev, finalUserMsg]);
-
-        return;
+        // Override text to send final prompt to AI
+        text = finalPrompt;
       }
-      return;
     }
+
+    // Create user message for AI generation
+    const userMsg: Message = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      sender: "user",
+      text,
+      time: Date.now(),
+    };
 
     // Create bot message placeholder for streaming
     const botMsg: Message = {
@@ -540,9 +537,9 @@ export default function AIChatPage() {
       isTyping: true, // Start with typing indicator
     };
 
-    // append user and bot messages
+    // Add user and bot messages
     setMessages((m) => [...m, userMsg, botMsg]);
-    setMessage("");
+    if (!guidedState.isActive) setMessage(""); // Only clear if not in guided state
     setStreamingMessageId(botMsg.id);
     setIsStreaming(true);
 
