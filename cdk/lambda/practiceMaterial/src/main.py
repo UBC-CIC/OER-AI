@@ -219,17 +219,11 @@ def handler(event, context):
 
         prompt = build_prompt(topic, difficulty, num_questions, num_options, snippets)
 
-        # Nova Pro uses the Converse API format (messages-based)
         payload = {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [{"text": prompt}]
-                }
-            ],
-            "inferenceConfig": {
+            "inputText": prompt,
+            "textGenerationConfig": {
                 "temperature": 0.6,
-                "maxTokens": 2048,
+                "maxTokenCount": 512,
                 "topP": 0.9,
             },
         }
@@ -243,8 +237,7 @@ def handler(event, context):
         text = model_bytes.decode("utf-8")
         try:
             parsed_outer = json.loads(text)
-            # Nova Pro response format: {"output": {"message": {"role": "assistant", "content": [{"text": "..."}]}}}
-            output_text = parsed_outer.get("output", {}).get("message", {}).get("content", [{}])[0].get("text", text)
+            output_text = parsed_outer.get("results", [{}])[0].get("outputText") or parsed_outer.get("outputText") or parsed_outer.get("generation") or text
         except Exception:
             output_text = text
 
@@ -253,7 +246,7 @@ def handler(event, context):
         except Exception as e1:
             logger.warning(f"First parse/validation failed: {e1}")
             retry_prompt = prompt + "\n\nIMPORTANT: Your previous response was invalid. You MUST return valid JSON only, exactly matching the schema and lengths. No extra commentary."
-            payload["messages"][0]["content"][0]["text"] = retry_prompt
+            payload["inputText"] = retry_prompt
             resp2 = _bedrock_runtime.invoke_model(
                 modelId=_practice_material_model_id,
                 contentType="application/json",
@@ -264,7 +257,7 @@ def handler(event, context):
             text2 = model_bytes2.decode("utf-8")
             try:
                 parsed_outer2 = json.loads(text2)
-                output_text2 = parsed_outer2.get("output", {}).get("message", {}).get("content", [{}])[0].get("text", text2)
+                output_text2 = parsed_outer2.get("results", [{}])[0].get("outputText") or parsed_outer2.get("outputText") or parsed_outer2.get("generation") or text2
             except Exception:
                 output_text2 = text2
             result = validate_shape(extract_json(output_text2), num_questions, num_options)
