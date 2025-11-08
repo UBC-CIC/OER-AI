@@ -3095,6 +3095,7 @@ paths:
                               "quiz_generation",
                               "mcq_generation",
                               "audio_generation",
+                              "guided",
                             ]
                         current_version_id:
                           type: integer
@@ -3163,6 +3164,7 @@ paths:
                       "quiz_generation",
                       "mcq_generation",
                       "audio_generation",
+                      "guided",
                     ]
                 current_version_id:
                   type: integer
@@ -3198,6 +3200,7 @@ paths:
                         "quiz_generation",
                         "mcq_generation",
                         "audio_generation",
+                        "guided",
                       ]
                   current_version_id:
                     type: integer
@@ -3269,6 +3272,7 @@ paths:
                         "quiz_generation",
                         "mcq_generation",
                         "audio_generation",
+                        "guided",
                       ]
                   current_version_id:
                     type: integer
@@ -3333,6 +3337,7 @@ paths:
                       "quiz_generation",
                       "mcq_generation",
                       "audio_generation",
+                      "guided",
                     ]
                 current_version_id:
                   type: integer
@@ -3364,6 +3369,7 @@ paths:
                         "quiz_generation",
                         "mcq_generation",
                         "audio_generation",
+                        "guided",
                       ]
                   current_version_id:
                     type: integer
