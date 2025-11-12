@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { MCQEditable } from "./MCQEditable";
+import { ExportDialog } from "./ExportDialog";
 import type { IH5PMinimalQuestionSet, IH5PQuestion } from "@/types/MaterialEditor";
 import { ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -22,6 +23,7 @@ export function MCQEditableContainer({
   const [isExpanded, setIsExpanded] = useState(true);
   const [title, setTitle] = useState("Untitled Quiz");
   const [exportFormat, setExportFormat] = useState<string>("json");
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   const handleQuestionUpdate = (index: number, updatedQuestion: IH5PQuestion) => {
     const newQuestions = [...questionSet.questions];
@@ -92,6 +94,13 @@ export function MCQEditableContainer({
     if (exportFormat === "h5p") {
       // use parents h5p api exporter
       onExport(questionSet);
+      return;
+    }
+
+    if (exportFormat === "pdf") {
+      // Open dialog to choose PDF style
+      setShowExportDialog(true);
+      return;
     }
   };
 
@@ -170,6 +179,7 @@ export function MCQEditableContainer({
                 <SelectContent>
                   <SelectItem className="cursor-pointer" value="json">JSON</SelectItem>
                   <SelectItem className="cursor-pointer" value="h5p">H5P</SelectItem>
+                  <SelectItem className="cursor-pointer" value="pdf">PDF</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -184,6 +194,13 @@ export function MCQEditableContainer({
           </CardFooter>
         </>
       )} 
+      
+      <ExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        questionSet={questionSet}
+        title={title}
+      />
     </Card>
   );
 }
