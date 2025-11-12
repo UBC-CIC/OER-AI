@@ -21,3 +21,29 @@ export interface SharedUserPrompt {
   updated_at: string;
   metadata: any;
 }
+
+export interface GuidedPromptQuestion {
+  id: string;
+  question_text: string;
+  order_index: number;
+}
+
+export interface GuidedPromptTemplate extends PromptTemplate {
+  type: 'guided';
+  questions: GuidedPromptQuestion[];
+}
+
+export interface Message {
+  id: string;
+  sender: 'user' | 'bot';
+  text: string;
+  sources_used?: string[];
+  time: number;
+  isTyping?: boolean;
+  isGuidedQuestion?: boolean;
+  guidedData?: {
+    templateId: string;
+    questionIndex: number;
+    totalQuestions: number;
+  };
+}
