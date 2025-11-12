@@ -63,8 +63,8 @@ export default function PracticeMaterialPage() {
   };
 
   return (
-    <div className="w-full 2xl:max-w-3xl px-4 py-4">
-      <div className="flex flex-col md:flex-row md:items-start md:justify-center gap-6">
+    <div className="w-full max-w-[1800px] px-4 py-4">
+      <div className="min-h-screen flex flex-col md:flex-row md:items-start md:justify-center gap-6">
         <div className="w-full md:w-[30%]">
           <GenerateForm onGenerate={handleGenerate} />
           {isGenerating && (

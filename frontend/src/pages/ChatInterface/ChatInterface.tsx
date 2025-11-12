@@ -66,52 +66,7 @@ export default function AIChatPage() {
     answers: [],
   });
 
-  // Dummy guided prompt templates
-  const mockGuidedPrompts: GuidedPromptTemplate[] = [
-    {
-      id: "12312903810298301",
-      name: "Create Quiz Questions",
-      description: `Role: You are an expert educator and instructional designer specializing in [SUBJECT].
-
-Your goal is to create high-quality essay questions that assess deep conceptual understanding and higher-order thinking skills.
-
-Task: Generate [X] essay questions aligned with the following course context and learning objective.
-
-Course Context: [COURSE_TITLE or DESCRIPTION]
-
-Learning Objective: [OBJECTIVE_TEXT]
-Difficulty Level: [DIFFICULTY]
-Pedagogical Approach: [APPROACH — e.g., inquiry-based, constructivist, Socratic, problem-based]
-
-Requirements:
-1. Each essay question must directly assess the specified learning objective.
-2. Use only the provided content as the foundation for the question (no outside knowledge).
-3. Questions must prompt analysis, evaluation, or synthesis — not recall.
-4. Each question should:
-- Be open-ended and encourage evidence-based reasoning.
-- Invite students to connect ideas, critique perspectives, or propose solutions.
-- Be clear, concise, and self-contained.
-5. For each essay question, provide:
- - Question Text
- - Expected Learning Outcome (what conceptual or analytical skill is being tested)
- - Guiding Points (3–5 bullet points outlining what a strong answer should include)
- - Rubric Criteria for assessment (e.g., clarity, argumentation, evidence, synthesis).
-6. Match the specified difficulty level and pedagogical approach.
-`,
-      type: "guided",
-      visibility: "public",
-      created_at: new Date().toISOString(),
-      questions: [
-        { id: "q1", question_text: "What is the subject or course topic to focus on? (fills [SUBJECT])", order_index: 0 },
-        { id: "q2", question_text: "How many essay questions should I generate? (fills [X])", order_index: 1 },
-        { id: "q3", question_text: "Please provide the course title or a brief course description. (fills [COURSE_TITLE or DESCRIPTION])", order_index: 2 },
-        { id: "q4", question_text: "What specific learning objective should these questions assess? (fills [OBJECTIVE_TEXT])", order_index: 3 },
-        { id: "q5", question_text: "What difficulty level should the questions be? (e.g., introductory, intermediate, advanced) (fills [DIFFICULTY])", order_index: 4 },
-        { id: "q6", question_text: "Which pedagogical approach should guide the questions? (e.g., inquiry-based, constructivist, Socratic, problem-based) (fills [APPROACH])", order_index: 5 },
-      ],
-    }
-  ];
-
+  
   // Auto-scroll to bottom when messages change or when typing starts
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -353,7 +308,7 @@ Requirements:
           (t: PromptTemplate) => t.type === "guided"
         );
         setGuidedPrompts(
-          guidedTemplates.length > 0 ? guidedTemplates : mockGuidedPrompts
+          guidedTemplates.length > 0 ? guidedTemplates : []
         );
       } catch (error) {
         console.error("Error fetching prompt templates:", error);
