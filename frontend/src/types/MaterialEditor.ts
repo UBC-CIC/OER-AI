@@ -84,6 +84,25 @@ export interface I5HPEssayQuestion {
 }
 
 /**
+ * Union type for all H5P question types
+ */
+export type IH5PQuestion = I5HPMultiChoiceQuestion | I5HPEssayQuestion;
+
+/**
+ * Type guard to check if a question is a multiple choice question
+ */
+export function isMultiChoiceQuestion(question: IH5PQuestion): question is I5HPMultiChoiceQuestion {
+  return question.library.startsWith("H5P.MultiChoice");
+}
+
+/**
+ * Type guard to check if a question is an essay question
+ */
+export function isEssayQuestion(question: IH5PQuestion): question is I5HPEssayQuestion {
+  return question.library.startsWith("H5P.Essay");
+}
+
+/**
  * This is the root-level object you should ask the LLM to generate.
  * It represents the minimal data payload for a list of questions.
  */

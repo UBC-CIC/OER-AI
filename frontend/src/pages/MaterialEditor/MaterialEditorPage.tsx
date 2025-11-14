@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { MCQEditableContainer } from "@/components/MaterialEditorPage/MCQEditableContainer";
-import type { I5HPMultiChoiceQuestion } from "@/types/MaterialEditor";
+import { EssayEditableContainer } from "@/components/MaterialEditorPage/EssayEditableContainer";
+import type { I5HPMultiChoiceQuestion, I5HPEssayQuestion, IH5PQuestion } from "@/types/MaterialEditor";
+import { isMultiChoiceQuestion, isEssayQuestion } from "@/types/MaterialEditor";
 import { Card, CardDescription } from "@/components/ui/card";
 import { MaterialEditorForm } from "@/components/MaterialEditorPage/MaterialEditorForm";
 
-// Dummy H5P question set data
+// Dummy H5P MCQ question data
 const dummyMCQQuestions: I5HPMultiChoiceQuestion[] = [
   {
     library: "H5P.MultiChoice 1.17",
@@ -87,8 +89,141 @@ const dummyMCQQuestions: I5HPMultiChoiceQuestion[] = [
   },
 ];
 
+// Dummy H5P Essay question data
+const dummyEssayQuestions: I5HPEssayQuestion[] = [
+  {
+    library: "H5P.Essay 1.5",
+    params: {
+      taskDescription: "Explain the concept of photosynthesis and describe the main stages involved in the process.",
+      keywords: [
+        {
+          keyword: "photosynthesis",
+          alternatives: ["photo synthesis", "photosynthetic process"],
+          options: {
+            points: 2,
+            occurrences: 1,
+            caseSensitive: false,
+            forgiveMistakes: true,
+            feedbackIncluded: "Good! You mentioned photosynthesis.",
+            feedbackMissed: "Don't forget to define what photosynthesis is.",
+            feedbackIncludedWord: "keyword",
+            feedbackMissedWord: "keyword",
+          },
+        },
+        {
+          keyword: "light-dependent",
+          alternatives: ["light dependent", "light reaction", "light reactions"],
+          options: {
+            points: 3,
+            occurrences: 1,
+            caseSensitive: false,
+            forgiveMistakes: true,
+            feedbackIncluded: "Excellent! You identified the light-dependent reactions.",
+            feedbackMissed: "Remember to mention the light-dependent stage.",
+            feedbackIncludedWord: "keyword",
+            feedbackMissedWord: "keyword",
+          },
+        },
+        {
+          keyword: "Calvin cycle",
+          alternatives: ["calvin-cycle", "light-independent", "light independent", "dark reaction"],
+          options: {
+            points: 3,
+            occurrences: 1,
+            caseSensitive: false,
+            forgiveMistakes: true,
+            feedbackIncluded: "Great! You mentioned the Calvin cycle.",
+            feedbackMissed: "Don't forget the Calvin cycle (light-independent reactions).",
+            feedbackIncludedWord: "alternative",
+            feedbackMissedWord: "keyword",
+          },
+        },
+        {
+          keyword: "chloroplast",
+          alternatives: ["chloroplasts"],
+          options: {
+            points: 2,
+            occurrences: 1,
+            caseSensitive: false,
+            forgiveMistakes: true,
+            feedbackIncluded: "Good! You identified where photosynthesis occurs.",
+            feedbackMissed: "Remember to mention where photosynthesis takes place.",
+            feedbackIncludedWord: "keyword",
+            feedbackMissedWord: "none",
+          },
+        },
+      ],
+    },
+  },
+  {
+    library: "H5P.Essay 1.5",
+    params: {
+      taskDescription: "Describe Newton's First Law of Motion and provide a real-world example.",
+      keywords: [
+        {
+          keyword: "inertia",
+          alternatives: ["inertial"],
+          options: {
+            points: 3,
+            occurrences: 1,
+            caseSensitive: false,
+            forgiveMistakes: true,
+            feedbackIncluded: "Excellent! You mentioned inertia.",
+            feedbackMissed: "The concept of inertia is key to Newton's First Law.",
+            feedbackIncludedWord: "keyword",
+            feedbackMissedWord: "keyword",
+          },
+        },
+        {
+          keyword: "rest",
+          alternatives: ["at rest", "stationary"],
+          options: {
+            points: 2,
+            occurrences: 1,
+            caseSensitive: false,
+            forgiveMistakes: true,
+            feedbackIncluded: "Good! You mentioned objects at rest.",
+            feedbackMissed: "Remember to discuss what happens to objects at rest.",
+            feedbackIncludedWord: "alternative",
+            feedbackMissedWord: "keyword",
+          },
+        },
+        {
+          keyword: "motion",
+          alternatives: ["moving", "movement"],
+          options: {
+            points: 2,
+            occurrences: 1,
+            caseSensitive: false,
+            forgiveMistakes: true,
+            feedbackIncluded: "Good! You discussed motion.",
+            feedbackMissed: "Don't forget to explain what happens to objects in motion.",
+            feedbackIncludedWord: "keyword",
+            feedbackMissedWord: "keyword",
+          },
+        },
+        {
+          keyword: "force",
+          alternatives: ["forces", "external force"],
+          options: {
+            points: 3,
+            occurrences: 1,
+            caseSensitive: false,
+            forgiveMistakes: true,
+            feedbackIncluded: "Excellent! You mentioned the role of force.",
+            feedbackMissed: "Remember to discuss what changes an object's state of motion.",
+            feedbackIncludedWord: "answer",
+            feedbackMissedWord: "none",
+          },
+        },
+      ],
+    },
+  },
+];
+
 export default function MaterialEditorPage() {
   const [mcqQuestionSets, setMcqQuestionSets] = useState<I5HPMultiChoiceQuestion[][]>([dummyMCQQuestions]);
+  const [essayQuestionSets, setEssayQuestionSets] = useState<I5HPEssayQuestion[][]>([dummyEssayQuestions]);
 
 
   const handleQuizDelete = (index: number) => {
@@ -96,16 +231,37 @@ export default function MaterialEditorPage() {
     setMcqQuestionSets(newQuestionSets);
   }
 
+  const handleEssayDelete = (index: number) => {
+    const newQuestionSets = essayQuestionSets.filter((_, i) => i !== index);
+    setEssayQuestionSets(newQuestionSets);
+  }
+
   const handleGenerate = (formData: unknown) => {
     console.log("Generate form data:", formData);
     // TODO: Call API to generate new question set
 
+    // For demo purposes, add both MCQ and Essay question sets
     setMcqQuestionSets((prev) => [...prev, dummyMCQQuestions]);
+    setEssayQuestionSets((prev) => [...prev, dummyEssayQuestions]);
   };
 
-  const handleExportToH5P = (questions: I5HPMultiChoiceQuestion[]) => {
-    console.log("Exporting questions:", questions);
-    // TODO: call api to export questions as h5p
+  const handleExportToH5P = (questions: IH5PQuestion[]) => {
+    // Determine question type and handle accordingly
+    if (questions.length === 0) {
+      console.warn("No questions to export");
+      return;
+    }
+
+    const firstQuestion = questions[0];
+    if (isMultiChoiceQuestion(firstQuestion)) {
+      console.log("Exporting MCQ questions:", questions);
+      // TODO: call api to export MCQ questions as h5p
+    } else if (isEssayQuestion(firstQuestion)) {
+      console.log("Exporting Essay questions:", questions);
+      // TODO: call api to export Essay questions as h5p
+    } else {
+      console.error("Unknown question type:", (firstQuestion as IH5PQuestion).library);
+    }
   };
 
   return (
@@ -117,7 +273,7 @@ export default function MaterialEditorPage() {
 
         <div className="w-full md:w-[70%] space-y-6">
           <h2 className="text-2xl font-semibold">Practice Questions</h2>
-          {mcqQuestionSets.length === 0 ? (
+          {mcqQuestionSets.length === 0 && essayQuestionSets.length === 0 ? (
             <Card>
               <CardDescription className="flex flex-col justify-center items-center p-6">
                 <p className="text-center text-muted-foreground">No practice materials have been generated for this session</p>
@@ -125,14 +281,35 @@ export default function MaterialEditorPage() {
               </CardDescription>
             </Card>
           ) : (
-            mcqQuestionSets.map((questions, index) => (
-              <MCQEditableContainer
-                key={index}
-                initialQuestions={questions}
-                exportToH5P={handleExportToH5P}
-                onDelete={() => {handleQuizDelete(index)}}
-              />
-            ))
+            <>
+              {mcqQuestionSets.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold">Multiple Choice Questions</h3>
+                  {mcqQuestionSets.map((questions, index) => (
+                    <MCQEditableContainer
+                      key={`mcq-${index}`}
+                      initialQuestions={questions}
+                      exportToH5P={handleExportToH5P}
+                      onDelete={() => {handleQuizDelete(index)}}
+                    />
+                  ))}
+                </div>
+              )}
+              
+              {essayQuestionSets.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold">Essay Questions</h3>
+                  {essayQuestionSets.map((questions, index) => (
+                    <EssayEditableContainer
+                      key={`essay-${index}`}
+                      initialQuestions={questions}
+                      exportToH5P={handleExportToH5P}
+                      onDelete={() => {handleEssayDelete(index)}}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
