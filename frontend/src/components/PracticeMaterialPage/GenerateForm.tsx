@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -17,41 +19,52 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+// Validation schema
+const mcqSchema = z.object({
+  materialType: z.literal("mcq"),
+  topic: z.string().min(1, "Topic is required").max(200, "Topic too long"),
+  numQuestions: z
+    .number()
+    .min(1, "Must be at least 1")
+    .max(20, "Maximum 20 questions"),
+  numOptions: z
+    .number()
+    .min(2, "Must be at least 2")
+    .max(8, "Maximum 8 options"),
+  difficulty: z.enum(["beginner", "intermediate", "advanced"]),
+});
+
+const formSchema = z.discriminatedUnion("materialType", [mcqSchema]);
+
+type FormData = z.infer<typeof formSchema>;
+
 interface GenerateFormProps {
-  onGenerate: (formData: any) => void;
+  onGenerate: (formData: FormData) => void;
 }
 
 export function GenerateForm({ onGenerate }: GenerateFormProps) {
-  const [materialType, setMaterialType] = useState("mcq");
-  const [topic, setTopic] = useState("");
-  const [numQuestions, setNumQuestions] = useState("5");
-  const [numOptions, setNumOptions] = useState("4");
-  const [numCards, setNumCards] = useState("10");
-  const [cardType, setCardType] = useState("question-answer");
-  const [difficulty, setDifficulty] = useState("intermediate");
+  const {
+    control,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      materialType: "mcq",
+      topic: "",
+      numQuestions: 5,
+      numOptions: 4,
+      difficulty: "intermediate",
+    },
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    //generation logic handled my parent
-    
-    const baseData = {
-      materialType,
-      topic,
-      difficulty,
-    };
+  // watch current material type
+  const materialType = watch("materialType");
 
-    if (materialType === "mcq") {
-      onGenerate({
-        ...baseData,
-        numQuestions: parseInt(numQuestions),
-        numOptions: parseInt(numOptions),
-      });
-    } else if (materialType === "flashcards") {
-      onGenerate({
-        ...baseData,
-        numCards: parseInt(numCards),
-        cardType,
-      });
+  const onSubmit = (data: FormData) => {
+    if (data.materialType === "mcq") {
+      onGenerate(data);
     }
   };
 
@@ -67,30 +80,54 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit(onSubmit)();
+          }}
+          className="space-y-4"
+        >
           <div className="space-y-2">
             <Label htmlFor="material-type">Material Type</Label>
-            <Select value={materialType} onValueChange={setMaterialType}>
-              <SelectTrigger className="border-grey w-full" id="material-type">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="mcq">Multiple Choice Questions</SelectItem>
-                <SelectItem value="flashcards">Flashcards</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="materialType"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger
+                    className="border-grey w-full"
+                    id="material-type"
+                  >
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mcq">
+                      Multiple Choice Questions
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
           {/* Topic */}
           <div className="space-y-2">
             <Label htmlFor="topic">Topic</Label>
-            <Input
-              id="topic"
-              placeholder="Describe a topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              required
+            <Controller
+              name="topic"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  id="topic"
+                  placeholder="Describe a topic"
+                  className={errors.topic ? "border-red-500" : ""}
+                />
+              )}
             />
+            {errors.topic && (
+              <p className="text-sm text-red-500">{errors.topic.message}</p>
+            )}
           </div>
 
           {/* Conditional Fields based on Material Type */}
@@ -99,102 +136,85 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
               {/* Number of Questions */}
               <div className="space-y-2">
                 <Label htmlFor="num-questions">Number of Questions</Label>
-                <Input
-                  id="num-questions"
-                  type="number"
-                  placeholder="Enter a number"
-                  min="1"
-                  max="50"
-                  value={numQuestions}
-                  onChange={(e) => setNumQuestions(e.target.value)}
-                  required
+                <Controller
+                  name="numQuestions"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      id="num-questions"
+                      type="number"
+                      placeholder="Enter a number"
+                      onChange={(e) =>
+                        field.onChange(parseInt(e.target.value) || 0)
+                      }
+                      className={errors.numQuestions ? "border-red-500" : ""}
+                    />
+                  )}
                 />
+                {errors.numQuestions && (
+                  <p className="text-sm text-red-500">
+                    {errors.numQuestions.message}
+                  </p>
+                )}
               </div>
 
               {/* Number of Answer Options */}
               <div className="space-y-2">
                 <Label htmlFor="num-options">Number of Answer Options</Label>
-                <Input
-                  id="num-options"
-                  type="number"
-                  placeholder="Enter a number"
-                  min="2"
-                  max="20"
-                  value={numOptions}
-                  onChange={(e) => setNumOptions(e.target.value)}
-                  required
+                <Controller
+                  name="numOptions"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      id="num-options"
+                      type="number"
+                      placeholder="Enter a number"
+                      onChange={(e) =>
+                        field.onChange(parseInt(e.target.value) || 0)
+                      }
+                      className={errors.numOptions ? "border-red-500" : ""}
+                    />
+                  )}
                 />
+                {errors.numOptions && (
+                  <p className="text-sm text-red-500">
+                    {errors.numOptions.message}
+                  </p>
+                )}
               </div>
 
               {/* Difficulty */}
               <div className="space-y-2">
                 <Label htmlFor="difficulty">Difficulty</Label>
-                <Select value={difficulty} onValueChange={setDifficulty}>
-                  <SelectTrigger className="border-grey w-full" id="difficulty">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="beginner">Beginner</SelectItem>
-                    <SelectItem value="intermediate">Intermediate</SelectItem>
-                    <SelectItem value="advanced">Advanced</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-
-          {/* Flashcard-specific fields */}
-          {materialType === "flashcards" && (
-            <>
-              {/* Number of Cards */}
-              <div className="space-y-2">
-                <Label htmlFor="num-cards">Number of Cards</Label>
-                <Input
-                  id="num-cards"
-                  type="number"
-                  placeholder="Enter a number"
-                  min="5"
-                  max="30"
-                  value={numCards}
-                  onChange={(e) => setNumCards(e.target.value)}
-                  required
+                <Controller
+                  name="difficulty"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger
+                        className="border-grey w-full"
+                        id="difficulty"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Beginner</SelectItem>
+                        <SelectItem value="intermediate">
+                          Intermediate
+                        </SelectItem>
+                        <SelectItem value="advanced">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
               </div>
-
-              {/* Card Type */}
-              <div className="space-y-2">
-                <Label htmlFor="card-type">Card Type</Label>
-                <Select value={cardType} onValueChange={setCardType}>
-                  <SelectTrigger className="border-grey w-full" id="card-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="term-definition">Term & Definition</SelectItem>
-                    <SelectItem value="question-answer">Question & Answer</SelectItem>
-                    <SelectItem value="concept-example">Concept & Example</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Difficulty */}
-              <div className="space-y-2">
-                <Label htmlFor="difficulty-flashcard">Difficulty</Label>
-                <Select value={difficulty} onValueChange={setDifficulty}>
-                  <SelectTrigger className="border-grey w-full" id="difficulty-flashcard">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="beginner">Beginner</SelectItem>
-                    <SelectItem value="intermediate">Intermediate</SelectItem>
-                    <SelectItem value="advanced">Advanced</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </>
           )}
 
-          <Button type="submit" className="w-full">
-            Generate
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Generating..." : "Generate"}
           </Button>
         </form>
       </CardContent>

@@ -96,7 +96,7 @@ export default function UserChatMessage({ text, textbookId, onSaveSuccess, onSav
       <div className="flex justify-end w-full">
         <Card className="py-[10px] max-w-[90%]">
           <CardContent className="px-[10px] text-sm lg:text-md break-words">
-            <p>{text}</p>
+            <p className="whitespace-pre-wrap">{text}</p>
           </CardContent>
         </Card>
       </div>

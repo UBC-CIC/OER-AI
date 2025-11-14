@@ -191,6 +191,57 @@ exports.handler = async (event) => {
         response.body = "";
         break;
         
+      case "GET /prompt_templates/{prompt_template_id}/questions":
+        const questionsTemplateId = event.pathParameters?.prompt_template_id;
+        if (!questionsTemplateId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Template ID is required" });
+          break;
+        }
+        
+        const questions = await sqlConnection`
+          SELECT id, question_text, order_index, created_at
+          FROM guided_prompt_questions
+          WHERE prompt_template_id = ${questionsTemplateId}
+          ORDER BY order_index ASC
+        `;
+        
+        response.body = JSON.stringify({ questions });
+        break;
+        
+      case "POST /prompt_templates/{prompt_template_id}/questions":
+        const newTemplateId = event.pathParameters?.prompt_template_id;
+        const questionData = parseBody(event.body);
+        const { questions: questionsToCreate } = questionData;
+        
+        if (!newTemplateId || !questionsToCreate || !Array.isArray(questionsToCreate) || questionsToCreate.length === 0) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Template ID and questions array are required" });
+          break;
+        }
+        
+        const createdQuestions = [];
+        for (const question of questionsToCreate) {
+          const { question_text, order_index } = question;
+          if (!question_text || order_index === undefined) {
+            response.statusCode = 400;
+            response.body = JSON.stringify({ error: "Each question must have question_text and order_index" });
+            break;
+          }
+          
+          const newQuestion = await sqlConnection`
+            INSERT INTO guided_prompt_questions (prompt_template_id, question_text, order_index)
+            VALUES (${newTemplateId}, ${question_text}, ${order_index})
+            RETURNING id, question_text, order_index, created_at
+          `;
+          
+          createdQuestions.push(newQuestion[0]);
+        }
+        
+        response.statusCode = 201;
+        response.body = JSON.stringify({ questions: createdQuestions });
+        break;
+        
       default:
         throw new Error(`Unsupported route: "${pathData}"`);
     }

@@ -4,23 +4,21 @@ import { ChevronDown, LibraryBig } from "lucide-react";
 import PromptCard from "@/components/ChatInterface/PromptCard";
 import AIChatMessage from "@/components/ChatInterface/AIChatMessage";
 import UserChatMessage from "@/components/ChatInterface/UserChatMessage";
+import GuidedQuestionMessage from "@/components/ChatInterface/GuidedQuestionMessage";
 import { Button } from "@/components/ui/button";
 import PromptLibraryModal from "@/components/ChatInterface/PromptLibraryModal";
 import { useTextbookView } from "@/providers/textbookView";
 import { AiChatInput } from "@/components/ChatInterface/userInput";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import type { PromptTemplate, SharedUserPrompt } from "@/types/Chat";
+import type {
+  PromptTemplate,
+  SharedUserPrompt,
+  GuidedPromptTemplate,
+  GuidedPromptQuestion,
+  Message,
+} from "@/types/Chat";
 import { useUserSession } from "@/providers/usersession";
 import { useMode } from "@/providers/mode";
-
-type Message = {
-  id: string;
-  sender: "user" | "bot";
-  text: string;
-  sources_used?: string[];
-  time: number;
-  isTyping?: boolean;
-};
 
 export default function AIChatPage() {
   // URL search params for pre-filled questions (from FAQ page)
@@ -30,6 +28,9 @@ export default function AIChatPage() {
   const [message, setMessage] = useState("");
   const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
   const [sharedPrompts, setSharedPrompts] = useState<SharedUserPrompt[]>([]);
+  const [guidedPrompts, setGuidedPrompts] = useState<GuidedPromptTemplate[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [seeMore, setSeeMore] = useState(false);
@@ -55,6 +56,21 @@ export default function AIChatPage() {
 
   const textbookTitle = textbook?.title ?? "Calculus: Volume 3";
 
+  const [guidedState, setGuidedState] = useState<{
+    isActive: boolean;
+    templateId: string;
+    questions: GuidedPromptQuestion[];
+    currentIndex: number;
+    answers: string[];
+  }>({
+    isActive: false,
+    templateId: "",
+    questions: [],
+    currentIndex: 0,
+    answers: [],
+  });
+
+  
   // Auto-scroll to bottom when messages change or when typing starts
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -290,9 +306,18 @@ export default function AIChatPage() {
         const data = await response.json();
         const templates = data.templates || [];
         setPrompts(templates);
+
+        // Set guided prompts without questions (lazy load later)
+        const guidedTemplates = templates.filter(
+          (t: PromptTemplate) => t.type === "guided"
+        );
+        setGuidedPrompts(
+          guidedTemplates.length > 0 ? guidedTemplates : []
+        );
       } catch (error) {
         console.error("Error fetching prompt templates:", error);
         setPrompts([]);
+        setGuidedPrompts([]);
       } finally {
         setLoading(false);
       }
@@ -301,7 +326,6 @@ export default function AIChatPage() {
     fetchPrompts();
   }, []);
 
-  // Fetch shared prompts from API filtered by current mode
   const fetchSharedPrompts = useCallback(async () => {
     if (!textbook?.id) return; // Need textbook_id
     try {
@@ -332,10 +356,146 @@ export default function AIChatPage() {
     }
   }, [textbook?.id, mode]);
 
+  const startGuidedConversation = async (template: GuidedPromptTemplate) => {
+    try {
+      // lazy fetch questions for template
+      let questions = template.questions;
+      if (!questions) {
+        const tokenResponse = await fetch(
+          `${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`
+        );
+        const { token } = await tokenResponse.json();
+
+        const questionsResponse = await fetch(
+          `${import.meta.env.VITE_API_ENDPOINT}/prompt_templates/${
+            template.id
+          }/questions`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        const questionsData = await questionsResponse.json();
+        questions = questionsData.questions || [];
+
+        // Update the template in state with questions
+        setGuidedPrompts((prev) =>
+          prev.map((p) => (p.id === template.id ? { ...p, questions } : p))
+        );
+      }
+
+      if (!questions.length) return;
+
+      setGuidedState({
+        isActive: true,
+        templateId: template.id,
+        questions,
+        currentIndex: 0,
+        answers: [],
+      });
+
+      // Send first question as AI message
+      const firstQuestion = questions[0];
+      const aiMsg: Message = {
+        id: `guided-${Date.now()}`,
+        sender: "bot",
+        text: firstQuestion.question_text,
+        time: Date.now(),
+        isGuidedQuestion: true,
+        guidedData: {
+          templateId: template.id,
+          questionIndex: 0,
+          totalQuestions: questions.length,
+        },
+      };
+      setMessages((prev) => [...prev, aiMsg]);
+    } catch (error) {
+      console.error("Error starting guided conversation:", error);
+    }
+  };
+
   async function sendMessage() {
-    const text = message.trim();
+    let text = message.trim();
     if (!text || !activeChatSessionId || !textbook) return;
 
+    // Handle guided conversation state
+    if (guidedState.isActive) {
+      const newAnswers = [...guidedState.answers, text];
+      const nextIndex = guidedState.currentIndex + 1;
+
+      // Add user's answer to chat
+      const userMsg: Message = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        sender: "user",
+        text,
+        time: Date.now(),
+      };
+      setMessages((prev) => [...prev, userMsg]);
+      setMessage("");
+
+      if (nextIndex < guidedState.questions.length) {
+        // Ask next question
+        const nextQuestion = guidedState.questions[nextIndex];
+        const aiMsg: Message = {
+          id: `guided-${Date.now()}`,
+          sender: "bot",
+          text: nextQuestion.question_text,
+          time: Date.now() + 1,
+          isGuidedQuestion: true,
+          guidedData: {
+            templateId: guidedState.templateId,
+            questionIndex: nextIndex,
+            totalQuestions: guidedState.questions.length,
+          },
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+        setGuidedState((prev) => ({
+          ...prev,
+          currentIndex: nextIndex,
+          answers: newAnswers,
+        }));
+        return;
+      } else {
+        // All questions answered - construct final prompt by replacing placeholders
+        const template = guidedPrompts.find(
+          (p) => p.id === guidedState.templateId
+        );
+        
+        let finalPrompt = template?.description || "";
+
+        // Extract all placeholders from the template description (e.g., [SUBJECT], [X], etc.)
+        const placeholderRegex = /\[([^\]]+)\]/g;
+        const placeholders: string[] = [];
+        let match;
+        
+        while ((match = placeholderRegex.exec(template?.description || "")) !== null) {
+          placeholders.push(match[0]); // Store the full placeholder including brackets
+        }
+
+        // Replace each placeholder with the corresponding user answer
+        newAnswers.forEach((answer, index) => {
+          if (index < placeholders.length) {
+            // replace placeholder with answer
+            finalPrompt = finalPrompt.replace(placeholders[index], answer);
+          }
+        });
+
+        setGuidedState({
+          isActive: false,
+          templateId: "",
+          questions: [],
+          currentIndex: 0,
+          answers: [],
+        });
+
+        // Override text to send final prompt to AI
+        console.log("Final constructed prompt:", finalPrompt);
+        text = finalPrompt;
+      }
+    }
+
+    // Create user message for AI generation
     const userMsg: Message = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       sender: "user",
@@ -353,9 +513,9 @@ export default function AIChatPage() {
       isTyping: true, // Start with typing indicator
     };
 
-    // append user and bot messages
+    // Add user and bot messages
     setMessages((m) => [...m, userMsg, botMsg]);
-    setMessage("");
+    if (!guidedState.isActive) setMessage(""); // Only clear if not in guided state
     setStreamingMessageId(botMsg.id);
     setIsStreaming(true);
 
@@ -495,6 +655,15 @@ export default function AIChatPage() {
           textbookId={textbook?.id || ""}
         />
       );
+    } else if (message.isGuidedQuestion && message.guidedData) {
+      return (
+        <GuidedQuestionMessage
+          key={message.id}
+          text={message.text}
+          questionIndex={message.guidedData.questionIndex}
+          totalQuestions={message.guidedData.totalQuestions}
+        />
+      );
     } else {
       return (
         <AIChatMessage
@@ -625,9 +794,11 @@ export default function AIChatPage() {
           onOpenChange={setShowLibrary}
           prompts={prompts}
           sharedPrompts={sharedPrompts}
+          guidedPrompts={guidedPrompts}
           onSelectPrompt={(msg) => {
             setMessage(msg);
           }}
+          onSelectGuidedPrompt={startGuidedConversation}
           onFetchSharedPrompts={fetchSharedPrompts}
         />
       </div>
