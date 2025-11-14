@@ -3,30 +3,30 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { EssayEditable } from "./EssayEditable";
-import type { IH5PMinimalQuestionSet, I5HPEssayQuestion } from "@/types/MaterialEditor";
+import type { I5HPEssayQuestion } from "@/types/MaterialEditor";
 import { ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 interface EssayEditableContainerProps {
-  initialQuestionSet: IH5PMinimalQuestionSet;
-  exportToH5P: (questionSet: IH5PMinimalQuestionSet) => void;
+  initialQuestions: I5HPEssayQuestion[];
+  exportToH5P: (questions: I5HPEssayQuestion[]) => void;
   onDelete: () => void;
 }
 
 export function EssayEditableContainer({
-  initialQuestionSet,
+  initialQuestions,
   exportToH5P: onExport,
   onDelete,
 }: EssayEditableContainerProps) {
-  const [questionSet, setQuestionSet] = useState<IH5PMinimalQuestionSet>(initialQuestionSet);
+  const [questions, setQuestions] = useState<I5HPEssayQuestion[]>(initialQuestions);
   const [isExpanded, setIsExpanded] = useState(true);
   const [title, setTitle] = useState("Untitled Essay Set");
   const [exportFormat, setExportFormat] = useState<string>("json");
 
   const handleQuestionUpdate = (index: number, updatedQuestion: I5HPEssayQuestion) => {
-    const newQuestions = [...(questionSet.questions as I5HPEssayQuestion[])];
+    const newQuestions = [...questions];
     newQuestions[index] = updatedQuestion;
-    setQuestionSet({ questions: newQuestions as I5HPEssayQuestion[] });
+    setQuestions(newQuestions);
   };
 
   const handleAddQuestion = () => {
@@ -52,13 +52,13 @@ export function EssayEditableContainer({
         ],
       },
     };
-    setQuestionSet({ questions: [...(questionSet.questions as I5HPEssayQuestion[]), newQuestion] as I5HPEssayQuestion[] });
+    setQuestions([...questions, newQuestion]);
   };
 
   const handleDeleteQuestion = (index: number) => {
-    if (questionSet.questions.length <= 1) return; // enforce at least 1
-    const newQuestions = questionSet.questions.filter((_, i) => i !== index);
-    setQuestionSet({ questions: newQuestions as I5HPEssayQuestion[] });
+    if (questions.length <= 1) return; // enforce at least 1
+    const newQuestions = questions.filter((_, i) => i !== index);
+    setQuestions(newQuestions);
   };
 
   const downloadFile = (contents: string, filename: string, mime = "application/json") => {
@@ -73,8 +73,8 @@ export function EssayEditableContainer({
     URL.revokeObjectURL(url);
   };
 
-  const exportAsJSON = (qs = questionSet) => {
-    const contents = JSON.stringify(qs, null, 2);
+  const exportAsJSON = (qs = questions) => {
+    const contents = JSON.stringify({ questions: qs }, null, 2);
     downloadFile(contents, `${title || "essay-set"}.json`, "application/json");
   };
 
@@ -86,7 +86,7 @@ export function EssayEditableContainer({
 
     if (exportFormat === "h5p") {
       // use parent's h5p api exporter
-      onExport(questionSet);
+      onExport(questions);
     }
   };
 
@@ -116,7 +116,7 @@ export function EssayEditableContainer({
                 className="text-lg font-semibold border-none shadow-none p-0 h-auto focus-visible:ring-0"
               />
               <p className="text-sm text-muted-foreground mt-1">
-                {questionSet.questions.length} {questionSet.questions.length === 1 ? 'essay question' : 'essay questions'}
+                {questions.length} {questions.length === 1 ? 'essay question' : 'essay questions'}
               </p>
             </div>
           </div>
@@ -138,7 +138,7 @@ export function EssayEditableContainer({
       {isExpanded && (
         <>
           <CardContent className="space-y-4">
-            {(questionSet.questions as I5HPEssayQuestion[]).map((question, index) => (
+            {questions.map((question, index) => (
               <EssayEditable
                 key={index}
                 question={question}
