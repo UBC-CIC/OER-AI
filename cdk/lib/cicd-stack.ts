@@ -51,6 +51,7 @@ export class CICDStack extends cdk.Stack {
         resources: [
           `arn:aws:lambda:${this.region}:${this.account}:function:*-DataIngestionLambdaDockerFunction`,
           `arn:aws:lambda:${this.region}:${this.account}:function:*-TextGenLambdaDockerFunction`,
+          `arn:aws:lambda:${this.region}:${this.account}:function:*-PracticeMaterialLambdaDockerFunction`,
         ],
       })
     );
@@ -76,7 +77,7 @@ export class CICDStack extends cdk.Stack {
           actionName: "GitHub",
           owner: username,
           repo: props.githubRepo,
-          branch: props.githubBranch ?? "text_generation",
+          branch: props.githubBranch ?? "main",
           oauthToken: cdk.SecretValue.secretsManager(
             "github-personal-access-token",
             {

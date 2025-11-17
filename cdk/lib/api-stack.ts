@@ -1102,6 +1102,68 @@ export class ApiGatewayStack extends cdk.Stack {
       .defaultChild as lambda.CfnFunction;
     cfnLambda_textbook.overrideLogicalId("textbookFunction");
 
+    // FAQ Lambda Function
+    const lambdaFaqFunction = new lambda.Function(
+      this,
+      `${id}-faqFunction`,
+      {
+        runtime: lambda.Runtime.NODEJS_22_X,
+        code: lambda.Code.fromAsset("lambda"),
+        handler: "handlers/faqHandler.handler",
+        timeout: Duration.seconds(300),
+        vpc: vpcStack.vpc,
+        environment: {
+          SM_DB_CREDENTIALS: db.secretPathUser.secretName,
+          RDS_PROXY_ENDPOINT: db.rdsProxyEndpoint,
+        },
+        functionName: `${id}-faqFunction`,
+        memorySize: 512,
+        layers: [postgres],
+        role: lambdaRole,
+      }
+    );
+
+    lambdaFaqFunction.addPermission("AllowApiGatewayInvoke", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+      action: "lambda:InvokeFunction",
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/textbooks/*/faq*`,
+    });
+
+    lambdaFaqFunction.addPermission("AllowFaqInvoke", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+      action: "lambda:InvokeFunction",
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/faq*`,
+    });
+
+    const cfnLambda_faq = lambdaFaqFunction.node
+      .defaultChild as lambda.CfnFunction;
+    cfnLambda_faq.overrideLogicalId("faqFunction");
+
+    // H5P Export Lambda Function
+    const lambdaH5pExportFunction = new lambda.Function(
+      this,
+      `${id}-h5pExportFunction`,
+      {
+        runtime: lambda.Runtime.PYTHON_3_11,
+        code: lambda.Code.fromAsset("lambda/h5pExport"),
+        handler: "index.handler",
+        timeout: Duration.seconds(30),
+        memorySize: 512,
+        functionName: `${id}-h5pExportFunction`,
+        role: lambdaRole,
+      }
+    );
+
+    lambdaH5pExportFunction.addPermission("AllowApiGatewayInvoke", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+      action: "lambda:InvokeFunction",
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/textbooks/*/practice_materials/export-h5p`,
+    });
+
+    const cfnLambda_h5pExport = lambdaH5pExportFunction.node
+      .defaultChild as lambda.CfnFunction;
+    cfnLambda_h5pExport.overrideLogicalId("h5pExportFunction");
+
     const lambdaChatSessionFunction = new lambda.Function(
       this,
       `${id}-chatSessionFunction`,
@@ -1356,33 +1418,79 @@ export class ApiGatewayStack extends cdk.Stack {
       .defaultChild as lambda.CfnFunction;
     cfnLambda_sharedUserPrompt.overrideLogicalId("sharedUserPromptFunction");
 
-    // Practice Material Lambda (Node.js)
-    const lambdaPracticeMaterialFunction = new lambda.Function(
+    // Practice Material Lambda (Docker)
+    const practiceMaterialDockerFunc = new lambda.DockerImageFunction(
       this,
-      `${id}-practiceMaterialFunction`,
+      `${id}-PracticeMaterialLambdaDockerFunction`,
       {
-        runtime: lambda.Runtime.NODEJS_22_X,
-        code: lambda.Code.fromAsset("lambda"),
-        handler: "handlers/practiceMaterialHandler.handler",
-        timeout: Duration.seconds(120),
+        code: lambda.DockerImageCode.fromEcr(
+          props.ecrRepositories["practiceMaterial"],
+          { tagOrDigest: "latest" }
+        ),
+        memorySize: 1024,
+        timeout: cdk.Duration.seconds(120),
         vpc: vpcStack.vpc,
+        functionName: `${id}-PracticeMaterialDockerFunc`,
         environment: {
           REGION: this.region,
+          // DB + RDS for embeddings access
+          SM_DB_CREDENTIALS: db.secretPathUser.secretName,
+          RDS_PROXY_ENDPOINT: db.rdsProxyEndpoint,
+          // Models - SSM parameter names (not hardcoded values)
+          PRACTICE_MATERIAL_MODEL_PARAM: bedrockLLMParameter.parameterName,
+          EMBEDDING_MODEL_PARAM: embeddingModelParameter.parameterName,
+          BEDROCK_REGION_PARAM: bedrockRegionParameter.parameterName,
         },
-        functionName: `${id}-practiceMaterialFunction`,
-        memorySize: 512,
         role: lambdaRole,
       }
     );
 
-    lambdaPracticeMaterialFunction.addPermission("AllowApiGatewayInvoke", {
+    // API Gateway permission
+    practiceMaterialDockerFunc.addPermission("AllowApiGatewayInvoke", {
       principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
       action: "lambda:InvokeFunction",
       sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/textbooks/*/practice_materials*`,
     });
 
-    const cfnLambda_practiceMaterial = lambdaPracticeMaterialFunction.node
+    // Logical ID override - USE NEW ID to force CloudFormation to replace old ZIP function
+    const cfnPracticeMaterialDocker = practiceMaterialDockerFunc.node
       .defaultChild as lambda.CfnFunction;
-    cfnLambda_practiceMaterial.overrideLogicalId("practiceMaterialFunction");
+    cfnPracticeMaterialDocker.overrideLogicalId("PracticeMaterialDockerFunc");
+
+    // IAM: Secrets, SSM, Bedrock
+    practiceMaterialDockerFunc.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["secretsmanager:GetSecretValue"],
+        resources: [
+          `arn:aws:secretsmanager:${this.region}:${this.account}:secret:*`,
+        ],
+      })
+    );
+
+    practiceMaterialDockerFunc.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["ssm:GetParameter"],
+        resources: [
+          bedrockLLMParameter.parameterArn,
+          embeddingModelParameter.parameterArn,
+          bedrockRegionParameter.parameterArn,
+        ],
+      })
+    );
+
+    practiceMaterialDockerFunc.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["bedrock:InvokeModel"],
+        resources: [
+          // Llama 3 model (for practice material generation)
+          `arn:aws:bedrock:${this.region}::foundation-model/meta.llama3-70b-instruct-v1:0`,
+          // Titan embeddings model (for retrieval)
+          `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`,
+        ],
+      })
+    );
   }
 }

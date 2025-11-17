@@ -5,6 +5,7 @@ import type { I5HPMultiChoiceQuestion, I5HPEssayQuestion, IH5PQuestion } from "@
 import { isMultiChoiceQuestion, isEssayQuestion } from "@/types/MaterialEditor";
 import { Card, CardDescription } from "@/components/ui/card";
 import { MaterialEditorForm } from "@/components/MaterialEditorPage/MaterialEditorForm";
+import { useTextbookView } from "@/providers/textbookView";
 
 // Dummy H5P MCQ question data
 const dummyMCQQuestions: I5HPMultiChoiceQuestion[] = [
@@ -224,7 +225,7 @@ const dummyEssayQuestions: I5HPEssayQuestion[] = [
 export default function MaterialEditorPage() {
   const [mcqQuestionSets, setMcqQuestionSets] = useState<I5HPMultiChoiceQuestion[][]>([dummyMCQQuestions]);
   const [essayQuestionSets, setEssayQuestionSets] = useState<I5HPEssayQuestion[][]>([dummyEssayQuestions]);
-
+ const { textbook } = useTextbookView();
 
   const handleQuizDelete = (index: number) => {
     const newQuestionSets = mcqQuestionSets.filter((_, i) => i !== index);
@@ -291,6 +292,7 @@ export default function MaterialEditorPage() {
                       initialQuestions={questions}
                       exportToH5P={handleExportToH5P}
                       onDelete={() => {handleQuizDelete(index)}}
+                      textbookId={textbook?.id}
                     />
                   ))}
                 </div>

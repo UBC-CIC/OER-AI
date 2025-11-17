@@ -1,12 +1,81 @@
 import { useState } from "react";
 import { GenerateForm } from "@/components/PracticeMaterialPage/GenerateForm";
 import { MCQQuiz } from "@/components/PracticeMaterialPage/MCQQuiz";
-import type { MCQQuizData } from "@/types/PracticeMaterial";
+import { FlashcardSet } from "@/components/PracticeMaterialPage/FlashcardSet";
+import type { PracticeMaterial, FlashcardSetData } from "@/types/PracticeMaterial";
+import { isMCQQuiz, isFlashcardSet } from "@/types/PracticeMaterial";
 import { Card, CardDescription } from "@/components/ui/card";
 import { useTextbookView } from "@/providers/textbookView";
 
+// Mock flashcard data
+const mockFlashcardSet: FlashcardSetData = {
+  title: "Calculus Fundamentals Practice",
+  cards: [
+    {
+      id: "1",
+      front: "What is the derivative of x²?",
+      back: "2x (using the power rule: d/dx(xⁿ) = n·xⁿ⁻¹)",
+      hint: "Remember the power rule"
+    },
+    {
+      id: "2",
+      front: "What does ∫ represent?",
+      back: "The integral symbol, representing the area under a curve or antiderivative",
+    },
+    {
+      id: "3",
+      front: "Define 'limit' in calculus",
+      back: "The value that a function approaches as the input approaches a specific point",
+      hint: "Think about approaching a value, not reaching it"
+    },
+    {
+      id: "4",
+      front: "What is the derivative of sin(x)?",
+      back: "cos(x)",
+    },
+    {
+      id: "5",
+      front: "What is the derivative of cos(x)?",
+      back: "-sin(x)",
+    },
+    {
+      id: "6",
+      front: "What is the chain rule?",
+      back: "d/dx[f(g(x))] = f'(g(x)) · g'(x)",
+      hint: "Derivative of outer function times derivative of inner function"
+    },
+    {
+      id: "7",
+      front: "What is the product rule?",
+      back: "d/dx[f(x)·g(x)] = f'(x)·g(x) + f(x)·g'(x)",
+    },
+    {
+      id: "8",
+      front: "What is the quotient rule?",
+      back: "d/dx[f(x)/g(x)] = [f'(x)·g(x) - f(x)·g'(x)] / [g(x)]²",
+      hint: "Low d-high minus high d-low, all over low squared"
+    },
+    {
+      id: "9",
+      front: "What is ∫ 1/x dx?",
+      back: "ln|x| + C",
+    },
+    {
+      id: "10",
+      front: "What is the fundamental theorem of calculus?",
+      back: "Integration and differentiation are inverse operations",
+      hint: "They undo each other"
+    }
+  ],
+  metadata: {
+    difficulty: "intermediate",
+    cardType: "question-answer",
+    topic: "calculus"
+  }
+};
+
 export default function PracticeMaterialPage() {
-  const [quizzes, setQuizzes] = useState<MCQQuizData[]>([]);
+  const [materials, setMaterials] = useState<PracticeMaterial[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { textbook } = useTextbookView();
@@ -17,12 +86,35 @@ export default function PracticeMaterialPage() {
       setErrorMsg("Please select a textbook before generating practice materials.");
       return;
     }
+
+    // For flashcards, use mock data instead of API call
+    if (formData.materialType === "flashcards") {
+      setIsGenerating(true);
+      // Simulate loading delay
+      setTimeout(() => {
+        const customTitle = `${formData.topic} - Flashcards`;
+        setMaterials((prev) => [...prev, { ...mockFlashcardSet, title: customTitle }]);
+        setIsGenerating(false);
+      }, 500);
+      return;
+    }
+
+    // For MCQ, make actual API call
     try {
       setIsGenerating(true);
       // Acquire public token
       const tokenResp = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
       if (!tokenResp.ok) throw new Error("Failed to get public token");
       const { token } = await tokenResp.json();
+
+      // Build request body based on material type
+      const requestBody = {
+        topic: formData.topic,
+        material_type: "mcq",
+        num_questions: formData.numQuestions,
+        num_options: formData.numOptions,
+        difficulty: formData.difficulty,
+      };
 
       const resp = await fetch(
         `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${textbook.id}/practice_materials`,
@@ -32,13 +124,7 @@ export default function PracticeMaterialPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            topic: formData.topic,
-            material_type: formData.materialType ?? "mcq",
-            num_questions: formData.numQuestions,
-            num_options: formData.numOptions,
-            difficulty: formData.difficulty,
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
 
@@ -47,8 +133,8 @@ export default function PracticeMaterialPage() {
         throw new Error(text || "Failed to generate practice materials");
       }
 
-      const data: MCQQuizData = await resp.json();
-      setQuizzes((prev) => [...prev, data]);
+      const data: PracticeMaterial = await resp.json();
+      setMaterials((prev) => [...prev, data]);
     } catch (e) {
       const err = e as Error;
       console.error("Error generating practice material:", err);
@@ -58,8 +144,8 @@ export default function PracticeMaterialPage() {
     }
   };
 
-  const handleDeleteQuiz = (index: number) => {
-    setQuizzes((prev) => prev.filter((_, i) => i !== index));
+  const handleDeleteMaterial = (index: number) => {
+    setMaterials((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -76,23 +162,37 @@ export default function PracticeMaterialPage() {
         </div>
 
         <div className="w-full md:w-[70%] space-y-6">
-          <h2 className="text-2xl font-semibold">Practice Questions</h2>
-          {quizzes.length === 0 ? (
+          <h2 className="text-2xl font-semibold">Practice Materials</h2>
+          {materials.length === 0 ? (
             <Card>
-              <CardDescription className="flex flex-col justify-center items-center">
+              <CardDescription className="flex flex-col justify-center items-center p-6">
                 <p className="text-center text-muted-foreground">No practice materials have been generated for this session</p>
-                <p className="text-destructive text-center">Reminder: All Sessions are temporary and will not persist after exiting</p>
+                <p className="text-destructive text-center mt-2">Reminder: All Sessions are temporary and will not persist after exiting</p>
               </CardDescription>
             </Card>
           ) : (
-            quizzes.map((quiz, index) => (
-              <MCQQuiz
-                key={index}
-                title={quiz.title}
-                questions={quiz.questions}
-                onDelete={() => handleDeleteQuiz(index)}
-              />
-            ))
+            materials.map((material, index) => {
+              if (isMCQQuiz(material)) {
+                return (
+                  <MCQQuiz
+                    key={index}
+                    title={material.title}
+                    questions={material.questions}
+                    onDelete={() => handleDeleteMaterial(index)}
+                  />
+                );
+              } else if (isFlashcardSet(material)) {
+                return (
+                  <FlashcardSet
+                    key={index}
+                    title={material.title}
+                    cards={material.cards}
+                    onDelete={() => handleDeleteMaterial(index)}
+                  />
+                );
+              }
+              return null;
+            })
           )}
         </div>
       </div>

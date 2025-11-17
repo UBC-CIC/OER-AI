@@ -1588,7 +1588,7 @@ paths:
           description: Internal Server Error
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${faqFunction.Arn}/invocations
         passthroughBehavior: "when_no_match"
         httpMethod: POST
         type: aws_proxy
@@ -1652,7 +1652,7 @@ paths:
           description: Internal Server Error
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${faqFunction.Arn}/invocations
         passthroughBehavior: "when_no_match"
         httpMethod: POST
         type: aws_proxy
@@ -1705,7 +1705,7 @@ paths:
           description: Internal Server Error
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${faqFunction.Arn}/invocations
         passthroughBehavior: "when_no_match"
         httpMethod: POST
         type: aws_proxy
@@ -1766,7 +1766,7 @@ paths:
           description: Internal Server Error
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${faqFunction.Arn}/invocations
         passthroughBehavior: "when_no_match"
         httpMethod: POST
         type: aws_proxy
@@ -1796,7 +1796,7 @@ paths:
           description: Internal Server Error
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${textbookFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${faqFunction.Arn}/invocations
         passthroughBehavior: "when_no_match"
         httpMethod: POST
         type: aws_proxy
@@ -3859,7 +3859,99 @@ paths:
           description: Internal Server Error
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${practiceMaterialFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PracticeMaterialDockerFunc.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /textbooks/{textbook_id}/practice_materials/export-h5p:
+    <<: *commonOptions
+    post:
+      tags:
+        - User
+      summary: Export practice materials as H5P package for LMS import
+      operationId: export_practice_materials_h5p
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: textbook_id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - questions
+              properties:
+                title:
+                  type: string
+                  description: Title for the H5P quiz
+                  example: "Calculus Practice Quiz"
+                questions:
+                  type: array
+                  description: Array of MCQ questions
+                  items:
+                    type: object
+                    required:
+                      - questionText
+                      - options
+                      - correctAnswer
+                    properties:
+                      id:
+                        type: string
+                      questionText:
+                        type: string
+                      options:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - id
+                            - text
+                          properties:
+                            id:
+                              type: string
+                            text:
+                              type: string
+                            explanation:
+                              type: string
+                      correctAnswer:
+                        type: string
+      responses:
+        "200":
+          description: H5P package generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  filename:
+                    type: string
+                    description: Name of the H5P file
+                    example: "Calculus_Practice_Quiz.h5p"
+                  content:
+                    type: string
+                    description: Base64-encoded H5P package content
+                  size:
+                    type: integer
+                    description: Size of the H5P file in bytes
+        "400":
+          description: Invalid request - missing required fields or malformed questions
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error - H5P generation failed
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${h5pExportFunction.Arn}/invocations
         passthroughBehavior: "when_no_match"
         httpMethod: POST
         type: aws_proxy

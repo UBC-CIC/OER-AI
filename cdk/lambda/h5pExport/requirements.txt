@@ -1,0 +1,9 @@
+# No external dependencies required
+# Python built-in libraries used:
+# - json
+# - os
+# - zipfile
+# - base64
+# - pathlib
+# - io
+# - logging
