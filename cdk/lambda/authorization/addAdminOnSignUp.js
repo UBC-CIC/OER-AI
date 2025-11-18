@@ -8,52 +8,45 @@ const { SM_DB_CREDENTIALS, RDS_PROXY_ENDPOINT } = process.env;
 let sqlConnection = global.sqlConnection;
 
 exports.handler = async (event) => {
+  console.log(
+    "Post-confirmation trigger event:",
+    JSON.stringify(event, null, 2)
+  );
+
   if (!sqlConnection) {
     await initializeConnection(SM_DB_CREDENTIALS, RDS_PROXY_ENDPOINT);
     sqlConnection = global.sqlConnection;
   }
 
-  const { userName, userPoolId } = event;
-  const client = new CognitoIdentityProviderClient();
+  const { userName, request } = event;
 
   try {
-    // Get user attributes from Cognito to retrieve the email
-    const getUserCommand = new AdminGetUserCommand({
-      UserPoolId: userPoolId,
-      Username: userName,
-    });
-    const userAttributesResponse = await client.send(getUserCommand);
+    // Extract user attributes from the event
+    const userAttributes = request.userAttributes;
+    const email = userAttributes.email;
+    const givenName = userAttributes.given_name || "";
+    const familyName = userAttributes.family_name || "";
+    const displayName = `${givenName} ${familyName}`.trim() || email;
 
-    const emailAttr = userAttributesResponse.UserAttributes.find(
-      (attr) => attr.Name === "email"
-    );
+    console.log("Creating admin user:", { email, displayName });
 
-    if (!emailAttr) {
-      console.error("Email attribute missing from Cognito");
-      return {
-        statusCode: 400,
-        body: JSON.stringify({
-          message: "Email attribute not found in Cognito user",
-        }),
-      };
-    }
-
-    const email = emailAttr.Value;
-
-    // Insert the new user into the Users table
-    await sqlConnection`
-      INSERT INTO "users" (user_id, user_email, time_account_created, last_sign_in)
-      VALUES (uuid_generate_v4(), ${email}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+    // Insert the new admin user into the Users table
+    const result = await sqlConnection`
+      INSERT INTO users (display_name, email, role, created_at, updated_at)
+      VALUES (${displayName}, ${email}, 'admin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT (email) DO UPDATE 
+      SET updated_at = CURRENT_TIMESTAMP
+      RETURNING id, email, role
     `;
 
+    console.log("Admin user created/updated:", result[0]);
+
+    // IMPORTANT: For Cognito triggers, you must return the event object
     return event;
   } catch (err) {
-    console.error("Error inserting user into database:", err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        message: "Internal Server Error",
-      }),
-    };
+    console.error("Error inserting admin user into database:", err);
+    // Even on error, return the event to allow sign-up to complete
+    // The user can still authenticate, but won't be in the database yet
+    return event;
   }
 };
