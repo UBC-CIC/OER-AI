@@ -167,6 +167,67 @@ def build_prompt(topic: str, difficulty: str, num_questions: int, num_options: i
     )
 
 
+def build_flashcard_prompt(topic: str, difficulty: str, num_cards: int, card_type: str, context_snippets: list[str]) -> str:
+    context = "\n".join([f"- {c}" for c in context_snippets])
+    
+    card_type_guidance = {
+        "definition": "Focus on key terms and their definitions from the material",
+        "concept": "Focus on explaining important concepts and their relationships",
+        "example": "Focus on providing concrete examples and applications"
+    }.get(card_type, "Focus on key information from the material")
+    
+    return (
+        f"You are an assistant that generates flashcards in strict JSON format.\n\n"
+        f"Context from textbook:\n{context}\n\n"
+        f"Your task:\n"
+        f"- Generate exactly {num_cards} flashcard(s)\n"
+        f"- Topic: \"{topic}\"\n"
+        f"- Difficulty: {difficulty}\n"
+        f"- Card type: {card_type}\n"
+        f"- Guidance: {card_type_guidance}\n"
+        f"- Card IDs must be: card1, card2, card3, etc.\n\n"
+        f"CRITICAL JSON SYNTAX RULES - FOLLOW EXACTLY:\n"
+        f"1. Output ONLY valid JSON - no markdown, no explanations, no preamble\n"
+        f"2. Use double quotes (\") for all strings, never single quotes\n"
+        f"3. COMMAS ARE REQUIRED between all array elements and object properties\n"
+        f"4. NEVER put a comma after the LAST item in an array or object\n"
+        f'5. Escape quotes inside strings: use \\" for a literal quote character\n'
+        f"6. Keep all text on single lines - no line breaks inside string values\n"
+        f"7. Ensure all brackets and braces are properly closed\n"
+        f"8. Pay special attention: comma BEFORE closing bracket/brace = ERROR\n\n"
+        f"CORRECT comma placement examples:\n"
+        f'- Between items: [{{"id": "card1"}}, {{"id": "card2"}}]  <- comma BETWEEN items\n'
+        f'- Last item has NO comma: [{{"id": "card1"}}, {{"id": "card2"}}]  <- no comma before ]\n'
+        f'- Object properties: {{"key1": "val1", "key2": "val2"}}  <- comma between, not after last\n\n'
+        f"Required JSON structure:\n"
+        f"{{\n"
+        f'  "title": "Flashcards: {topic}",\n'
+        f'  "cards": [\n'
+        f"    {{\n"
+        f'      "id": "card1",\n'
+        f'      "front": "Question or term on the front of the card",\n'
+        f'      "back": "Answer or definition on the back of the card",\n'
+        f'      "hint": "Optional hint to help recall the answer (can be empty string)"\n'
+        f"    }}\n"
+        f"  ]\n"
+        f"}}\n\n"
+        f"Content requirements:\n"
+        f"- Front: Clear, concise question or term\n"
+        f"- Back: Detailed, accurate answer or explanation\n"
+        f"- Hint: Optional clue (leave as empty string \"\" if not needed)\n"
+        f"- Base content on the provided context\n"
+        f"- Make cards progressively more challenging based on difficulty\n\n"
+        f"Common mistakes to avoid:\n"
+        f"- WRONG: Trailing comma before closing bracket: [card1, card2,]\n"
+        f"- WRONG: Missing comma between items: [card1 card2]\n"
+        f"- WRONG: Comma after last property: {{\"key\": \"value\",}}\n"
+        f"- WRONG: Unescaped quotes in strings\n"
+        f"- WRONG: Extra text before or after the JSON\n"
+        f"- WRONG: Incomplete JSON - must complete all {num_cards} cards\n\n"
+        f"Output the complete, valid JSON now:"
+    )
+
+
 def parse_body(body: str | None) -> Dict[str, Any]:
     if not body:
         return {}
@@ -217,6 +278,28 @@ def validate_shape(obj: Dict[str, Any], num_questions: int, num_options: int) ->
     return obj
 
 
+def validate_flashcard_shape(obj: Dict[str, Any], num_cards: int) -> Dict[str, Any]:
+    if not isinstance(obj, dict):
+        raise ValueError("Invalid root JSON")
+    if not isinstance(obj.get("title"), str) or not obj["title"].strip():
+        raise ValueError("Invalid title")
+    cards = obj.get("cards")
+    if not isinstance(cards, list) or len(cards) != num_cards:
+        raise ValueError(f"cards must have exactly {num_cards} items")
+    for idx, card in enumerate(cards):
+        if not isinstance(card, dict):
+            raise ValueError(f"Card[{idx}] invalid")
+        if not isinstance(card.get("id"), str) or not card["id"].strip():
+            raise ValueError(f"Card[{idx}].id invalid")
+        if not isinstance(card.get("front"), str) or not card["front"].strip():
+            raise ValueError(f"Card[{idx}].front invalid")
+        if not isinstance(card.get("back"), str) or not card["back"].strip():
+            raise ValueError(f"Card[{idx}].back invalid")
+        if not isinstance(card.get("hint"), str):
+            raise ValueError(f"Card[{idx}].hint must be a string (can be empty)")
+    return obj
+
+
 def handler(event, context):
     logger.info("PracticeMaterial Lambda (Docker) invoked")
 
@@ -235,12 +318,18 @@ def handler(event, context):
     if not topic:
         return {"statusCode": 400, "body": json.dumps({"error": "'topic' is required"})}
     material_type = str(body.get("material_type", "mcq")).lower().strip()
-    if material_type != "mcq":
-        return {"statusCode": 400, "body": json.dumps({"error": "Only 'mcq' material_type is supported at this time"})}
+    if material_type not in ["mcq", "flashcard"]:
+        return {"statusCode": 400, "body": json.dumps({"error": "material_type must be 'mcq' or 'flashcard'"})}
 
+    difficulty = str(body.get("difficulty", "intermediate")).lower().strip()
+    
+    # MCQ-specific parameters
     num_questions = clamp(int(body.get("num_questions", 5)), 1, 20)
     num_options = clamp(int(body.get("num_options", 4)), 2, 6)
-    difficulty = str(body.get("difficulty", "intermediate")).lower().strip()
+    
+    # Flashcard-specific parameters
+    num_cards = clamp(int(body.get("num_cards", 10)), 1, 20)
+    card_type = str(body.get("card_type", "definition")).lower().strip()
 
     try:
         # Initialize constants from SSM parameters
@@ -273,10 +362,14 @@ def handler(event, context):
         docs = retriever.get_relevant_documents(topic)
         snippets = [d.page_content.strip()[:500] for d in docs][:6]
 
-        prompt = build_prompt(topic, difficulty, num_questions, num_options, snippets)
+        # Build prompt based on material type
+        if material_type == "mcq":
+            prompt = build_prompt(topic, difficulty, num_questions, num_options, snippets)
+        else:  # flashcard
+            prompt = build_flashcard_prompt(topic, difficulty, num_cards, card_type, snippets)
 
         # Use ChatBedrock LLM (matching textGeneration pattern)
-        logger.info("Invoking LLM for practice material generation")
+        logger.info(f"Invoking LLM for {material_type} generation")
         response = _llm.invoke(prompt)
         output_text = response.content
         logger.info(f"Received response from LLM, length: {len(output_text)}")
@@ -285,7 +378,10 @@ def handler(event, context):
         logger.info(f"Raw LLM output (full): {output_text}")
 
         try:
-            result = validate_shape(extract_json(output_text), num_questions, num_options)
+            if material_type == "mcq":
+                result = validate_shape(extract_json(output_text), num_questions, num_options)
+            else:  # flashcard
+                result = validate_flashcard_shape(extract_json(output_text), num_cards)
         except Exception as e1:
             logger.warning(f"First parse/validation failed: {e1}")
             logger.warning(f"Raw LLM output (first 2000 chars): {output_text[:2000]}")
@@ -296,7 +392,10 @@ def handler(event, context):
             logger.info(f"Retry response length: {len(output_text2)}")
             logger.info(f"Raw retry LLM output (full): {output_text2}")
             try:
-                result = validate_shape(extract_json(output_text2), num_questions, num_options)
+                if material_type == "mcq":
+                    result = validate_shape(extract_json(output_text2), num_questions, num_options)
+                else:  # flashcard
+                    result = validate_flashcard_shape(extract_json(output_text2), num_cards)
             except Exception as e2:
                 logger.error(f"Retry also failed: {e2}")
                 logger.error(f"Raw retry output (first 2000 chars): {output_text2[:2000]}")

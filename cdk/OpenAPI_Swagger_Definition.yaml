@@ -3839,7 +3839,7 @@ paths:
     post:
       tags:
         - User
-      summary: Generate AI practice materials (MCQs) for a textbook
+      summary: Generate AI practice materials (MCQs or Flashcards) for a textbook
       operationId: generate_practice_materials
       security:
         - userAuthorizer: []
@@ -3866,18 +3866,35 @@ paths:
                   example: "derivatives and integrals"
                 material_type:
                   type: string
-                  enum: [mcq]
+                  enum: [mcq, flashcard]
                   default: mcq
+                  description: Type of practice material to generate
+                # MCQ-specific fields
                 num_questions:
                   type: integer
                   minimum: 1
                   maximum: 20
                   default: 5
+                  description: Number of questions (for MCQ)
                 num_options:
                   type: integer
                   minimum: 2
                   maximum: 6
                   default: 4
+                  description: Number of answer options per question (for MCQ)
+                # Flashcard-specific fields
+                num_cards:
+                  type: integer
+                  minimum: 1
+                  maximum: 20
+                  default: 10
+                  description: Number of flashcards (for flashcard)
+                card_type:
+                  type: string
+                  enum: [definition, concept, example]
+                  default: definition
+                  description: Type of flashcard content (for flashcard)
+                # Common fields
                 difficulty:
                   type: string
                   enum: [beginner, intermediate, advanced]
@@ -3892,32 +3909,61 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  title:
-                    type: string
-                  questions:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        questionText:
-                          type: string
-                        options:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                              text:
-                                type: string
-                              explanation:
-                                type: string
-                        correctAnswer:
-                          type: string
+                oneOf:
+                  - type: object
+                    description: MCQ Quiz
+                    properties:
+                      title:
+                        type: string
+                      questions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            questionText:
+                              type: string
+                            options:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  text:
+                                    type: string
+                                  explanation:
+                                    type: string
+                            correctAnswer:
+                              type: string
+                  - type: object
+                    description: Flashcard Set
+                    properties:
+                      title:
+                        type: string
+                      cards:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            front:
+                              type: string
+                            back:
+                              type: string
+                            hint:
+                              type: string
+                      metadata:
+                        type: object
+                        properties:
+                          difficulty:
+                            type: string
+                          cardType:
+                            type: string
+                          topic:
+                            type: string
         "400":
           description: Invalid request parameters
         "401":
