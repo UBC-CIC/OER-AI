@@ -761,6 +761,8 @@ def _get_text_and_meta(doc):
 
 def execute_query(query, params=None, fetch_one=False):
     """Execute a database query and return results"""
+    conn = None
+    cursor = None
     try:
         conn = connect_to_db()
         cursor = conn.cursor()
@@ -772,14 +774,16 @@ def execute_query(query, params=None, fetch_one=False):
             result = cursor.fetchall() if cursor.description else None
             
         conn.commit()
-        cursor.close()
         return result
         
     except Exception as e:
         logger.error(f"Database query error: {e}")
-        if 'conn' in locals():
+        if conn:
             conn.rollback()
         raise
+    finally:
+        if cursor:
+            cursor.close()
 
 def postprocess_documents(docs, min_chars=600):
     """
@@ -897,8 +901,12 @@ def process_chapters_to_vectors(extracted_chapters, vector_store, s3_bucket, tex
                 cleaned_chunks = postprocess_documents(doc_chunks, min_chars=600)
                 
                 if cleaned_chunks:
-                    vector_store.add_documents(cleaned_chunks)
-                    logger.info(f"Added {len(cleaned_chunks)} processed chunks to vector store for chapter: {chapter['metadata']['source_title']}")
+                    try:
+                        vector_store.add_documents(cleaned_chunks)
+                        logger.info(f"Added {len(cleaned_chunks)} processed chunks to vector store for chapter: {chapter['metadata']['source_title']}")
+                    except Exception as e:
+                        logger.error(f"Error adding chunks to vector store for chapter {chapter['metadata']['source_title']}: {e}")
+                        # Continue processing other chapters even if vector store fails
                 else:
                     logger.warning(f"No chunks to add for chapter: {chapter['metadata']['source_title']}")
                 
@@ -1122,9 +1130,13 @@ def main():
         combined_metadata = {**metadata, **book_metadata_full}
         combined_metadata.update(book_info)
         book_id = metadata.get('bookId', 'unknown')
+        
+        logger.info(f"Combined metadata: {json.dumps(combined_metadata, indent=2, default=str)}")
         # Insert textbook into database
         logger.info("Inserting textbook into database...")
         textbook_id = None
+        conn = None
+        cursor = None
         try:
             conn = connect_to_db()
             cursor = conn.cursor()
@@ -1158,7 +1170,7 @@ def main():
             }
             
             params = (
-                f"{combined_metadata.get('Title', 'Unknown Title')} (Updated)",
+                combined_metadata.get('Title', 'Unknown Title'),
                 authors,
                 book_info.get('license_url'),
                 start_url,
@@ -1180,18 +1192,22 @@ def main():
             combined_metadata['textbook_id'] = textbook_id
             
             # Initialize embeddings and vector store for this textbook
-            vector_store = initialize_embeddings_and_vectorstore(
-                textbook_id, 
-                combined_metadata.get('Title', 'Unknown Title')
-            )
+            try:
+                vector_store = initialize_embeddings_and_vectorstore(
+                    textbook_id, 
+                    combined_metadata.get('Title', 'Unknown Title')
+                )
+            except Exception as e:
+                logger.error(f"Error initializing vector store: {e}")
+                vector_store = None
             
         except Exception as e:
             logger.error(f"Error inserting textbook into database: {e}")
-            if 'conn' in locals():
+            if conn:
                 conn.rollback()
             logger.info("Continuing without database insertion...")
         finally:
-            if 'cursor' in locals():
+            if cursor:
                 cursor.close()
         
         # Extract text from all chapters
@@ -1200,7 +1216,11 @@ def main():
         # Process chapters into vector embeddings if we have a vector store
         if vector_store and extracted_chapters:
             logger.info("Processing chapters into vector embeddings...")
-            process_chapters_to_vectors(extracted_chapters, vector_store, s3_bucket, textbook_id)
+            try:
+                process_chapters_to_vectors(extracted_chapters, vector_store, s3_bucket, textbook_id)
+            except Exception as e:
+                logger.error(f"Error processing chapters to vectors: {e}")
+                # Continue to show results even if vector processing fails
         
         if not extracted_chapters:
             logger.warning("No chapters were successfully processed")
@@ -1213,7 +1233,15 @@ def main():
         print(f"Chapters processed: {len(extracted_chapters)}")
         print(f"Image sources found: {len(image_sources)}")
         print(f"S3 bucket: {s3_bucket}")
+        
+        # Create base prefix for S3 keys
+        base_prefix = 'processed-textbooks'
+        book_id = metadata.get('bookId', 'unknown')
         print(f"S3 prefix: {base_prefix}/{book_id}")
+        
+        # Collect all S3 keys from extracted chapters
+        all_s3_keys = [chapter['s3_key'] for chapter in extracted_chapters]
+        
         print("Files uploaded:")
         for key in all_s3_keys:
             print(f"  - s3://{s3_bucket}/{key}")
