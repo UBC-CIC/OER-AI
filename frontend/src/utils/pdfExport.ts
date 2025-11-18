@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
-import type { IH5PMinimalQuestionSet } from "@/types/MaterialEditor";
+import type { IH5PMinimalQuestionSet, IH5PAnswerOption } from "@/types/MaterialEditor";
+import { isMultiChoiceQuestion } from "@/types/MaterialEditor";
 
 /**
  * Export options for PDF generation
@@ -94,6 +95,10 @@ export function exportQuestionSetAsPDF(
   // Process each question
   questionSet.questions.forEach((question, qIndex) => {
     const questionNumber = qIndex + 1;
+    if (!isMultiChoiceQuestion(question)) {
+      // We only handle multi-choice questions in this export function
+      return;
+    }
     const { question: questionText, answers } = question.params;
 
     // Check if we need a new page for this question
@@ -112,24 +117,42 @@ export function exportQuestionSetAsPDF(
     answers.forEach((answer, aIndex) => {
       const optionLetter = String.fromCharCode(65 + aIndex); // A, B, C, D...
       const isCorrect = answer.correct;
-      
+
+      // Detect if the answer text already includes the option letter at the start
+      // Matches forms like "A. ", "A) ", "(A) ", "[A] ", "A: ", "A - ", etc.
+      const leadingOptionRegex = new RegExp(`^\\s*(?:\\(|\\[)?${optionLetter}(?:\\)|\\]|\\.|:|\\-|\\–)?\\s+`, "i");
+      const hasOptionPrefix = leadingOptionRegex.test(answer.text);
+
       checkPageBreak(15);
 
       // Option label
       doc.setFontSize(11);
-      
+
+      // Choose where to render the answer text. If the text already contains the option
+      // letter, render the text closer to the left (where the letter would otherwise appear),
+      // and don't print our own separate option text. Otherwise, print the letter and
+      // indent the answer text.
+      const labelX = margin + 5;
+      const defaultTextX = margin + 12;
+      const textX = hasOptionPrefix ? labelX : defaultTextX;
+      const textMaxWidth = contentWidth - (textX - margin);
+
       if (style === "answer-key" && isCorrect) {
         // Highlight correct answer
         doc.setFont("helvetica", "bold");
-        doc.text(`${optionLetter}.`, margin + 5, currentY);
+        if (!hasOptionPrefix) {
+          doc.text(`${optionLetter}.`, labelX, currentY);
+        }
         doc.text("✓", margin, currentY); // Checkmark
-        addWrappedText(answer.text, margin + 12, 11, contentWidth - 12, true);
+        addWrappedText(answer.text, textX, 11, textMaxWidth, true);
       } else {
         doc.setFont("helvetica", "normal");
-        doc.text(`${optionLetter}.`, margin + 5, currentY);
-        addWrappedText(answer.text, margin + 12, 11, contentWidth - 12, false);
+        if (!hasOptionPrefix) {
+          doc.text(`${optionLetter}.`, labelX, currentY);
+        }
+        addWrappedText(answer.text, textX, 11, textMaxWidth, false);
       }
-      
+
       currentY += 2;
     });
 
@@ -138,7 +161,7 @@ export function exportQuestionSetAsPDF(
       currentY += 3;
       
       // Find correct answer for explanation
-      const correctAnswer = answers.find((a) => a.correct);
+  const correctAnswer = answers.find((a: IH5PAnswerOption) => a.correct);
       if (correctAnswer?.tipsAndFeedback) {
         const feedback = correctAnswer.tipsAndFeedback;
         

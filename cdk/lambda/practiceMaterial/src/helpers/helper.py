@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from langchain_aws import BedrockEmbeddings
 from langchain_postgres import PGVector

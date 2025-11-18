@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { IH5PQuestion } from "@/types/MaterialEditor";
+import type { I5HPMultiChoiceQuestion } from "@/types/MaterialEditor";
 import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,9 @@ import { CheckCircle, XCircle, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MCQEditableProps {
-  question: IH5PQuestion;
+  question: I5HPMultiChoiceQuestion;
   questionNumber: number;
-  onUpdate: (updatedQuestion: IH5PQuestion) => void;
+  onUpdate: (updatedQuestion: I5HPMultiChoiceQuestion) => void;
   onDelete?: () => void;
 }
 
