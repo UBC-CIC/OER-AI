@@ -81,6 +81,7 @@ export default function PracticeMaterialPage() {
   const { textbook } = useTextbookView();
 
   const handleGenerate = async (formData: any) => {
+    console.log("handleGenerate called with:", formData);
     setErrorMsg(null);
     if (!textbook?.id) {
       setErrorMsg("Please select a textbook before generating practice materials.");
@@ -89,10 +90,12 @@ export default function PracticeMaterialPage() {
 
     // For flashcards, use mock data instead of API call
     if (formData.materialType === "flashcards") {
+      console.log("Generating mock flashcards...");
       setIsGenerating(true);
       // Simulate loading delay
       setTimeout(() => {
         const customTitle = `${formData.topic} - Flashcards`;
+        console.log("Adding flashcard set:", customTitle);
         setMaterials((prev) => [...prev, { ...mockFlashcardSet, title: customTitle }]);
         setIsGenerating(false);
       }, 500);
