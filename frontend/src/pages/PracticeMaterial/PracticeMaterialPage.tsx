@@ -88,21 +88,6 @@ export default function PracticeMaterialPage() {
       return;
     }
 
-    // For flashcards, use mock data instead of API call
-    if (formData.materialType === "flashcards") {
-      console.log("Generating mock flashcards...");
-      setIsGenerating(true);
-      // Simulate loading delay
-      setTimeout(() => {
-        const customTitle = `${formData.topic} - Flashcards`;
-        console.log("Adding flashcard set:", customTitle);
-        setMaterials((prev) => [...prev, { ...mockFlashcardSet, title: customTitle }]);
-        setIsGenerating(false);
-      }, 500);
-      return;
-    }
-
-    // For MCQ, make actual API call
     try {
       setIsGenerating(true);
       // Acquire public token
@@ -111,13 +96,20 @@ export default function PracticeMaterialPage() {
       const { token } = await tokenResp.json();
 
       // Build request body based on material type
-      const requestBody = {
+      let requestBody: any = {
         topic: formData.topic,
-        material_type: "mcq",
-        num_questions: formData.numQuestions,
-        num_options: formData.numOptions,
         difficulty: formData.difficulty,
       };
+
+      if (formData.materialType === "flashcards") {
+        requestBody.material_type = "flashcard";
+        requestBody.num_cards = formData.numCards;
+        requestBody.card_type = formData.cardType;
+      } else {
+        requestBody.material_type = "mcq";
+        requestBody.num_questions = formData.numQuestions;
+        requestBody.num_options = formData.numOptions;
+      }
 
       const resp = await fetch(
         `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${textbook.id}/practice_materials`,
