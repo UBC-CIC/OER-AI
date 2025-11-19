@@ -2,10 +2,60 @@ import { useState } from "react";
 import { GenerateForm } from "@/components/PracticeMaterialPage/GenerateForm";
 import { MCQQuiz } from "@/components/PracticeMaterialPage/MCQQuiz";
 import { FlashcardSet } from "@/components/PracticeMaterialPage/FlashcardSet";
-import type { PracticeMaterial } from "@/types/PracticeMaterial";
-import { isMCQQuiz, isFlashcardSet } from "@/types/PracticeMaterial";
+import { ShortAnswer } from "@/components/PracticeMaterialPage/ShortAnswer";
+import type { PracticeMaterial, ShortAnswerData } from "@/types/PracticeMaterial";
+import { isMCQQuiz, isFlashcardSet, isShortAnswer } from "@/types/PracticeMaterial";
 import { Card, CardDescription } from "@/components/ui/card";
 import { useTextbookView } from "@/providers/textbookView";
+
+// Mock short answer data
+const mockShortAnswer: ShortAnswerData = {
+  title: "Critical Thinking: Biology Concepts",
+  questions: [
+    {
+      id: "1",
+      questionText: "Explain the process of photosynthesis and its importance to life on Earth.",
+      context: "Consider both the chemical process and the broader ecological implications.",
+      sampleAnswer: "Photosynthesis is the process by which plants convert light energy into chemical energy stored in glucose. During this process, plants take in carbon dioxide from the air and water from the soil, using sunlight to convert these into glucose and oxygen. The oxygen is released as a byproduct. This process is crucial because it provides the foundation for most food chains on Earth and produces the oxygen that most organisms need to survive.",
+      keyPoints: [
+        "Conversion of light energy to chemical energy",
+        "Inputs: CO₂, water, sunlight",
+        "Outputs: glucose, oxygen",
+        "Foundation of food chains",
+        "Oxygen production for atmosphere"
+      ],
+      rubric: "A complete answer should mention the inputs and outputs of photosynthesis, explain the energy conversion, and discuss its ecological significance.",
+      expectedLength: 100
+    },
+    {
+      id: "2",
+      questionText: "Compare and contrast mitosis and meiosis.",
+      sampleAnswer: "Both mitosis and meiosis are processes of cell division, but they serve different purposes. Mitosis produces two identical daughter cells with the same number of chromosomes as the parent cell, and is used for growth and repair. Meiosis, on the other hand, produces four non-identical daughter cells with half the number of chromosomes, and is used for sexual reproduction. Mitosis involves one division cycle, while meiosis involves two. The genetic variation in meiosis comes from crossing over and independent assortment.",
+      keyPoints: [
+        "Mitosis: 2 identical cells, same chromosome number",
+        "Meiosis: 4 non-identical cells, half chromosome number",
+        "Mitosis: growth and repair",
+        "Meiosis: sexual reproduction",
+        "Meiosis creates genetic variation"
+      ],
+      rubric: "Answer should identify key similarities and differences, including purpose, number of divisions, and resulting cells.",
+      expectedLength: 120
+    },
+    {
+      id: "3",
+      questionText: "What is natural selection and how does it drive evolution?",
+      sampleAnswer: "Natural selection is the process by which organisms with traits better suited to their environment are more likely to survive and reproduce. Over time, these advantageous traits become more common in the population. This occurs because individuals with beneficial traits have higher fitness, meaning they produce more offspring that inherit these traits. Through many generations, this process leads to evolutionary change as populations become better adapted to their environments. Natural selection operates on variation within populations and requires heritable traits that affect survival or reproduction.",
+      keyPoints: [
+        "Differential survival and reproduction",
+        "Advantageous traits increase in frequency",
+        "Requires heritable variation",
+        "Leads to adaptation over time",
+        "Mechanism of evolutionary change"
+      ],
+      expectedLength: 100
+    }
+  ]
+};
 
 // Mock flashcard data - kept for reference
 // const mockFlashcardSet: FlashcardSetData = {
@@ -148,6 +198,10 @@ export default function PracticeMaterialPage() {
     setMaterials((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleLoadMockShortAnswer = () => {
+    setMaterials((prev) => [...prev, mockShortAnswer]);
+  };
+
   return (
     <div className="w-full max-w-[1800px] px-4 py-4">
       <div className="min-h-screen flex flex-col md:flex-row md:items-start md:justify-center gap-6">
@@ -159,6 +213,14 @@ export default function PracticeMaterialPage() {
           {errorMsg && (
             <p className="text-sm text-destructive mt-2">{errorMsg}</p>
           )}
+          <div className="mt-4">
+            <button
+              onClick={handleLoadMockShortAnswer}
+              className="w-full px-4 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+            >
+              Load Mock Short Answer (Demo)
+            </button>
+          </div>
         </div>
 
         <div className="w-full md:w-[70%] space-y-6">
@@ -187,6 +249,15 @@ export default function PracticeMaterialPage() {
                     key={index}
                     title={material.title}
                     cards={material.cards}
+                    onDelete={() => handleDeleteMaterial(index)}
+                  />
+                );
+              } else if (isShortAnswer(material)) {
+                return (
+                  <ShortAnswer
+                    key={index}
+                    title={material.title}
+                    questions={material.questions}
                     onDelete={() => handleDeleteMaterial(index)}
                   />
                 );
