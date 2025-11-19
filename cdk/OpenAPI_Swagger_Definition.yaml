@@ -3903,7 +3903,7 @@ paths:
     post:
       tags:
         - User
-      summary: Generate AI practice materials (MCQs or Flashcards) for a textbook
+      summary: Generate AI practice materials (MCQs, Flashcards, or Short Answer) for a textbook
       operationId: generate_practice_materials
       #TODO: figure out why this breaks the API Gateway deployment
       # security:
@@ -3931,7 +3931,7 @@ paths:
                   example: "derivatives and integrals"
                 material_type:
                   type: string
-                  enum: [mcq, flashcard]
+                  enum: [mcq, flashcard, short_answer]
                   default: mcq
                   description: Type of practice material to generate
                 # MCQ-specific fields
@@ -3940,7 +3940,7 @@ paths:
                   minimum: 1
                   maximum: 20
                   default: 5
-                  description: Number of questions (for MCQ)
+                  description: Number of questions (for MCQ or short_answer)
                 num_options:
                   type: integer
                   minimum: 2
@@ -4029,12 +4029,134 @@ paths:
                             type: string
                           topic:
                             type: string
+                  - type: object
+                    description: Short Answer Questions
+                    properties:
+                      title:
+                        type: string
+                      questions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            questionText:
+                              type: string
+                            context:
+                              type: string
+                            sampleAnswer:
+                              type: string
+                            keyPoints:
+                              type: array
+                              items:
+                                type: string
+                            rubric:
+                              type: string
+                            expectedLength:
+                              type: string
+                      metadata:
+                        type: object
+                        properties:
+                          difficulty:
+                            type: string
+                          topic:
+                            type: string
         "400":
           description: Invalid request parameters
         "401":
           description: Unauthorized
         "500":
           description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PracticeMaterialDockerFunc.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /textbooks/{textbook_id}/practice_materials/grade:
+    <<: *commonOptions
+    post:
+      tags:
+        - User
+      summary: Grade a short answer response using AI
+      operationId: grade_short_answer
+      #TODO: figure out why this breaks the API Gateway deployment
+      # security:
+      #   - userAuthorizer: []
+      parameters:
+        - name: textbook_id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - question
+                - student_answer
+              properties:
+                question:
+                  type: string
+                  description: The question text
+                student_answer:
+                  type: string
+                  description: The student's submitted answer
+                sample_answer:
+                  type: string
+                  description: Optional sample/reference answer
+                key_points:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional key points that should be covered
+                rubric:
+                  type: string
+                  description: Optional grading rubric
+      responses:
+        "200":
+          description: Answer graded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  feedback:
+                    type: string
+                    description: Overall feedback on the answer
+                  strengths:
+                    type: array
+                    items:
+                      type: string
+                    description: List of strengths in the answer
+                  improvements:
+                    type: array
+                    items:
+                      type: string
+                    description: List of suggested improvements
+                  keyPointsCovered:
+                    type: array
+                    items:
+                      type: string
+                    description: Key points that were addressed
+                  keyPointsMissed:
+                    type: array
+                    items:
+                      type: string
+                    description: Key points that were not addressed
+        "400":
+          description: Invalid request - missing required fields
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error - grading failed
       x-amazon-apigateway-integration:
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PracticeMaterialDockerFunc.Arn}/invocations
