@@ -77,7 +77,7 @@ export class CICDStack extends cdk.Stack {
           actionName: "GitHub",
           owner: username,
           repo: props.githubRepo,
-          branch: props.githubBranch ?? "text_generation",
+          branch: props.githubBranch ?? "dev",
           oauthToken: cdk.SecretValue.secretsManager(
             "github-personal-access-token",
             {
