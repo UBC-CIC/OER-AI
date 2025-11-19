@@ -6,7 +6,6 @@ from typing import Any, Dict
 
 from helpers.vectorstore import get_textbook_retriever
 from langchain_aws import BedrockEmbeddings, ChatBedrock
-#comment to trigger code pipeline
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

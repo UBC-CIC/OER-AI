@@ -2,77 +2,77 @@ import { useState } from "react";
 import { GenerateForm } from "@/components/PracticeMaterialPage/GenerateForm";
 import { MCQQuiz } from "@/components/PracticeMaterialPage/MCQQuiz";
 import { FlashcardSet } from "@/components/PracticeMaterialPage/FlashcardSet";
-import type { PracticeMaterial, FlashcardSetData } from "@/types/PracticeMaterial";
+import type { PracticeMaterial } from "@/types/PracticeMaterial";
 import { isMCQQuiz, isFlashcardSet } from "@/types/PracticeMaterial";
 import { Card, CardDescription } from "@/components/ui/card";
 import { useTextbookView } from "@/providers/textbookView";
 
-// Mock flashcard data
-const mockFlashcardSet: FlashcardSetData = {
-  title: "Calculus Fundamentals Practice",
-  cards: [
-    {
-      id: "1",
-      front: "What is the derivative of x²?",
-      back: "2x (using the power rule: d/dx(xⁿ) = n·xⁿ⁻¹)",
-      hint: "Remember the power rule"
-    },
-    {
-      id: "2",
-      front: "What does ∫ represent?",
-      back: "The integral symbol, representing the area under a curve or antiderivative",
-    },
-    {
-      id: "3",
-      front: "Define 'limit' in calculus",
-      back: "The value that a function approaches as the input approaches a specific point",
-      hint: "Think about approaching a value, not reaching it"
-    },
-    {
-      id: "4",
-      front: "What is the derivative of sin(x)?",
-      back: "cos(x)",
-    },
-    {
-      id: "5",
-      front: "What is the derivative of cos(x)?",
-      back: "-sin(x)",
-    },
-    {
-      id: "6",
-      front: "What is the chain rule?",
-      back: "d/dx[f(g(x))] = f'(g(x)) · g'(x)",
-      hint: "Derivative of outer function times derivative of inner function"
-    },
-    {
-      id: "7",
-      front: "What is the product rule?",
-      back: "d/dx[f(x)·g(x)] = f'(x)·g(x) + f(x)·g'(x)",
-    },
-    {
-      id: "8",
-      front: "What is the quotient rule?",
-      back: "d/dx[f(x)/g(x)] = [f'(x)·g(x) - f(x)·g'(x)] / [g(x)]²",
-      hint: "Low d-high minus high d-low, all over low squared"
-    },
-    {
-      id: "9",
-      front: "What is ∫ 1/x dx?",
-      back: "ln|x| + C",
-    },
-    {
-      id: "10",
-      front: "What is the fundamental theorem of calculus?",
-      back: "Integration and differentiation are inverse operations",
-      hint: "They undo each other"
-    }
-  ],
-  metadata: {
-    difficulty: "intermediate",
-    cardType: "question-answer",
-    topic: "calculus"
-  }
-};
+// Mock flashcard data - kept for reference
+// const mockFlashcardSet: FlashcardSetData = {
+//   title: "Calculus Fundamentals Practice",
+//   cards: [
+//     {
+//       id: "1",
+//       front: "What is the derivative of x²?",
+//       back: "2x (using the power rule: d/dx(xⁿ) = n·xⁿ⁻¹)",
+//       hint: "Remember the power rule"
+//     },
+//     {
+//       id: "2",
+//       front: "What does ∫ represent?",
+//       back: "The integral symbol, representing the area under a curve or antiderivative",
+//     },
+//     {
+//       id: "3",
+//       front: "Define 'limit' in calculus",
+//       back: "The value that a function approaches as the input approaches a specific point",
+//       hint: "Think about approaching a value, not reaching it"
+//     },
+//     {
+//       id: "4",
+//       front: "What is the derivative of sin(x)?",
+//       back: "cos(x)",
+//     },
+//     {
+//       id: "5",
+//       front: "What is the derivative of cos(x)?",
+//       back: "-sin(x)",
+//     },
+//     {
+//       id: "6",
+//       front: "What is the chain rule?",
+//       back: "d/dx[f(g(x))] = f'(g(x)) · g'(x)",
+//       hint: "Derivative of outer function times derivative of inner function"
+//     },
+//     {
+//       id: "7",
+//       front: "What is the product rule?",
+//       back: "d/dx[f(x)·g(x)] = f'(x)·g(x) + f(x)·g'(x)",
+//     },
+//     {
+//       id: "8",
+//       front: "What is the quotient rule?",
+//       back: "d/dx[f(x)/g(x)] = [f'(x)·g(x) - f(x)·g'(x)] / [g(x)]²",
+//       hint: "Low d-high minus high d-low, all over low squared"
+//     },
+//     {
+//       id: "9",
+//       front: "What is ∫ 1/x dx?",
+//       back: "ln|x| + C",
+//     },
+//     {
+//       id: "10",
+//       front: "What is the fundamental theorem of calculus?",
+//       back: "Integration and differentiation are inverse operations",
+//       hint: "They undo each other"
+//     }
+//   ],
+//   metadata: {
+//     difficulty: "intermediate",
+//     cardType: "question-answer",
+//     topic: "calculus"
+//   }
+// };
 
 export default function PracticeMaterialPage() {
   const [materials, setMaterials] = useState<PracticeMaterial[]>([]);

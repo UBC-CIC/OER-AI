@@ -630,21 +630,43 @@ export default function AIChatPage() {
   // Handle pre-filled question from URL (e.g., from FAQ page)
   useEffect(() => {
     const question = searchParams.get("question");
-    if (question && activeChatSessionId && textbook && !isStreaming && messages.length === 0) {
-      // Set the message and trigger send
-      setMessage(question);
-      
-      // Clear the URL parameter
-      setSearchParams({});
-      
-      // Send the message after a brief delay to ensure state updates
-      setTimeout(() => {
-        if (question.trim()) {
-          sendMessage();
-        }
-      }, 100);
+    const answer = searchParams.get("answer");
+    
+    // Wait for history to finish loading before processing FAQ params
+    if (question && activeChatSessionId && textbook && !isStreaming && !isLoadingHistory) {
+      // If both question and answer are provided (from FAQ), display them directly
+      if (answer) {
+        const userMsg: Message = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          sender: "user",
+          text: question,
+          time: Date.now(),
+        };
+        
+        const botMsg: Message = {
+          id: `${Date.now() + 1}-${Math.random().toString(36).slice(2, 9)}`,
+          sender: "bot",
+          text: answer,
+          sources_used: [],
+          time: Date.now() + 1,
+        };
+        
+        // Append to existing messages (history)
+        setMessages((prev) => [...prev, userMsg, botMsg]);
+        setSearchParams({});
+      } else {
+        // Only question provided, send it to LLM
+        setMessage(question);
+        setSearchParams({});
+        
+        setTimeout(() => {
+          if (question.trim()) {
+            sendMessage();
+          }
+        }, 100);
+      }
     }
-  }, [searchParams, activeChatSessionId, textbook, isStreaming, messages.length]);
+  }, [searchParams, activeChatSessionId, textbook, isStreaming, isLoadingHistory]);
 
   function messageFormatter(message: Message) {
     if (message.sender === "user") {

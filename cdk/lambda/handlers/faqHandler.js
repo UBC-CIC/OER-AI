@@ -78,6 +78,7 @@ exports.handler = async (event) => {
           SELECT id, question_text, answer_text, usage_count, last_used_at, cached_at
           FROM faq_cache
           WHERE textbook_id = ${faqTextbookId}
+          AND usage_count > 3
           ORDER BY usage_count DESC, cached_at DESC
         `;
         

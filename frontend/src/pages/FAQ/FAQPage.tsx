@@ -72,8 +72,8 @@ export default function FAQPage() {
   }, [textbookId]);
 
   const handleFaqClick = async (faq: FAQ) => {
-    // Navigate to chat with pre-filled question
-    navigate(`/textbook/${textbookId}/chat?question=${encodeURIComponent(faq.question_text)}`);
+    // Navigate to chat with pre-filled question and answer
+    navigate(`/textbook/${textbookId}/chat?question=${encodeURIComponent(faq.question_text)}&answer=${encodeURIComponent(faq.answer_text)}`);
 
     // Increment usage count in background (fire and forget)
     try {
