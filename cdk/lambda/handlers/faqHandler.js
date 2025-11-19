@@ -213,6 +213,70 @@ exports.handler = async (event) => {
         response.body = '';
         break;
         
+      case "POST /faq/{faq_id}/report":
+        const reportFaqId = event.pathParameters?.faq_id;
+        if (!reportFaqId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "FAQ ID is required" });
+          break;
+        }
+        
+        const reportData = parseBody(event.body);
+        const { reason, comment } = reportData;
+        
+        // Validate reason if provided
+        const validReasons = ['inaccurate', 'inappropriate', 'outdated', 'other'];
+        if (reason && !validReasons.includes(reason)) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ 
+            error: "Invalid reason. Must be one of: inaccurate, inappropriate, outdated, other" 
+          });
+          break;
+        }
+        
+        // Check if FAQ exists
+        const existingFaq = await sqlConnection`
+          SELECT id FROM faq_cache WHERE id = ${reportFaqId}
+        `;
+        
+        if (existingFaq.length === 0) {
+          response.statusCode = 404;
+          response.body = JSON.stringify({ error: "FAQ entry not found" });
+          break;
+        }
+        
+        // Update the FAQ to mark it as reported and store report details in metadata
+        const reportMetadata = {
+          reason: reason || 'other',
+          comment: comment || '',
+          reported_at: new Date().toISOString()
+        };
+        
+        const reportedFaq = await sqlConnection`
+          UPDATE faq_cache
+          SET 
+            reported = true,
+            metadata = jsonb_set(
+              COALESCE(metadata::jsonb, '{}'::jsonb),
+              '{report}',
+              ${JSON.stringify(reportMetadata)}::jsonb
+            )
+          WHERE id = ${reportFaqId}
+          RETURNING id, question_text, reported, metadata
+        `;
+        
+        data = {
+          id: reportedFaq[0].id,
+          faq_id: reportedFaq[0].id,
+          reported_at: reportMetadata.reported_at,
+          reason: reportMetadata.reason,
+          message: "FAQ has been reported successfully"
+        };
+        
+        response.statusCode = 200;
+        response.body = JSON.stringify(data);
+        break;
+        
       default:
         throw new Error(`Unsupported route: "${pathData}"`);
     }

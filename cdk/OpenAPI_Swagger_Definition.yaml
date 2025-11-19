@@ -1801,6 +1801,73 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
+  /faq/{faq_id}/report:
+    <<: *commonOptions
+    post:
+      tags:
+        - User
+      summary: Report an FAQ entry as inaccurate or inappropriate
+      operationId: report_faq
+      security:
+        - userAuthorizer: []
+      parameters:
+        - name: faq_id
+          in: path
+          required: true
+          description: FAQ entry UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  enum: [inaccurate, inappropriate, outdated, other]
+                  description: Reason for reporting the FAQ
+                comment:
+                  type: string
+                  description: Optional additional comment
+      responses:
+        "200":
+          description: FAQ reported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  faq_id:
+                    type: string
+                    format: uuid
+                  reported_at:
+                    type: string
+                    format: date-time
+                  reason:
+                    type: string
+                  message:
+                    type: string
+        "400":
+          description: Invalid request
+        "404":
+          description: FAQ entry not found
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${faqFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
   /textbooks/{textbook_id}/chat_sessions:
     <<: *commonOptions
     get:
@@ -3772,10 +3839,11 @@ paths:
     post:
       tags:
         - User
-      summary: Generate AI practice materials (MCQs) for a textbook
+      summary: Generate AI practice materials (MCQs or Flashcards) for a textbook
       operationId: generate_practice_materials
-      security:
-        - userAuthorizer: []
+      #TODO: figure out why this breaks the API Gateway deployment
+      # security:
+      #   - userAuthorizer: []
       parameters:
         - name: textbook_id
           in: path
@@ -3799,18 +3867,35 @@ paths:
                   example: "derivatives and integrals"
                 material_type:
                   type: string
-                  enum: [mcq]
+                  enum: [mcq, flashcard]
                   default: mcq
+                  description: Type of practice material to generate
+                # MCQ-specific fields
                 num_questions:
                   type: integer
                   minimum: 1
                   maximum: 20
                   default: 5
+                  description: Number of questions (for MCQ)
                 num_options:
                   type: integer
                   minimum: 2
                   maximum: 6
                   default: 4
+                  description: Number of answer options per question (for MCQ)
+                # Flashcard-specific fields
+                num_cards:
+                  type: integer
+                  minimum: 1
+                  maximum: 20
+                  default: 10
+                  description: Number of flashcards (for flashcard)
+                card_type:
+                  type: string
+                  enum: [definition, concept, example]
+                  default: definition
+                  description: Type of flashcard content (for flashcard)
+                # Common fields
                 difficulty:
                   type: string
                   enum: [beginner, intermediate, advanced]
@@ -3825,32 +3910,61 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  title:
-                    type: string
-                  questions:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        questionText:
-                          type: string
-                        options:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                              text:
-                                type: string
-                              explanation:
-                                type: string
-                        correctAnswer:
-                          type: string
+                oneOf:
+                  - type: object
+                    description: MCQ Quiz
+                    properties:
+                      title:
+                        type: string
+                      questions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            questionText:
+                              type: string
+                            options:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                  text:
+                                    type: string
+                                  explanation:
+                                    type: string
+                            correctAnswer:
+                              type: string
+                  - type: object
+                    description: Flashcard Set
+                    properties:
+                      title:
+                        type: string
+                      cards:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            front:
+                              type: string
+                            back:
+                              type: string
+                            hint:
+                              type: string
+                      metadata:
+                        type: object
+                        properties:
+                          difficulty:
+                            type: string
+                          cardType:
+                            type: string
+                          topic:
+                            type: string
         "400":
           description: Invalid request parameters
         "401":

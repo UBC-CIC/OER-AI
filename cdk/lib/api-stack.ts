@@ -278,6 +278,7 @@ export class ApiGatewayStack extends cdk.Stack {
       cloudWatchRole: true,
       deployOptions: {
         stageName: "prod",
+        description: "Deployment with flashcard support - Nov 18 2025",
         loggingLevel: apigateway.MethodLoggingLevel.INFO,
         dataTraceEnabled: true,
         metricsEnabled: true,
@@ -1425,7 +1426,7 @@ export class ApiGatewayStack extends cdk.Stack {
         memorySize: 1024,
         timeout: cdk.Duration.seconds(120),
         vpc: vpcStack.vpc,
-        functionName: `${id}-PracticeMaterialDockerFunc`,
+        functionName: `${id}-PracticeMaterialLambdaDockerFunction`,
         environment: {
           REGION: this.region,
           // DB + RDS for embeddings access

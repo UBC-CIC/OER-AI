@@ -12,9 +12,44 @@ interface FaqCardProps {
   question: string;
   count: number;
   onClick?: () => void;
+  faqId: string;
 }
 
-export function FaqCard({ question, count, onClick }: FaqCardProps) {
+export function FaqCard({ question, count, onClick, faqId }: FaqCardProps) {
+  const handleReport = async () => {
+    try {
+      const tokenResp = await fetch(
+        `${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`
+      );
+      if (!tokenResp.ok) throw new Error("Failed to get token");
+      const { token } = await tokenResp.json();
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_ENDPOINT}/faq/${faqId}/report`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            reason: "other",
+            comment: "Reported via FAQ page",
+          }),
+        }
+      );
+
+      if (response.ok) {
+        alert("Thank you for reporting this FAQ. It has been flagged for review.");
+      } else {
+        throw new Error("Failed to report FAQ");
+      }
+    } catch (error) {
+      console.error("Error reporting FAQ:", error);
+      alert("Failed to report FAQ. Please try again.");
+    }
+  };
+
   return (
     <Card
       className="gap-1 sm:gap-6 p-[10px] flex-col justify-between cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] bg-muted/30"
@@ -59,7 +94,7 @@ export function FaqCard({ question, count, onClick }: FaqCardProps) {
                 className="p-1 focus:bg-background focus:text-black hover:text-black text-muted-foreground cursor-pointer flex items-center"
                 onClick={(e) => {
                   e.stopPropagation();
-                  console.log("Report clicked");
+                  handleReport();
                 }}
               >
                 <span >Report</span>

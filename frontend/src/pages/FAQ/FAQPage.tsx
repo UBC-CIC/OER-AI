@@ -135,6 +135,7 @@ export default function FAQPage() {
               {faqs.map((faq) => (
                 <FaqListItem
                   key={faq.id}
+                  faqId={faq.id}
                   question={faq.question_text}
                   count={faq.usage_count}
                   onClick={() => handleFaqClick(faq)}
@@ -147,6 +148,7 @@ export default function FAQPage() {
               {faqs.map((faq) => (
                 <FaqCard
                   key={faq.id}
+                  faqId={faq.id}
                   question={faq.question_text}
                   count={faq.usage_count}
                   onClick={() => handleFaqClick(faq)}

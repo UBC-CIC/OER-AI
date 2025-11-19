@@ -81,25 +81,14 @@ export default function PracticeMaterialPage() {
   const { textbook } = useTextbookView();
 
   const handleGenerate = async (formData: any) => {
+    console.log("handleGenerate called with:", formData);
+    console.log("Material type being processed:", formData.materialType);
     setErrorMsg(null);
     if (!textbook?.id) {
       setErrorMsg("Please select a textbook before generating practice materials.");
       return;
     }
 
-    // For flashcards, use mock data instead of API call
-    if (formData.materialType === "flashcards") {
-      setIsGenerating(true);
-      // Simulate loading delay
-      setTimeout(() => {
-        const customTitle = `${formData.topic} - Flashcards`;
-        setMaterials((prev) => [...prev, { ...mockFlashcardSet, title: customTitle }]);
-        setIsGenerating(false);
-      }, 500);
-      return;
-    }
-
-    // For MCQ, make actual API call
     try {
       setIsGenerating(true);
       // Acquire public token
@@ -108,13 +97,24 @@ export default function PracticeMaterialPage() {
       const { token } = await tokenResp.json();
 
       // Build request body based on material type
-      const requestBody = {
+      let requestBody: any = {
         topic: formData.topic,
-        material_type: "mcq",
-        num_questions: formData.numQuestions,
-        num_options: formData.numOptions,
         difficulty: formData.difficulty,
       };
+
+      if (formData.materialType === "flashcards") {
+        console.log("Building flashcard request body");
+        requestBody.material_type = "flashcard";
+        requestBody.num_cards = formData.numCards;
+        requestBody.card_type = formData.cardType;
+      } else {
+        console.log("Building MCQ request body");
+        requestBody.material_type = "mcq";
+        requestBody.num_questions = formData.numQuestions;
+        requestBody.num_options = formData.numOptions;
+      }
+
+      console.log("Final request body:", requestBody);
 
       const resp = await fetch(
         `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${textbook.id}/practice_materials`,

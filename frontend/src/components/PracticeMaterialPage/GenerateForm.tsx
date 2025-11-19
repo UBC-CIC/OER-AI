@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,7 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-// Validation schema
+// Validation schema for MCQ
 const mcqSchema = z.object({
   materialType: z.literal("mcq"),
   topic: z.string().min(1, "Topic is required").max(200, "Topic too long"),
@@ -34,7 +35,19 @@ const mcqSchema = z.object({
   difficulty: z.enum(["beginner", "intermediate", "advanced"]),
 });
 
-const formSchema = z.discriminatedUnion("materialType", [mcqSchema]);
+// Validation schema for Flashcards
+const flashcardSchema = z.object({
+  materialType: z.literal("flashcards"),
+  topic: z.string().min(1, "Topic is required").max(200, "Topic too long"),
+  numCards: z
+    .number()
+    .min(1, "Must be at least 1")
+    .max(20, "Maximum 20 flashcards"),
+  difficulty: z.enum(["beginner", "intermediate", "advanced"]),
+  cardType: z.enum(["definition", "concept", "example"]),
+});
+
+const formSchema = z.discriminatedUnion("materialType", [mcqSchema, flashcardSchema]);
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -43,10 +56,12 @@ interface GenerateFormProps {
 }
 
 export function GenerateForm({ onGenerate }: GenerateFormProps) {
+  const [currentMaterialType, setCurrentMaterialType] = useState<"mcq" | "flashcards">("mcq");
+
   const {
     control,
     handleSubmit,
-    watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -56,15 +71,43 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
       numQuestions: 5,
       numOptions: 4,
       difficulty: "intermediate",
-    },
+    } as FormData,
   });
 
-  // watch current material type
-  const materialType = watch("materialType");
-
   const onSubmit = (data: FormData) => {
-    if (data.materialType === "mcq") {
-      onGenerate(data);
+    console.log("Form submitted with materialType:", data.materialType);
+    console.log("Current state materialType:", currentMaterialType);
+    onGenerate(data);
+  };
+
+  // Handle material type change
+  const handleMaterialTypeChange = (value: "mcq" | "flashcards") => {
+    console.log("=== Material Type Change ===");
+    console.log("New value:", value);
+    console.log("Value type:", typeof value);
+    console.log("Value === 'mcq':", value === "mcq");
+    console.log("Value === 'flashcards':", value === "flashcards");
+    
+    setCurrentMaterialType(value);
+    
+    if (value === "flashcards") {
+      console.log("Resetting to flashcard defaults");
+      reset({
+        materialType: value,
+        topic: "",
+        numCards: 10,
+        difficulty: "intermediate",
+        cardType: "definition",
+      } as FormData);
+    } else {
+      console.log("Resetting to MCQ defaults");
+      reset({
+        materialType: value,
+        topic: "",
+        numQuestions: 5,
+        numOptions: 4,
+        difficulty: "intermediate",
+      } as FormData);
     }
   };
 
@@ -93,7 +136,14 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
               name="materialType"
               control={control}
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select 
+                  value={currentMaterialType}
+                  onValueChange={(value) => {
+                    const newType = value as "mcq" | "flashcards";
+                    field.onChange(newType);
+                    handleMaterialTypeChange(newType);
+                  }}
+                >
                   <SelectTrigger
                     className="border-grey w-full"
                     id="material-type"
@@ -103,6 +153,9 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
                   <SelectContent>
                     <SelectItem value="mcq">
                       Multiple Choice Questions
+                    </SelectItem>
+                    <SelectItem value="flashcards">
+                      Flashcards
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -131,7 +184,7 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
           </div>
 
           {/* Conditional Fields based on Material Type */}
-          {materialType === "mcq" && (
+          {currentMaterialType === "mcq" && (
             <>
               {/* Number of Questions */}
               <div className="space-y-2">
@@ -148,11 +201,11 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
                       onChange={(e) =>
                         field.onChange(parseInt(e.target.value) || 0)
                       }
-                      className={errors.numQuestions ? "border-red-500" : ""}
+                      className={(currentMaterialType === "mcq" && "numQuestions" in errors && errors.numQuestions) ? "border-red-500" : ""}
                     />
                   )}
                 />
-                {errors.numQuestions && (
+                {currentMaterialType === "mcq" && "numQuestions" in errors && errors.numQuestions && (
                   <p className="text-sm text-red-500">
                     {errors.numQuestions.message}
                   </p>
@@ -174,11 +227,11 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
                       onChange={(e) =>
                         field.onChange(parseInt(e.target.value) || 0)
                       }
-                      className={errors.numOptions ? "border-red-500" : ""}
+                      className={(currentMaterialType === "mcq" && "numOptions" in errors && errors.numOptions) ? "border-red-500" : ""}
                     />
                   )}
                 />
-                {errors.numOptions && (
+                {currentMaterialType === "mcq" && "numOptions" in errors && errors.numOptions && (
                   <p className="text-sm text-red-500">
                     {errors.numOptions.message}
                   </p>
@@ -196,6 +249,87 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
                       <SelectTrigger
                         className="border-grey w-full"
                         id="difficulty"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Beginner</SelectItem>
+                        <SelectItem value="intermediate">
+                          Intermediate
+                        </SelectItem>
+                        <SelectItem value="advanced">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Flashcard-specific Fields */}
+          {currentMaterialType === "flashcards" && (
+            <>
+              {/* Number of Cards */}
+              <div className="space-y-2">
+                <Label htmlFor="num-cards">Number of Flashcards</Label>
+                <Controller
+                  name="numCards"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      id="num-cards"
+                      type="number"
+                      placeholder="Enter a number"
+                      onChange={(e) =>
+                        field.onChange(parseInt(e.target.value) || 0)
+                      }
+                      className={(currentMaterialType === "flashcards" && "numCards" in errors && errors.numCards) ? "border-red-500" : ""}
+                    />
+                  )}
+                />
+                {currentMaterialType === "flashcards" && "numCards" in errors && errors.numCards && (
+                  <p className="text-sm text-red-500">
+                    {errors.numCards.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Card Type */}
+              <div className="space-y-2">
+                <Label htmlFor="card-type">Card Type</Label>
+                <Controller
+                  name="cardType"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger
+                        className="border-grey w-full"
+                        id="card-type"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="definition">Definition</SelectItem>
+                        <SelectItem value="concept">Concept</SelectItem>
+                        <SelectItem value="example">Example</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+
+              {/* Difficulty */}
+              <div className="space-y-2">
+                <Label htmlFor="difficulty-fc">Difficulty</Label>
+                <Controller
+                  name="difficulty"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger
+                        className="border-grey w-full"
+                        id="difficulty-fc"
                       >
                         <SelectValue />
                       </SelectTrigger>
