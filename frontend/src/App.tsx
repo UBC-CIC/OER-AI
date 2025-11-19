@@ -7,6 +7,26 @@ import TextbookLayout from "./layouts/TextbookLayout";
 import PracticeMaterialPage from "./pages/PracticeMaterial/PracticeMaterialPage";
 import FAQPage from "./pages/FAQ/FAQPage";
 import MaterialEditorPage from "./pages/MaterialEditor/MaterialEditorPage";
+import AdminLogin from "./pages/Admin/AdminLogin";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { Amplify } from "aws-amplify";
+
+Amplify.configure({
+  API: {
+    REST: {
+      MyApi: {
+        endpoint: import.meta.env.VITE_API_ENDPOINT,
+      },
+    },
+  },
+  Auth: {
+    Cognito: {
+      userPoolClientId: import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID,
+      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+    },
+  },
+});
 
 function App() {
   return (
@@ -21,10 +41,21 @@ function App() {
               <Route path="faq" element={<FAQPage />} />
               <Route path="material-editor" element={<MaterialEditorPage />} />
             </Route>
+
+            {/* Admin Routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </ModeProvider>
       </UserSessionProvider>
-      </BrowserRouter>
+    </BrowserRouter>
   );
 }
 

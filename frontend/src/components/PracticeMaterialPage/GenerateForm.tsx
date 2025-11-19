@@ -47,7 +47,18 @@ const flashcardSchema = z.object({
   cardType: z.enum(["definition", "concept", "example"]),
 });
 
-const formSchema = z.discriminatedUnion("materialType", [mcqSchema, flashcardSchema]);
+// Validation schema for Short Answer
+const shortAnswerSchema = z.object({
+  materialType: z.literal("shortAnswer"),
+  topic: z.string().min(1, "Topic is required").max(200, "Topic too long"),
+  numQuestions: z
+    .number()
+    .min(1, "Must be at least 1")
+    .max(10, "Maximum 10 questions"),
+  difficulty: z.enum(["beginner", "intermediate", "advanced"]),
+});
+
+const formSchema = z.discriminatedUnion("materialType", [mcqSchema, flashcardSchema, shortAnswerSchema]);
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -56,7 +67,7 @@ interface GenerateFormProps {
 }
 
 export function GenerateForm({ onGenerate }: GenerateFormProps) {
-  const [currentMaterialType, setCurrentMaterialType] = useState<"mcq" | "flashcards">("mcq");
+  const [currentMaterialType, setCurrentMaterialType] = useState<"mcq" | "flashcards" | "shortAnswer">("mcq");
 
   const {
     control,
@@ -81,12 +92,9 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
   };
 
   // Handle material type change
-  const handleMaterialTypeChange = (value: "mcq" | "flashcards") => {
+  const handleMaterialTypeChange = (value: "mcq" | "flashcards" | "shortAnswer") => {
     console.log("=== Material Type Change ===");
     console.log("New value:", value);
-    console.log("Value type:", typeof value);
-    console.log("Value === 'mcq':", value === "mcq");
-    console.log("Value === 'flashcards':", value === "flashcards");
     
     setCurrentMaterialType(value);
     
@@ -98,6 +106,14 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
         numCards: 10,
         difficulty: "intermediate",
         cardType: "definition",
+      } as FormData);
+    } else if (value === "shortAnswer") {
+      console.log("Resetting to short answer defaults");
+      reset({
+        materialType: value,
+        topic: "",
+        numQuestions: 3,
+        difficulty: "intermediate",
       } as FormData);
     } else {
       console.log("Resetting to MCQ defaults");
@@ -139,7 +155,7 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
                 <Select 
                   value={currentMaterialType}
                   onValueChange={(value) => {
-                    const newType = value as "mcq" | "flashcards";
+                    const newType = value as "mcq" | "flashcards" | "shortAnswer";
                     field.onChange(newType);
                     handleMaterialTypeChange(newType);
                   }}
@@ -156,6 +172,9 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
                     </SelectItem>
                     <SelectItem value="flashcards">
                       Flashcards
+                    </SelectItem>
+                    <SelectItem value="shortAnswer">
+                      Short Answer
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -330,6 +349,63 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
                       <SelectTrigger
                         className="border-grey w-full"
                         id="difficulty-fc"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Beginner</SelectItem>
+                        <SelectItem value="intermediate">
+                          Intermediate
+                        </SelectItem>
+                        <SelectItem value="advanced">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Short Answer-specific Fields */}
+          {currentMaterialType === "shortAnswer" && (
+            <>
+              {/* Number of Questions */}
+              <div className="space-y-2">
+                <Label htmlFor="num-questions-sa">Number of Questions</Label>
+                <Controller
+                  name="numQuestions"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      id="num-questions-sa"
+                      type="number"
+                      placeholder="Enter a number"
+                      onChange={(e) =>
+                        field.onChange(parseInt(e.target.value) || 0)
+                      }
+                      className={(currentMaterialType === "shortAnswer" && "numQuestions" in errors && errors.numQuestions) ? "border-red-500" : ""}
+                    />
+                  )}
+                />
+                {currentMaterialType === "shortAnswer" && "numQuestions" in errors && errors.numQuestions && (
+                  <p className="text-sm text-red-500">
+                    {errors.numQuestions.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Difficulty */}
+              <div className="space-y-2">
+                <Label htmlFor="difficulty-sa">Difficulty</Label>
+                <Controller
+                  name="difficulty"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger
+                        className="border-grey w-full"
+                        id="difficulty-sa"
                       >
                         <SelectValue />
                       </SelectTrigger>

@@ -6,6 +6,7 @@ import psycopg2
 from langchain_aws import BedrockEmbeddings
 from helpers.vectorstore import get_textbook_retriever
 from helpers.chat import get_bedrock_llm, get_response_streaming, get_response, update_session_name
+from helpers.faq_cache import check_faq_cache, cache_faq, stream_cached_response
 
 # Set up basic logging
 logging.basicConfig(level=logging.INFO)
@@ -319,38 +320,84 @@ def handler(event, context):
         # Connect to database for custom prompts and logging
         connection = connect_to_db()
         
-        # Generate response using helper function
-        try:
-            if is_websocket:
-                # For WebSocket, use streaming response
+        # Check FAQ cache first for WebSocket requests (only non-chat-session queries)
+        cached_response = None
+        from_cache = False
+        if is_websocket:
+            logger.info("Checking FAQ cache for similar questions...")
+            cached_response = check_faq_cache(
+                question=question,
+                textbook_id=textbook_id,
+                embeddings=embeddings,
+                connection=connection
+            )
+            
+            if cached_response:
+                logger.info(f"Found cached response (similarity: {cached_response.get('similarity', 0):.4f})")
+                # Stream the cached response via WebSocket
                 connection_id = event['requestContext']['connectionId']
                 domain_name = event['requestContext']['domainName']
                 stage = event['requestContext']['stage']
                 websocket_endpoint = f"https://{domain_name}/{stage}"
-                response_data = process_query_streaming(
-                    query=question,
-                    textbook_id=textbook_id,
-                    retriever=retriever,
-                    connection=connection,
-                    chat_session_id=chat_session_id,
+                
+                response_data = stream_cached_response(
+                    cached_faq=cached_response,
                     websocket_endpoint=websocket_endpoint,
                     connection_id=connection_id
                 )
-            else:
-                # For regular API, use non-streaming response
-                response_data = process_query(
-                    query=question,
-                    textbook_id=textbook_id,
-                    retriever=retriever,
-                    connection=connection,
-                    chat_session_id=chat_session_id
-                )
-        except Exception as query_error:
-            logger.error(f"Error processing query: {str(query_error)}", exc_info=True)
-            response_data = {
-                "response": "I apologize, but I'm experiencing technical difficulties at the moment. Our team has been notified of the issue.",
-                "sources_used": []
-            }
+                from_cache = True
+        
+        # Generate response using helper function if not found in cache
+        if not from_cache:
+            try:
+                if is_websocket:
+                    # For WebSocket, use streaming response
+                    connection_id = event['requestContext']['connectionId']
+                    domain_name = event['requestContext']['domainName']
+                    stage = event['requestContext']['stage']
+                    websocket_endpoint = f"https://{domain_name}/{stage}"
+                    response_data = process_query_streaming(
+                        query=question,
+                        textbook_id=textbook_id,
+                        retriever=retriever,
+                        connection=connection,
+                        chat_session_id=chat_session_id,
+                        websocket_endpoint=websocket_endpoint,
+                        connection_id=connection_id
+                    )
+                    
+                    # Cache the response for future use (only for non-chat-session WebSocket queries)
+                    if response_data.get("response"):
+                        logger.info("Caching FAQ response for future use...")
+                        cache_metadata = {
+                            "sources_count": len(response_data.get("sources_used", [])),
+                            "has_guardrail_assessments": "assessments" in response_data
+                        }
+                        cache_faq(
+                            question=question,
+                            answer=response_data["response"],
+                            textbook_id=textbook_id,
+                            embeddings=embeddings,
+                            connection=connection,
+                            sources=response_data.get("sources_used", []),
+                            metadata=cache_metadata
+                        )
+                else:
+                    # Non-WebSocket API calls are deprecated
+                    logger.warning("Non-WebSocket API call detected - this is deprecated")
+                    response_data = process_query(
+                        query=question,
+                        textbook_id=textbook_id,
+                        retriever=retriever,
+                        connection=connection,
+                        chat_session_id=chat_session_id
+                    )
+            except Exception as query_error:
+                logger.error(f"Error processing query: {str(query_error)}", exc_info=True)
+                response_data = {
+                    "response": "I apologize, but I'm experiencing technical difficulties at the moment. Our team has been notified of the issue.",
+                    "sources_used": []
+                }
         
         try:
             # Log the interaction for analytics purposes
@@ -396,6 +443,19 @@ def handler(event, context):
                 connection.close()
         
         # Return successful response
+        response_body = {
+            "textbook_id": textbook_id,
+            "response": response_data["response"],
+            "sources": response_data["sources_used"],
+            "session_name": session_name if not is_websocket else response_data.get("session_name")
+        }
+        
+        # Include cache metadata if response was from cache
+        if from_cache or response_data.get("from_cache"):
+            response_body["from_cache"] = True
+            if "cache_similarity" in response_data:
+                response_body["cache_similarity"] = response_data["cache_similarity"]
+        
         return {
             "statusCode": 200,
             "headers": {
@@ -404,12 +464,7 @@ def handler(event, context):
                 "Access-Control-Allow-Origin": "*", 
                 "Access-Control-Allow-Methods": "*"
             },
-            "body": json.dumps({
-                "textbook_id": textbook_id,
-                "response": response_data["response"],
-                "sources": response_data["sources_used"],
-                "session_name": session_name if not is_websocket else response_data.get("session_name")
-            })
+            "body": json.dumps(response_body)
         }
         
     except Exception as e:

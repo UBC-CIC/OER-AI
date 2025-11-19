@@ -2,6 +2,7 @@
 import * as cdk from "aws-cdk-lib";
 import { VpcStack } from "../lib/vpc-stack";
 import { DatabaseStack } from "../lib/database-stack";
+import { DataPipelineStack } from "../lib/data-pipeline-stack";
 import { ApiGatewayStack } from "../lib/api-stack";
 import { DBFlowStack } from "../lib/dbFlow-stack";
 import { AmplifyStack } from "../lib/amplify-stack";
@@ -35,6 +36,16 @@ const dbFlowStack = new DBFlowStack(
   dbStack,
   { env }
 );
+
+const dataPipelineStack = new DataPipelineStack(
+  app,
+  `${StackPrefix}-DataPipeline`,
+  {
+    env,
+    vpcStack,
+    databaseStack: dbStack,
+  }
+);
 const cicdStack = new CICDStack(app, `${StackPrefix}-CICD`, {
   env,
   githubRepo: githubRepo,
@@ -59,7 +70,7 @@ const cicdStack = new CICDStack(app, `${StackPrefix}-CICD`, {
   pathFilters: [
     "cdk/lambda/dataIngestion/**",
     "cdk/lambda/textGeneration/**",
-    "cdk/lambda/practiceMaterial/**"
+    "cdk/lambda/practiceMaterial/**",
   ],
 });
 const apiStack = new ApiGatewayStack(
