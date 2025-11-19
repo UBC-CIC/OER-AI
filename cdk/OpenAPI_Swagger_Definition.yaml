@@ -112,6 +112,70 @@ paths:
         type: aws_proxy
       x-amazon-apigateway-request-validator: all
 
+  /admin/textbooks:
+    <<: *commonOptions
+    get:
+      tags:
+        - Admin
+      summary: Get all textbooks with user and question counts
+      operationId: get_admin_textbooks
+      security:
+        - adminAuthorizer: []
+      responses:
+        "200":
+          description: List of textbooks with statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  textbooks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        title:
+                          type: string
+                        authors:
+                          type: array
+                          items:
+                            type: string
+                        publisher:
+                          type: string
+                        publish_date:
+                          type: string
+                        summary:
+                          type: string
+                        language:
+                          type: string
+                        level:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                        updated_at:
+                          type: string
+                          format: date-time
+                        user_count:
+                          type: integer
+                          description: Number of unique users with chat sessions for this textbook
+                        question_count:
+                          type: integer
+                          description: Total number of questions asked about this textbook
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${adminFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
   /chat_sessions/{chat_session_id}: #this endpoint is just shorter than having all the extra data to slot it under textbooks.
     <<: *commonOptions
     delete:

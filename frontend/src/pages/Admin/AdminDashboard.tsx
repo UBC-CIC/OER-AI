@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   BarChart3,
@@ -7,14 +7,12 @@ import {
   Upload,
   Trash2,
   RefreshCw,
-  MoreVertical,
   FileText,
   Users,
   HelpCircle,
   BookOpen,
-  CheckCircle2,
-  AlertCircle,
 } from "lucide-react";
+import { AuthService } from "@/functions/authService";
 import {
   Card,
   CardContent,
@@ -44,13 +42,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   LineChart,
   Line,
   BarChart,
@@ -60,7 +51,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 
 // --- Mock Data ---
@@ -84,48 +74,16 @@ const materialTypeData = [
   { name: "Flashcards", value: 550, fill: "#4a8fb0" },
 ];
 
-const initialTextbooks = [
-  {
-    id: 1,
-    title: "Calculus: Volume 3",
-    author: "Gilbert Strang",
-    status: "Active",
-    users: 124,
-    questions: 546,
-  },
-  {
-    id: 2,
-    title: "Elementary Differential Equations",
-    author: "William F. Trench",
-    status: "Active",
-    users: 320,
-    questions: 789,
-  },
-  {
-    id: 3,
-    title: "Financial Strategy for Public Managers",
-    author: "Justin Marlowe",
-    status: "Active",
-    users: 534,
-    questions: 1239,
-  },
-  {
-    id: 4,
-    title: "Building a Competitive First Nation",
-    author: "J.C. Andre",
-    status: "Disabled",
-    users: 24,
-    questions: 42,
-  },
-  {
-    id: 5,
-    title: "Introduction to Psychology",
-    author: "Rose M. Spielman",
-    status: "Active",
-    users: 892,
-    questions: 2100,
-  },
-];
+type TextbookData = {
+  id: string | number;
+  title: string;
+  author: string;
+  status: string;
+  users: number;
+  questions: number;
+};
+
+const initialTextbooks: TextbookData[] = [];
 
 // --- Components ---
 
@@ -201,6 +159,8 @@ function DashboardView() {
   const [textbooks, setTextbooks] = useState(initialTextbooks);
   const [searchQuery, setSearchQuery] = useState("");
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const filteredTextbooks = textbooks.filter(
     (book) =>
@@ -208,7 +168,7 @@ function DashboardView() {
       book.author.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const toggleStatus = (id: number) => {
+  const toggleStatus = (id: string | number) => {
     setTextbooks(
       textbooks.map((book) =>
         book.id === id
@@ -221,9 +181,74 @@ function DashboardView() {
     );
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string | number) => {
     setTextbooks(textbooks.filter((book) => book.id !== id));
   };
+
+  // Fetch textbooks from API
+  useEffect(() => {
+    const fetchTextbooks = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Get admin token from authService
+        const session = await AuthService.getAuthSession(true);
+        const token = session.tokens.idToken;
+
+        if (!token) {
+          throw new Error("No authentication token available");
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_ENDPOINT}/admin/textbooks`,
+          {
+            headers: {
+              Authorization: token,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch textbooks: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Transform API data to match component format
+        const transformedTextbooks = data.textbooks.map((book: any) => ({
+          id: book.id,
+          title: book.title,
+          author: book.authors?.join(", ") || "Unknown Author",
+          status: "Active", // Default to Active, you can add a status field to the DB if needed
+          users: book.user_count,
+          questions: book.question_count,
+        }));
+
+        setTextbooks(transformedTextbooks);
+      } catch (err) {
+        console.error("Error fetching textbooks:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to load textbooks"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTextbooks();
+  }, []);
+
+  // Calculate total metrics from textbooks
+  const totalUsers = textbooks.reduce(
+    (sum, book) => sum + (book.users || 0),
+    0
+  );
+  const totalQuestions = textbooks.reduce(
+    (sum, book) => sum + (book.questions || 0),
+    0
+  );
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500">
@@ -234,25 +259,33 @@ function DashboardView() {
         </p>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <p className="font-medium">Error loading data</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
+
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard
           title="Total Users"
-          value="773"
+          value={loading ? "..." : totalUsers.toString()}
           icon={<Users className="h-5 w-5 text-[#2c5f7c]" />}
-          trend="+12% from last month"
+          trend="Unique users with chat sessions"
         />
         <MetricCard
           title="Total Questions"
-          value="26,720"
+          value={loading ? "..." : totalQuestions.toLocaleString()}
           icon={<HelpCircle className="h-5 w-5 text-[#3d7a9a]" />}
-          trend="+5.4% from last month"
+          trend="Questions asked across all textbooks"
         />
         <MetricCard
-          title="Total Practice Materials"
-          value="342"
+          title="Total Textbooks"
+          value={loading ? "..." : textbooks.length.toString()}
           icon={<FileText className="h-5 w-5 text-[#2c5f7c]" />}
-          trend="+2 new this week"
+          trend="Active textbooks in the system"
         />
       </div>
 
@@ -339,68 +372,93 @@ function DashboardView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTextbooks.map((book) => (
-                  <TableRow key={book.id} className="hover:bg-gray-50/50">
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-gray-900">
-                          {book.title}
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#2c5f7c]"></div>
+                        <span className="text-gray-500">
+                          Loading textbooks...
                         </span>
-                        <span className="text-xs text-gray-500">
-                          {book.author}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          book.status === "Active" ? "default" : "secondary"
-                        }
-                        className={
-                          book.status === "Active"
-                            ? "bg-green-100 text-green-700 hover:bg-green-100 border-green-200 shadow-none"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-100 border-gray-200 shadow-none"
-                        }
-                      >
-                        {book.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-gray-600">
-                      {book.users}
-                    </TableCell>
-                    <TableCell className="text-gray-600">
-                      {book.questions}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        <div className="flex items-center gap-2 mr-2">
-                          <span className="text-xs text-gray-400 hidden sm:inline">
-                            {book.status === "Active" ? "Enabled" : "Disabled"}
-                          </span>
-                          <Switch
-                            checked={book.status === "Active"}
-                            onCheckedChange={() => toggleStatus(book.id)}
-                          />
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-[#2c5f7c]"
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-red-600"
-                          onClick={() => handleDelete(book.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredTextbooks.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <p className="text-gray-500">
+                        {searchQuery
+                          ? "No textbooks found matching your search."
+                          : "No textbooks available."}
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredTextbooks.map((book) => (
+                    <TableRow key={book.id} className="hover:bg-gray-50/50">
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-900">
+                            {book.title}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {book.author}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            book.status === "Active" ? "default" : "secondary"
+                          }
+                          className={
+                            book.status === "Active"
+                              ? "bg-green-100 text-green-700 hover:bg-green-100 border-green-200 shadow-none"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-100 border-gray-200 shadow-none"
+                          }
+                        >
+                          {book.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-gray-600">
+                        {book.users}
+                      </TableCell>
+                      <TableCell className="text-gray-600">
+                        {book.questions}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <div className="flex items-center gap-2 mr-2">
+                            <span className="text-xs text-gray-400 hidden sm:inline">
+                              {book.status === "Active"
+                                ? "Enabled"
+                                : "Disabled"}
+                            </span>
+                            <Switch
+                              checked={book.status === "Active"}
+                              onCheckedChange={() => toggleStatus(book.id)}
+                            />
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-400 hover:text-[#2c5f7c]"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-400 hover:text-red-600"
+                            onClick={() => handleDelete(book.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
