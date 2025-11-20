@@ -9,6 +9,7 @@ import { useTextbookView } from "@/providers/textbookView";
 interface ShortAnswerProps {
   title: string;
   questions: ShortAnswerQuestion[];
+  sources_used?: string[];
   onDelete: () => void;
 }
 
@@ -20,7 +21,7 @@ interface GradingFeedback {
   keyPointsMissed: string[];
 }
 
-export function ShortAnswer({ title, questions, onDelete }: ShortAnswerProps) {
+export function ShortAnswer({ title, questions, sources_used, onDelete }: ShortAnswerProps) {
   const { textbook } = useTextbookView();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -332,6 +333,21 @@ export function ShortAnswer({ title, questions, onDelete }: ShortAnswerProps) {
             <p className="text-sm text-muted-foreground mt-1">
               Review your answers or reset to try again.
             </p>
+          </div>
+        )}
+
+        {/* Sources Section */}
+        {sources_used && sources_used.length > 0 && (
+          <div className="pt-4 border-t">
+            <h3 className="text-sm font-semibold mb-2">Content Sources</h3>
+            <ul className="text-xs text-muted-foreground space-y-1">
+              {sources_used.map((source, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">•</span>
+                  <span>{source}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </CardContent>

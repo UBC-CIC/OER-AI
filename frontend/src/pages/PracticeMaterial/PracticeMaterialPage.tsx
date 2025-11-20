@@ -116,6 +116,7 @@ export default function PracticeMaterialPage() {
                     key={index}
                     title={material.title}
                     questions={material.questions}
+                    sources_used={material.sources_used}
                     onDelete={() => handleDeleteMaterial(index)}
                   />
                 );
@@ -125,6 +126,7 @@ export default function PracticeMaterialPage() {
                     key={index}
                     title={material.title}
                     cards={material.cards}
+                    sources_used={material.sources_used}
                     onDelete={() => handleDeleteMaterial(index)}
                   />
                 );
@@ -134,6 +136,7 @@ export default function PracticeMaterialPage() {
                     key={index}
                     title={material.title}
                     questions={material.questions}
+                    sources_used={material.sources_used}
                     onDelete={() => handleDeleteMaterial(index)}
                   />
                 );

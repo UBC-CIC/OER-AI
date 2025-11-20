@@ -14,6 +14,7 @@ export interface MCQQuestion {
 export interface MCQQuizData {
   title: string;
   questions: MCQQuestion[];
+  sources_used?: string[];
 }
 
 export interface QuestionAnswer {
@@ -39,6 +40,7 @@ export interface FlashcardSetData {
     cardType: string;
     topic: string;
   };
+  sources_used?: string[];
 }
 
 // Short answer types
@@ -55,6 +57,7 @@ export interface ShortAnswerQuestion {
 export interface ShortAnswerData {
   title: string;
   questions: ShortAnswerQuestion[];
+  sources_used?: string[];
 }
 
 // Union type for practice materials

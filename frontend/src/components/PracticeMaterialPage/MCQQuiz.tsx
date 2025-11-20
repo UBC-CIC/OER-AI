@@ -8,10 +8,11 @@ import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 interface MCQQuizProps {
   title: string;
   questions: MCQQuestion[];
+  sources_used?: string[];
   onDelete?: () => void;
 }
 
-export function MCQQuiz({ title, questions, onDelete }: MCQQuizProps) {
+export function MCQQuiz({ title, questions, sources_used, onDelete }: MCQQuizProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [answers, setAnswers] = useState<QuestionAnswer[]>(
     questions.map((q) => ({
@@ -161,6 +162,21 @@ export function MCQQuiz({ title, questions, onDelete }: MCQQuizProps) {
               </Button>
             )}
           </div>
+
+          {/* Sources Section */}
+          {sources_used && sources_used.length > 0 && (
+            <div className="mt-6 pt-6 border-t">
+              <h3 className="text-sm font-semibold mb-2">Content Sources</h3>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                {sources_used.map((source, idx) => (
+                  <li key={idx} className="flex items-start gap-2">
+                    <span className="text-primary mt-0.5">•</span>
+                    <span>{source}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </CardContent>
       )}
     </Card>

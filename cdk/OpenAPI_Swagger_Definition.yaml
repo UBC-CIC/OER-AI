@@ -4002,6 +4002,11 @@ paths:
                                     type: string
                             correctAnswer:
                               type: string
+                      sources_used:
+                        type: array
+                        items:
+                          type: string
+                        description: Source citations for the practice material
                   - type: object
                     description: Flashcard Set
                     properties:
@@ -4029,6 +4034,11 @@ paths:
                             type: string
                           topic:
                             type: string
+                      sources_used:
+                        type: array
+                        items:
+                          type: string
+                        description: Source citations for the practice material
                   - type: object
                     description: Short Answer Questions
                     properties:
@@ -4062,6 +4072,11 @@ paths:
                             type: string
                           topic:
                             type: string
+                      sources_used:
+                        type: array
+                        items:
+                          type: string
+                        description: Source citations for the practice material
         "400":
           description: Invalid request parameters
         "401":

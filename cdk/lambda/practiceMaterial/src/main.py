@@ -288,6 +288,24 @@ def build_short_answer_prompt(
     )
 
 
+def extract_sources_from_docs(docs) -> list[str]:
+    """
+    Extract source citations from document objects.
+    Mirrors the function from textGeneration/src/helpers/chat.py
+    """
+    sources_used = []
+    for doc in docs:
+        if hasattr(doc, "metadata"):
+            source = doc.metadata.get("source", "")
+            page = doc.metadata.get("page", None)
+            if source and source not in sources_used:
+                source_entry = f"{source}"
+                if page:
+                    source_entry += f" (p. {page})"
+                sources_used.append(source_entry)
+    return sources_used
+
+
 def parse_body(body: str | None) -> Dict[str, Any]:
     if not body:
         return {}
@@ -528,6 +546,10 @@ def handler(event, context):
         # Pull a few relevant chunks as context
         docs = retriever.get_relevant_documents(topic)
         snippets = [d.page_content.strip()[:500] for d in docs][:6] #pulling chunks
+        
+        # Extract sources from retrieved documents 
+        sources_used = extract_sources_from_docs(docs)
+        logger.info(f"Extracted {len(sources_used)} sources: {sources_used}")
 
         # Build prompt based on material type
         if material_type == "mcq":
@@ -590,6 +612,12 @@ def handler(event, context):
                     })
                 }
 
+        # Add sources to response 
+        response_data = {
+            **result,
+            "sources_used": sources_used
+        }
+        
         return {
             "statusCode": 200,
             "headers": {
@@ -598,7 +626,7 @@ def handler(event, context):
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "*",
             },
-            "body": json.dumps(result),
+            "body": json.dumps(response_data)
         }
     except Exception as e:
         logger.exception("Error generating practice materials")
