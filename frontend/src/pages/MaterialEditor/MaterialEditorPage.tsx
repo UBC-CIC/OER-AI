@@ -421,6 +421,7 @@ export default function MaterialEditorPage() {
                       initialQuestions={questions}
                       exportToH5P={handleExportToH5P}
                       onDelete={() => {handleEssayDelete(index)}}
+                      textbookId={textbook?.id}
                     />
                   ))}
                 </div>
