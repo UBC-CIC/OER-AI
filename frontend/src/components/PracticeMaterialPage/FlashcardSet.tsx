@@ -74,12 +74,12 @@ export function FlashcardSet({ title, cards, onDelete }: FlashcardSetProps) {
             </p>
           </div>
           <Button
-            variant="ghost"
+            variant="link"
             size="icon"
             onClick={onDelete}
-            className="text-destructive hover:text-destructive"
+            className="cursor-pointer h-8 w-8 text-muted-foreground hover:text-destructive"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       </CardHeader>

@@ -227,6 +227,85 @@ def build_flashcard_prompt(topic: str, difficulty: str, num_cards: int, card_typ
     )
 
 
+def build_short_answer_prompt(
+    topic: str,
+    difficulty: str,
+    num_questions: int,
+    snippets: list[str]
+) -> str:
+    """
+    Build a prompt for generating short answer questions with sample answers and grading rubrics.
+    """
+    context_str = "\n\n".join(f"[Chunk {i+1}]\n{s}" for i, s in enumerate(snippets))
+    
+    return (
+        f"You are an expert educational content creator specializing in creating short answer questions.\n\n"
+        f"Topic: {topic}\n"
+        f"Difficulty: {difficulty}\n"
+        f"Number of questions: {num_questions}\n\n"
+        f"Context from textbook:\n{context_str}\n\n"
+        f"CRITICAL JSON FORMATTING RULES:\n"
+        f'- Use double quotes for all strings, property names, and array items\n'
+        f'- Do NOT use trailing commas (no comma after last item in array or object)\n'
+        f'- Array items: ["item1", "item2", "item3"]  <- comma between, not after last\n'
+        f'- Object properties: {{"key1": "val1", "key2": "val2"}}  <- comma between, not after last\n\n'
+        f"Required JSON structure:\n"
+        f"{{\n"
+        f'  "title": "Short Answer: {topic}",\n'
+        f'  "questions": [\n'
+        f"    {{\n"
+        f'      "id": "q1",\n'
+        f'      "questionText": "Clear, specific question requiring detailed explanation",\n'
+        f'      "context": "Optional background information or scenario (can be empty string)",\n'
+        f'      "sampleAnswer": "Comprehensive answer (100-150 words) that fully addresses the question with accurate details from the textbook",\n'
+        f'      "keyPoints": ["Key concept 1", "Key concept 2", "Key concept 3", "Key concept 4", "Key concept 5"],\n'
+        f'      "rubric": "Clear grading criteria explaining what a complete answer should include",\n'
+        f'      "expectedLength": 100\n'
+        f"    }}\n"
+        f"  ]\n"
+        f"}}\n\n"
+        f"Content requirements:\n"
+        f"- questionText: Ask open-ended questions requiring explanation, analysis, or comparison\n"
+        f"- context: Provide relevant background only if needed (use empty string \"\" if not)\n"
+        f"- sampleAnswer: Write thorough, accurate answers (100-150 words) based on textbook content\n"
+        f"- keyPoints: List 3-5 essential concepts that should be included in the answer\n"
+        f"- rubric: Explain how to evaluate answer quality and what earns full credit\n"
+        f"- expectedLength: Set to 100 for most questions\n"
+        f"- Base all content on the provided textbook context\n"
+        f"- Questions should be progressively more challenging based on difficulty level\n"
+        f"- For beginner: Focus on definitions and basic concepts\n"
+        f"- For intermediate: Require explanation of processes and relationships\n"
+        f"- For advanced: Demand analysis, evaluation, or synthesis\n\n"
+        f"Common mistakes to avoid:\n"
+        f"- WRONG: Trailing comma before closing bracket: [item1, item2,]\n"
+        f"- WRONG: Missing comma between items: [item1 item2]\n"
+        f"- WRONG: Comma after last property: {{\"key\": \"value\",}}\n"
+        f"- WRONG: Unescaped quotes in strings - use \\\" inside strings\n"
+        f"- WRONG: Extra text before or after the JSON\n"
+        f"- WRONG: Incomplete JSON - must complete all {num_questions} questions\n"
+        f"- WRONG: Sample answers that are too short or vague\n\n"
+        f"Output the complete, valid JSON now:"
+    )
+
+
+def extract_sources_from_docs(docs) -> list[str]:
+    """
+    Extract source citations from document objects.
+    Mirrors the function from textGeneration/src/helpers/chat.py
+    """
+    sources_used = []
+    for doc in docs:
+        if hasattr(doc, "metadata"):
+            source = doc.metadata.get("source", "")
+            page = doc.metadata.get("page", None)
+            if source and source not in sources_used:
+                source_entry = f"{source}"
+                if page:
+                    source_entry += f" (p. {page})"
+                sources_used.append(source_entry)
+    return sources_used
+
+
 def parse_body(body: str | None) -> Dict[str, Any]:
     if not body:
         return {}
@@ -299,11 +378,113 @@ def validate_flashcard_shape(obj: Dict[str, Any], num_cards: int) -> Dict[str, A
     return obj
 
 
+def validate_short_answer_shape(obj: Dict[str, Any], num_questions: int) -> Dict[str, Any]:
+    """
+    Validate the shape of a short answer JSON object.
+    """
+    if not isinstance(obj, dict):
+        raise ValueError("Invalid root JSON")
+    if not isinstance(obj.get("title"), str) or not obj["title"].strip():
+        raise ValueError("Invalid title")
+    
+    questions = obj.get("questions")
+    if not isinstance(questions, list) or len(questions) != num_questions:
+        raise ValueError(f"questions must have exactly {num_questions} items")
+    
+    for idx, q in enumerate(questions):
+        if not isinstance(q, dict):
+            raise ValueError(f"Question[{idx}] invalid")
+        
+        # Validate id
+        if not isinstance(q.get("id"), str) or not q["id"].strip():
+            raise ValueError(f"Question[{idx}].id invalid")
+        
+        # Validate questionText
+        if not isinstance(q.get("questionText"), str) or not q["questionText"].strip():
+            raise ValueError(f"Question[{idx}].questionText invalid")
+        
+        # Validate context (optional, can be empty string)
+        if not isinstance(q.get("context"), str):
+            raise ValueError(f"Question[{idx}].context must be a string (can be empty)")
+        
+        # Validate sampleAnswer
+        if not isinstance(q.get("sampleAnswer"), str) or not q["sampleAnswer"].strip():
+            raise ValueError(f"Question[{idx}].sampleAnswer invalid")
+        
+        # Validate keyPoints (array of strings)
+        key_points = q.get("keyPoints")
+        if not isinstance(key_points, list) or len(key_points) < 3:
+            raise ValueError(f"Question[{idx}].keyPoints must be an array with at least 3 items")
+        for kp_idx, kp in enumerate(key_points):
+            if not isinstance(kp, str) or not kp.strip():
+                raise ValueError(f"Question[{idx}].keyPoints[{kp_idx}] must be a non-empty string")
+        
+        # Validate rubric
+        if not isinstance(q.get("rubric"), str) or not q["rubric"].strip():
+            raise ValueError(f"Question[{idx}].rubric invalid")
+        
+        # Validate expectedLength (optional number)
+        expected_length = q.get("expectedLength")
+        if expected_length is not None and not isinstance(expected_length, (int, float)):
+            raise ValueError(f"Question[{idx}].expectedLength must be a number")
+    
+    return obj
+
+
+def build_grading_prompt(
+    question: str,
+    student_answer: str,
+    sample_answer: str,
+    key_points: list[str],
+    rubric: str
+) -> str:
+    """
+    Build a prompt for the LLM to grade a student's short answer response.
+    """
+    key_points_str = "\n".join(f"{i+1}. {kp}" for i, kp in enumerate(key_points))
+    
+    return (
+        f"You are an expert educational assessor providing constructive feedback on student answers.\n\n"
+        f"Question:\n{question}\n\n"
+        f"Student's Answer:\n{student_answer}\n\n"
+        f"Sample Answer (for reference):\n{sample_answer}\n\n"
+        f"Key Points to Cover:\n{key_points_str}\n\n"
+        f"Grading Rubric:\n{rubric}\n\n"
+        f"CRITICAL JSON FORMATTING RULES:\n"
+        f'- Use double quotes for all strings and property names\n'
+        f'- Do NOT use trailing commas\n'
+        f'- Escape quotes within strings using \\"\n\n'
+        f"Required JSON structure:\n"
+        f"{{\n"
+        f'  "feedback": "Overall qualitative assessment of the answer (2-3 sentences)",\n'
+        f'  "strengths": ["Strength 1", "Strength 2"],\n'
+        f'  "improvements": ["Improvement suggestion 1", "Improvement suggestion 2"],\n'
+        f'  "keyPointsCovered": ["Key point covered 1", "Key point covered 2"],\n'
+        f'  "keyPointsMissed": ["Key point missed 1"]\n'
+        f"}}\n\n"
+        f"Instructions:\n"
+        f"- Provide constructive, encouraging feedback\n"
+        f"- Identify 2-3 specific strengths in the student's answer\n"
+        f"- Suggest 2-3 concrete ways to improve the answer\n"
+        f"- List which key points were adequately covered\n"
+        f"- List which key points were missing or insufficiently addressed\n"
+        f"- Be specific and educational, not just critical\n"
+        f"- Arrays can be empty if no items apply\n\n"
+        f"Output the complete, valid JSON now:"
+    )
+
+
 def handler(event, context):
     logger.info("PracticeMaterial Lambda (Docker) invoked")
 
     # Validate path and parse inputs
     resource = (event.get("httpMethod", "") + " " + event.get("resource", "")).strip()
+    
+    # Handle grading endpoint
+    if resource == "POST /textbooks/{textbook_id}/practice_materials/grade":
+        return handle_grading(event, context)
+    
+    # Handle generation endpoint
     if resource != "POST /textbooks/{textbook_id}/practice_materials":
         return {"statusCode": 404, "body": json.dumps({"error": f"Unsupported route: {resource}"})}
 
@@ -317,8 +498,8 @@ def handler(event, context):
     if not topic:
         return {"statusCode": 400, "body": json.dumps({"error": "'topic' is required"})}
     material_type = str(body.get("material_type", "mcq")).lower().strip()
-    if material_type not in ["mcq", "flashcard"]:
-        return {"statusCode": 400, "body": json.dumps({"error": "material_type must be 'mcq' or 'flashcard'"})}
+    if material_type not in ["mcq", "flashcard", "short_answer"]:
+        return {"statusCode": 400, "body": json.dumps({"error": "material_type must be 'mcq', 'flashcard', or 'short_answer'"})}
 
     difficulty = str(body.get("difficulty", "intermediate")).lower().strip()
     
@@ -329,6 +510,11 @@ def handler(event, context):
     # Flashcard-specific parameters
     num_cards = clamp(int(body.get("num_cards", 10)), 1, 20)
     card_type = str(body.get("card_type", "definition")).lower().strip()
+    
+    # Short answer-specific parameters
+    # For short answers, reuse num_questions but with different limits
+    if material_type == "short_answer":
+        num_questions = clamp(int(body.get("num_questions", 3)), 1, 10)
 
     try:
         # Initialize constants from SSM parameters
@@ -360,12 +546,18 @@ def handler(event, context):
         # Pull a few relevant chunks as context
         docs = retriever.get_relevant_documents(topic)
         snippets = [d.page_content.strip()[:500] for d in docs][:6] #pulling chunks
+        
+        # Extract sources from retrieved documents 
+        sources_used = extract_sources_from_docs(docs)
+        logger.info(f"Extracted {len(sources_used)} sources: {sources_used}")
 
         # Build prompt based on material type
         if material_type == "mcq":
             prompt = build_prompt(topic, difficulty, num_questions, num_options, snippets)
-        else:  # flashcard
+        elif material_type == "flashcard":
             prompt = build_flashcard_prompt(topic, difficulty, num_cards, card_type, snippets)
+        else:  # short_answer
+            prompt = build_short_answer_prompt(topic, difficulty, num_questions, snippets)
 
         # Use ChatBedrock LLM (matching textGeneration pattern)
         logger.info(f"Invoking LLM for {material_type} generation")
@@ -379,8 +571,10 @@ def handler(event, context):
         try:
             if material_type == "mcq":
                 result = validate_shape(extract_json(output_text), num_questions, num_options)
-            else:  # flashcard
+            elif material_type == "flashcard":
                 result = validate_flashcard_shape(extract_json(output_text), num_cards)
+            else:  # short_answer
+                result = validate_short_answer_shape(extract_json(output_text), num_questions)
         except Exception as e1:
             logger.warning(f"First parse/validation failed: {e1}")
             logger.warning(f"Raw LLM output (first 2000 chars): {output_text[:2000]}")
@@ -393,8 +587,10 @@ def handler(event, context):
             try:
                 if material_type == "mcq":
                     result = validate_shape(extract_json(output_text2), num_questions, num_options)
-                else:  # flashcard
+                elif material_type == "flashcard":
                     result = validate_flashcard_shape(extract_json(output_text2), num_cards)
+                else:  # short_answer
+                    result = validate_short_answer_shape(extract_json(output_text2), num_questions)
             except Exception as e2:
                 logger.error(f"Retry also failed: {e2}")
                 logger.error(f"Raw retry output (first 2000 chars): {output_text2[:2000]}")
@@ -416,6 +612,111 @@ def handler(event, context):
                     })
                 }
 
+        # Add sources to response 
+        response_data = {
+            **result,
+            "sources_used": sources_used
+        }
+        
+        return {
+            "statusCode": 200,
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+            },
+            "body": json.dumps(response_data)
+        }
+    except Exception as e:
+        logger.exception("Error generating practice materials")
+        return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
+
+
+def handle_grading(event, context):
+    """
+    Handle grading of a student's short answer response.
+    """
+    logger.info("Grading endpoint invoked")
+    
+    body = parse_body(event.get("body"))
+    
+    # Extract required fields
+    question = str(body.get("question", "")).strip()
+    student_answer = str(body.get("student_answer", "")).strip()
+    sample_answer = str(body.get("sample_answer", "")).strip()
+    key_points = body.get("key_points", [])
+    rubric = str(body.get("rubric", "")).strip()
+    
+    # Validate inputs
+    if not question:
+        return {"statusCode": 400, "body": json.dumps({"error": "question is required"})}
+    if not student_answer:
+        return {"statusCode": 400, "body": json.dumps({"error": "student_answer is required"})}
+    if not sample_answer:
+        return {"statusCode": 400, "body": json.dumps({"error": "sample_answer is required"})}
+    if not isinstance(key_points, list) or len(key_points) == 0:
+        return {"statusCode": 400, "body": json.dumps({"error": "key_points must be a non-empty array"})}
+    if not rubric:
+        return {"statusCode": 400, "body": json.dumps({"error": "rubric is required"})}
+    
+    try:
+        # Initialize constants if needed
+        initialize_constants()
+        
+        # Build grading prompt
+        prompt = build_grading_prompt(question, student_answer, sample_answer, key_points, rubric)
+        
+        # Get LLM response
+        logger.info("Invoking LLM for grading")
+        response = _llm.invoke(prompt)
+        output_text = response.content
+        logger.info(f"Received grading response from LLM, length: {len(output_text)}")
+        logger.info(f"Raw grading output: {output_text}")
+        
+        # Parse JSON response
+        try:
+            result = extract_json(output_text)
+            
+            # Validate expected fields
+            if not isinstance(result.get("feedback"), str):
+                raise ValueError("feedback must be a string")
+            if not isinstance(result.get("strengths"), list):
+                raise ValueError("strengths must be an array")
+            if not isinstance(result.get("improvements"), list):
+                raise ValueError("improvements must be an array")
+            if not isinstance(result.get("keyPointsCovered"), list):
+                raise ValueError("keyPointsCovered must be an array")
+            if not isinstance(result.get("keyPointsMissed"), list):
+                raise ValueError("keyPointsMissed must be an array")
+                
+        except Exception as e1:
+            logger.warning(f"First grading parse failed: {e1}")
+            # Retry with enhanced prompt
+            retry_prompt = prompt + "\n\nIMPORTANT: Your previous response was invalid. Return valid JSON only."
+            logger.info("Retrying grading with enhanced prompt")
+            response2 = _llm.invoke(retry_prompt)
+            output_text2 = response2.content
+            logger.info(f"Retry grading response: {output_text2}")
+            
+            try:
+                result = extract_json(output_text2)
+            except Exception as e2:
+                logger.error(f"Retry grading also failed: {e2}")
+                return {
+                    "statusCode": 500,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Headers": "*",
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Allow-Methods": "*",
+                    },
+                    "body": json.dumps({
+                        "error": f"Failed to parse grading response: {str(e2)}",
+                        "rawResponse": output_text2
+                    })
+                }
+        
         return {
             "statusCode": 200,
             "headers": {
@@ -426,6 +727,17 @@ def handler(event, context):
             },
             "body": json.dumps(result),
         }
+        
     except Exception as e:
-        logger.exception("Error generating practice materials")
-        return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
+        logger.exception("Error grading answer")
+        return {
+            "statusCode": 500,
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+            },
+            "body": json.dumps({"error": f"Error grading answer: {str(e)}"}),
+        }
+

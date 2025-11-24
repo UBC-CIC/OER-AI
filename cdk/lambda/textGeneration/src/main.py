@@ -367,11 +367,21 @@ def handler(event, context):
                     )
                     
                     # Cache the response for future use (only for non-chat-session WebSocket queries)
-                    if response_data.get("response"):
+                    # Validate that the response is appropriate for caching
+                    should_cache = (
+                        response_data.get("response") and
+                        # Don't cache if guardrails blocked the content
+                        not response_data.get("guardrail_blocked", False) and
+                        # Don't cache error messages or very short responses (likely errors)
+                        len(response_data.get("response", "")) > 50 and
+                        # Ensure we have actual content from sources
+                        len(response_data.get("sources_used", [])) > 0
+                    )
+                    
+                    if should_cache:
                         logger.info("Caching FAQ response for future use...")
                         cache_metadata = {
-                            "sources_count": len(response_data.get("sources_used", [])),
-                            "has_guardrail_assessments": "assessments" in response_data
+                            "sources_count": len(response_data.get("sources_used", []))
                         }
                         cache_faq(
                             question=question,
@@ -382,6 +392,8 @@ def handler(event, context):
                             sources=response_data.get("sources_used", []),
                             metadata=cache_metadata
                         )
+                    else:
+                        logger.info("Skipping FAQ cache: Response does not meet quality criteria for caching")
                 else:
                     # Non-WebSocket API calls are deprecated
                     logger.warning("Non-WebSocket API call detected - this is deprecated")

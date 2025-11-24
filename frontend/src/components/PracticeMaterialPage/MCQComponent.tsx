@@ -8,22 +8,75 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { MCQQuestion, QuestionAnswer } from "@/types/PracticeMaterial";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, BookOpen, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MCQQuestionComponentProps {
   question: MCQQuestion;
   questionNumber: number;
   answer: QuestionAnswer;
+  sources_used?: string[];
   onAnswerChange: (questionId: string, optionId: string) => void;
   onSubmit: (questionId: string) => void;
   onReset: (questionId: string) => void;
 }
 
+// Format source to show clickable links for URLs
+const formatSource = (source: string) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const pageRegex = /\(p\.\s*(\d+)\)/i;
+
+  // Check if source contains a URL
+  const urlMatch = source.match(urlRegex);
+
+  if (urlMatch && urlMatch.length > 0) {
+    // Extract URL
+    const url = urlMatch[0];
+    // Extract the remaining text (title, page info)
+    const textParts = source.split(urlRegex);
+    const beforeUrl = textParts[0]?.trim() || "";
+    const afterUrl = textParts[2]?.trim() || "";
+
+    // Check for page number
+    const pageMatch = afterUrl.match(pageRegex);
+    const pageNumber = pageMatch ? pageMatch[1] : null;
+
+    return (
+      <span className="flex items-center gap-1.5 flex-wrap text-foreground/80">
+        <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline break-all"
+        >
+          {beforeUrl || url}
+        </a>
+        {pageNumber && <span className="text-muted-foreground">(p. {pageNumber})</span>}
+      </span>
+    );
+  } else {
+    // Not a URL, treat as textbook reference
+    const pageMatch = source.match(pageRegex);
+    const pageNumber = pageMatch ? pageMatch[1] : null;
+
+    return (
+      <span className="flex items-center gap-1.5 flex-wrap text-foreground/80">
+        <BookOpen className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+        <span className="break-words">
+          {source.replace(pageRegex, "").trim()}
+          {pageNumber && <span className="ml-1 text-muted-foreground">(p. {pageNumber})</span>}
+        </span>
+      </span>
+    );
+  }
+};
+
 export function MCQQuestionComponent({
   question,
   questionNumber,
   answer,
+  sources_used,
   onAnswerChange,
   onSubmit,
   onReset,
@@ -134,7 +187,7 @@ export function MCQQuestionComponent({
 
               <div className="flex-1">
                 <p className="font-semibold mb-1">
-                  {answer.isCorrect ? "Correct!" : "Incorrect"}
+                  {answer.isCorrect ? "Great job!" : "Not quite right"}
                 </p>
                 <p className="text-sm text-gray-700">
                   {
@@ -143,6 +196,25 @@ export function MCQQuestionComponent({
                     )?.explanation
                   }
                 </p>
+                
+                {/* Show sources for incorrect answers */}
+                {!answer.isCorrect && sources_used && sources_used.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-red-200">
+                    <p className="text-sm font-medium mb-2 text-foreground/80">
+                      Learn more from these sources:
+                    </p>
+                    <ul className="space-y-2 list-none pl-0">
+                      {sources_used.map((source, index) => (
+                        <li
+                          key={index}
+                          className="text-xs"
+                        >
+                          {formatSource(source)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           </Card>

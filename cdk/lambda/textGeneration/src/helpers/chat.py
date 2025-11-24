@@ -435,7 +435,8 @@ def get_response_streaming(
             return {
                 "response": guardrail_error,
                 "sources_used": [],
-                "assessments": guardrail_assessments
+                "assessments": guardrail_assessments,
+                "guardrail_blocked": True
             }
             
         # Initialize chat history using helper function
@@ -536,8 +537,13 @@ def get_response_streaming(
                 )
         
         # Apply output guardrails using helper function
+        output_blocked = False
         if full_response:
+            original_response = full_response
             full_response, guardrail_assessments = _apply_output_guardrails(full_response, guardrail_id, guardrail_assessments)
+            # Check if response was modified by guardrails
+            if full_response != original_response:
+                output_blocked = True
             # Note: WebSocket correction message would need to be sent here if response was modified
         
         # Generate session name if parameters are provided
@@ -591,6 +597,10 @@ def get_response_streaming(
         # Include guardrail assessments if they exist
         if guardrail_assessments:
             result_dict["assessments"] = guardrail_assessments
+        
+        # Flag if guardrails blocked content
+        if output_blocked:
+            result_dict["guardrail_blocked"] = True
             
         return result_dict
         
@@ -642,7 +652,8 @@ def get_response(
         return {
             "response": guardrail_error,
             "sources_used": [],
-            "assessments": guardrail_assessments
+            "assessments": guardrail_assessments,
+            "guardrail_blocked": True
         }
 
     logger.info(f"Processing query for textbook ID: {textbook_id}")
@@ -710,7 +721,9 @@ def get_response(
         logger.info(f"Response length: {len(response_text)} characters")
         
         # Apply output guardrails using helper function
+        original_response = response_text
         response_text, guardrail_assessments = _apply_output_guardrails(response_text, guardrail_id, guardrail_assessments)
+        output_blocked = (response_text != original_response)
         
         # Extract sources using helper function
         sources_used = _extract_sources_from_docs(docs)
@@ -725,6 +738,10 @@ def get_response(
         # Include guardrail assessments if they exist
         if guardrail_assessments:
             result_dict["assessments"] = guardrail_assessments
+        
+        # Flag if guardrails blocked content
+        if output_blocked:
+            result_dict["guardrail_blocked"] = True
             
         return result_dict
         
