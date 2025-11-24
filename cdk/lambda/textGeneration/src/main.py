@@ -81,7 +81,8 @@ def initialize_constants():
         embeddings = BedrockEmbeddings(
             model_id=EMBEDDING_MODEL_ID,
             client=bedrock_runtime,
-            region_name=REGION,
+            region_name='us-east-1',
+            model_kwargs = {"input_type": "search_document"}
         )
 
 def get_db_credentials():

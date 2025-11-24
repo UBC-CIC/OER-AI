@@ -77,12 +77,13 @@ def initialize_constants():
         _bedrock_runtime = boto3.client("bedrock-runtime", region_name=_bedrock_region)
         logger.info(f"Initialized bedrock_runtime client for region: {_bedrock_region}")
     
-    # Initialize embeddings (use deployment region, matching textGeneration pattern)
+    # Initialize embeddings (use us-east-1 region for Cohere Embed v4, matching textGeneration pattern)
     if _embeddings is None:
         _embeddings = BedrockEmbeddings(
             model_id=_embedding_model_id,
             client=boto3.client("bedrock-runtime", region_name=REGION),  # Separate client for embeddings in deployment region
-            region_name=REGION,  # Use deployment region for embeddings, not _bedrock_region
+            region_name='us-east-1',  # Use us-east-1 for Cohere Embed v4
+            model_kwargs = {"input_type": "search_query"}  # Use search_query for querying vector store
         )
     
     # Initialize LLM using ChatBedrock (matching textGeneration pattern)
