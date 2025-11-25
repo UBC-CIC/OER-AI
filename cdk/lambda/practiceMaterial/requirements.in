@@ -1,0 +1,12 @@
+langchain-aws==1.0.0
+langchain-core==1.0.7
+langchain-community>=0.3.29
+langchain-postgres==0.0.16
+langchain>=1.0.0,<2.0.0
+langchain-classic
+boto3
+psycopg[binary, pool]
+psycopg2-binary
+pydantic
+urllib3
+botocore
