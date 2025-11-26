@@ -750,6 +750,16 @@ export class ApiGatewayStack extends cdk.Stack {
       }
     );
 
+    const dailyTokenLimitParameter = new ssm.StringParameter(
+      this,
+      "DailyTokenLimitParameter",
+      {
+        parameterName: `/${id}/OER/DailyTokenLimit`,
+        description: "Parameter containing the daily token limit for users",
+        stringValue: "NONE",
+      }
+    );
+
     // Create DynamoDB table for session management with 30-day TTL
     const sessionTable = new dynamodb.Table(this, `${id}-ConversationTable`, {
       tableName: `${id}-DynamoDB-Conversation-Table`,
@@ -1202,6 +1212,7 @@ export class ApiGatewayStack extends cdk.Stack {
         environment: {
           SM_DB_CREDENTIALS: db.secretPathUser.secretName,
           RDS_PROXY_ENDPOINT: db.rdsProxyEndpoint,
+          DAILY_TOKEN_LIMIT: dailyTokenLimitParameter.parameterName,
         },
         functionName: `${id}-adminFunction`,
         memorySize: 512,
@@ -1221,6 +1232,13 @@ export class ApiGatewayStack extends cdk.Stack {
       action: "lambda:InvokeFunction",
       sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/test-invoke-stage/*/*`,
     });
+
+    lambdaAdminFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["ssm:GetParameter", "ssm:PutParameter"],
+        resources: [dailyTokenLimitParameter.parameterArn],
+      })
+    );
 
     const cfnLambda_admin = lambdaAdminFunction.node
       .defaultChild as lambda.CfnFunction;
