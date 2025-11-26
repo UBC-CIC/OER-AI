@@ -213,11 +213,11 @@ export default function AIChatPage() {
   useEffect(() => {
     const shareParam = searchParams.get("share");
     
-    if (!shareParam || sharedChatSessionId) {
-      return; // No share parameter or already loaded
+    if (!shareParam || sharedChatSessionId || !textbook?.id || !sessionUuid) {
+      return; // No share parameter, already loaded, or missing required data
     }
 
-    const loadSharedChat = async () => {
+    const loadAndForkSharedChat = async () => {
       setIsLoadingSharedChat(true);
       setSharedChatError(null);
       
@@ -264,9 +264,11 @@ export default function AIChatPage() {
 
         const chatMessages: Message[] = [];
 
-        // Convert interactions to messages
-        data.interactions.forEach((interaction) => {
-          const baseTime = new Date(interaction.created_at).getTime();
+        // Convert interactions to messages - process in order
+        data.interactions.forEach((interaction, index) => {
+          // Use order_index if available, otherwise use array index
+          const orderValue = interaction.order_index ?? index;
+          const baseTime = orderValue * 1000; // Multiply by 1000 to create distinct timestamps
 
           // Add user message if query_text exists
           if (interaction.query_text) {
@@ -276,7 +278,6 @@ export default function AIChatPage() {
               text: interaction.query_text,
               sources_used: [],
               time: baseTime,
-              isFromSharedChat: true,
             });
           }
 
@@ -288,16 +289,49 @@ export default function AIChatPage() {
               text: interaction.response_text,
               sources_used: interaction.source_chunks || [],
               time: baseTime + 1,
-              isFromSharedChat: true,
             });
           }
         });
 
-        // Sort by creation time
+        // Sort by time to ensure proper order
         chatMessages.sort((a, b) => a.time - b.time);
 
         setMessages(chatMessages);
+
+        // Immediately fork the chat session
+        const forkResponse = await fetch(
+          `${import.meta.env.VITE_API_ENDPOINT}/chat_sessions/fork`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              source_chat_session_id: shareParam,
+              user_session_id: sessionUuid,
+              textbook_id: textbook.id,
+            }),
+          }
+        );
+
+        if (!forkResponse.ok) {
+          throw new Error("Failed to fork chat session");
+        }
+
+        const forkData = await forkResponse.json();
+        const newChatSessionId = forkData.chat_session_id;
+
+        // Update state to reflect the forked chat
+        setHasForkedChat(true);
+        setActiveChatSessionId(newChatSessionId);
         setSharedChatSessionId(shareParam);
+        
+        // Refresh chat sessions to show the new forked session in sidebar
+        await refreshChatSessions();
+        
+        // Remove 'share' parameter from URL
+        setSearchParams({});
         
       } catch (error) {
         console.error("Failed to load shared chat:", error);
@@ -314,8 +348,8 @@ export default function AIChatPage() {
       }
     };
 
-    loadSharedChat();
-  }, [searchParams, sharedChatSessionId, setSearchParams]);
+    loadAndForkSharedChat();
+  }, [searchParams, sharedChatSessionId, textbook?.id, sessionUuid, setSearchParams, setActiveChatSessionId, refreshChatSessions]);
 
   // Load chat history and redirect if no chat session ID
   useEffect(() => {
@@ -366,8 +400,10 @@ export default function AIChatPage() {
         const chatMessages: Message[] = [];
 
         // Each interaction contains both user query and AI response
-        data.interactions.forEach((interaction) => {
-          const baseTime = new Date(interaction.created_at).getTime();
+        // Process in order - backend already sorts by order_index
+        data.interactions.forEach((interaction, index) => {
+          // Use index to create distinct timestamps that preserve order
+          const baseTime = index * 1000;
 
           // Add user message if query_text exists
           if (interaction.query_text) {
@@ -392,7 +428,7 @@ export default function AIChatPage() {
           }
         });
 
-        // Sort by creation time
+        // Sort by time to ensure proper order
         chatMessages.sort((a, b) => a.time - b.time);
 
         setMessages(chatMessages);
@@ -540,72 +576,6 @@ export default function AIChatPage() {
   async function sendMessage() {
     let text = message.trim();
     if (!text || !textbook) return;
-
-    // Handle forking shared chat on first message
-    if (sharedChatSessionId && !hasForkedChat) {
-      try {
-        // Get public token
-        const tokenResponse = await fetch(
-          `${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`
-        );
-        if (!tokenResponse.ok) throw new Error("Failed to get public token");
-        const { token } = await tokenResponse.json();
-
-        // Call fork endpoint
-        const forkResponse = await fetch(
-          `${import.meta.env.VITE_API_ENDPOINT}/chat_sessions/fork`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              source_chat_session_id: sharedChatSessionId,
-              user_session_id: sessionUuid,
-              textbook_id: textbook.id,
-            }),
-          }
-        );
-
-        if (!forkResponse.ok) {
-          throw new Error("Failed to fork chat session");
-        }
-
-        const forkData = await forkResponse.json();
-        const newChatSessionId = forkData.chat_session_id;
-
-        // Update state to reflect the forked chat
-        setHasForkedChat(true);
-        setActiveChatSessionId(newChatSessionId);
-        
-        // Refresh chat sessions to show the new forked session in sidebar
-        await refreshChatSessions();
-        
-        // Remove 'share' parameter from URL
-        setSearchParams({});
-        
-        // Mark all existing messages as no longer from shared chat
-        setMessages((prev) =>
-          prev.map((msg) => ({ ...msg, isFromSharedChat: false }))
-        );
-
-        // Continue with sending the message using the new chat session
-        // The rest of the function will handle this
-      } catch (error) {
-        console.error("Failed to fork chat session:", error);
-        
-        // Show error message to user
-        const errorMsg: Message = {
-          id: `error-${Date.now()}`,
-          sender: "bot",
-          text: "Failed to create your copy of this chat. Please try again or start a new chat.",
-          time: Date.now(),
-        };
-        setMessages((prev) => [...prev, errorMsg]);
-        return;
-      }
-    }
 
     // Ensure we have an active chat session
     if (!activeChatSessionId) return;
@@ -918,7 +888,7 @@ export default function AIChatPage() {
               /* messages area */
               <div className="flex flex-col gap-4 mb-6">
                 {/* Chat header with share button */}
-                {messages.length > 0 && activeChatSessionId && textbook?.id && !sharedChatSessionId && (
+                {messages.length > 0 && activeChatSessionId && textbook?.id && (
                   <div className="flex justify-end items-center mb-2">
                     <ShareChatButton
                       chatSessionId={activeChatSessionId}
@@ -953,14 +923,6 @@ export default function AIChatPage() {
                   </div>
                 ) : (
                   <>
-                    {/* Show banner if viewing shared chat */}
-                    {sharedChatSessionId && !hasForkedChat && (
-                      <div className="bg-muted/50 border border-border rounded-lg p-4 mb-4">
-                        <p className="text-sm text-muted-foreground">
-                          You're viewing a shared conversation. Send a message to continue this chat in your own session.
-                        </p>
-                      </div>
-                    )}
                     {messages.map((m) => messageFormatter(m))}
                     <div ref={messagesEndRef} />
                   </>
