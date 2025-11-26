@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { LayoutDashboard, BarChart3, LogOut } from "lucide-react";
+import { LayoutDashboard, BarChart3, LogOut, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthService } from "@/functions/authService";
 
 type AdminSidebarProps = {
-  activeView: "dashboard" | "analytics";
-  onViewChange: (view: "dashboard" | "analytics") => void;
+  activeView: "dashboard" | "analytics" | "ai-settings";
+  onViewChange: (view: "dashboard" | "analytics" | "ai-settings") => void;
 };
 
 export default function AdminSidebar({
@@ -67,6 +67,18 @@ export default function AdminSidebar({
         >
           <BarChart3 className="mr-2 h-4 w-4" />
           Analytics
+        </Button>
+        <Button
+          variant={activeView === "ai-settings" ? "secondary" : "ghost"}
+          className={`w-full justify-start ${
+            activeView === "ai-settings"
+              ? "bg-[#2c5f7c]/10 text-[#2c5f7c] font-medium"
+              : "text-gray-600"
+          }`}
+          onClick={() => onViewChange("ai-settings")}
+        >
+          <Bot className="mr-2 h-4 w-4" />
+          AI Settings
         </Button>
       </div>
 

@@ -180,6 +180,131 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
+      case "GET /chat_sessions/{chat_session_id}/interactions":
+        const chatSessionId = event.pathParameters?.chat_session_id;
+        if (!chatSessionId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "chat_session_id is required" });
+          break;
+        }
+        
+        // Verify chat session exists and get textbook_id
+        const chatSessionResult = await sqlConnection`
+          SELECT id, textbook_id FROM chat_sessions WHERE id = ${chatSessionId}
+        `;
+        
+        if (chatSessionResult.length === 0) {
+          response.statusCode = 404;
+          response.body = JSON.stringify({ error: "Chat session not found" });
+          break;
+        }
+        
+        // Fetch all interactions for this chat session
+        const interactions = await sqlConnection`
+          SELECT id, sender_role, query_text, response_text, source_chunks, created_at, order_index
+          FROM user_interactions
+          WHERE chat_session_id = ${chatSessionId}
+          ORDER BY order_index ASC, created_at ASC
+        `;
+        
+        data = {
+          chat_session_id: chatSessionResult[0].id,
+          textbook_id: chatSessionResult[0].textbook_id,
+          interactions: interactions
+        };
+        response.body = JSON.stringify(data);
+        break;
+        
+      case "POST /chat_sessions/fork":
+        const forkData = parseBody(event.body);
+        const { source_chat_session_id, user_session_id, textbook_id } = forkData;
+        
+        // Validate required parameters
+        if (!source_chat_session_id) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Missing required parameter: source_chat_session_id" });
+          break;
+        }
+        if (!user_session_id) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Missing required parameter: user_session_id" });
+          break;
+        }
+        if (!textbook_id) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Missing required parameter: textbook_id" });
+          break;
+        }
+        
+        // Verify source chat session exists
+        const sourceChatSession = await sqlConnection`
+          SELECT id, textbook_id FROM chat_sessions WHERE id = ${source_chat_session_id}
+        `;
+        
+        if (sourceChatSession.length === 0) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Source chat session not found" });
+          break;
+        }
+        
+        // Verify user session exists
+        const forkUserSessionExists = await sqlConnection`
+          SELECT id FROM user_sessions WHERE id = ${user_session_id}
+        `;
+        
+        if (forkUserSessionExists.length === 0) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Invalid user_session_id" });
+          break;
+        }
+        
+        // Fetch all interactions from source chat session
+        const sourceInteractions = await sqlConnection`
+          SELECT sender_role, query_text, response_text, source_chunks, order_index
+          FROM user_interactions
+          WHERE chat_session_id = ${source_chat_session_id}
+          ORDER BY order_index ASC, created_at ASC
+        `;
+        
+        // Create new chat session and copy interactions in a transaction
+        const forkedChatSession = await sqlConnection.begin(async sql => {
+          // Create new chat session
+          const [newSession] = await sql`
+            INSERT INTO chat_sessions (user_session_id, textbook_id, context)
+            VALUES (${user_session_id}, ${textbook_id}, ${{}})
+            RETURNING id, user_session_id, textbook_id, context, created_at, metadata
+          `;
+          
+          // Copy interactions if any exist
+          if (sourceInteractions.length > 0) {
+            const interactionValues = sourceInteractions.map(interaction => ({
+              chat_session_id: newSession.id,
+              sender_role: interaction.sender_role,
+              query_text: interaction.query_text,
+              response_text: interaction.response_text,
+              source_chunks: interaction.source_chunks,
+              order_index: interaction.order_index
+            }));
+            
+            await sql`
+              INSERT INTO user_interactions ${sql(interactionValues)}
+            `;
+          }
+          
+          return newSession;
+        });
+        
+        response.statusCode = 201;
+        data = {
+          chat_session_id: forkedChatSession.id,
+          user_session_id: forkedChatSession.user_session_id,
+          textbook_id: forkedChatSession.textbook_id,
+          interactions_copied: sourceInteractions.length,
+          created_at: forkedChatSession.created_at
+        };
+        response.body = JSON.stringify(data);
+        break;
+        
       default:
         throw new Error(`Unsupported route: "${pathData}"`);
     }

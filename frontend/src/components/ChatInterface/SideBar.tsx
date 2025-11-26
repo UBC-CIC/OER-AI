@@ -5,18 +5,20 @@ import { useNavigate, useLocation } from "react-router";
 import { Separator } from "@/components/ui/separator";
 import { useMode } from "@/providers/mode";
 import { useTextbookView } from "@/providers/textbookView";
-import { Plus, MessageSquare } from "lucide-react";
+import { Plus, MessageSquare, ExternalLink } from "lucide-react";
 
 type StudentSideBarProps = {
   textbookTitle: string;
   textbookAuthor: string;
   textbookId?: string;
+  textbookSourceUrl?: string;
 };
 
 export default function SideBar({
   textbookTitle,
   textbookAuthor,
   textbookId,
+  textbookSourceUrl,
 }: StudentSideBarProps) {
   const { mobileOpen, setMobileOpen } = useSidebar();
   const navigate = useNavigate();
@@ -63,6 +65,21 @@ export default function SideBar({
           <p className="text-xs text-gray-600">By {textbookAuthor}</p>
         </CardContent>
       </Card>
+
+      {/* Source URL Link */}
+      {textbookSourceUrl && (
+        <Button
+          variant="outline"
+          size="sm"
+          asChild
+          className="w-full mb-4 gap-2 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <a href={textbookSourceUrl} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-3.5 w-3.5" />
+            View Original Textbook
+          </a>
+        </Button>
+      )}
 
       {/* Menu Items */}
 

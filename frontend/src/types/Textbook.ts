@@ -7,5 +7,6 @@ export interface Textbook {
   summary?: string;
   language?: string;
   level?: string;
+  source_url?: string;
   created_at: string;
-};
+}

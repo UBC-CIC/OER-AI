@@ -736,7 +736,7 @@ export class ApiGatewayStack extends cdk.Stack {
       {
         parameterName: `/${id}/OER/EmbeddingModelId`,
         description: "Parameter containing the Embedding Model ID",
-        stringValue: "amazon.titan-embed-text-v2:0",
+        stringValue: "cohere.embed-v4:0",
       }
     );
 
@@ -747,6 +747,16 @@ export class ApiGatewayStack extends cdk.Stack {
         parameterName: `/${id}/OER/BedrockRegion`,
         description: "Parameter containing the Bedrock runtime region",
         stringValue: "ca-central-1",
+      }
+    );
+
+    const dailyTokenLimitParameter = new ssm.StringParameter(
+      this,
+      "DailyTokenLimitParameter",
+      {
+        parameterName: `/${id}/OER/DailyTokenLimit`,
+        description: "Parameter containing the daily token limit for users",
+        stringValue: "NONE",
       }
     );
 
@@ -945,7 +955,7 @@ export class ApiGatewayStack extends cdk.Stack {
         `arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0`,
         */
         `arn:aws:bedrock:${this.region}::foundation-model/meta.llama3-70b-instruct-v1:0`,
-        `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`,
+        `arn:aws:bedrock:us-east-1::foundation-model/cohere.embed-v4:0`,
         // Guardrail
         `arn:aws:bedrock:${this.region}:${this.account}:guardrail/${bedrockGuardrail.attrGuardrailId}`,
       ],
@@ -1186,6 +1196,13 @@ export class ApiGatewayStack extends cdk.Stack {
       sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/textbooks/*/chat_sessions*`,
     });
 
+    // Allow API Gateway to invoke for shared chat endpoints (public access)
+    lambdaChatSessionFunction.addPermission("AllowApiGatewayInvokeShared", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+      action: "lambda:InvokeFunction",
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/chat_sessions*`,
+    });
+
     const cfnLambda_chatSession = lambdaChatSessionFunction.node
       .defaultChild as lambda.CfnFunction;
     cfnLambda_chatSession.overrideLogicalId("chatSessionFunction");
@@ -1202,6 +1219,7 @@ export class ApiGatewayStack extends cdk.Stack {
         environment: {
           SM_DB_CREDENTIALS: db.secretPathUser.secretName,
           RDS_PROXY_ENDPOINT: db.rdsProxyEndpoint,
+          DAILY_TOKEN_LIMIT: dailyTokenLimitParameter.parameterName,
         },
         functionName: `${id}-adminFunction`,
         memorySize: 512,
@@ -1221,6 +1239,13 @@ export class ApiGatewayStack extends cdk.Stack {
       action: "lambda:InvokeFunction",
       sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/test-invoke-stage/*/*`,
     });
+
+    lambdaAdminFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["ssm:GetParameter", "ssm:PutParameter"],
+        resources: [dailyTokenLimitParameter.parameterArn],
+      })
+    );
 
     const cfnLambda_admin = lambdaAdminFunction.node
       .defaultChild as lambda.CfnFunction;
@@ -1485,6 +1510,8 @@ export class ApiGatewayStack extends cdk.Stack {
           `arn:aws:bedrock:${this.region}::foundation-model/meta.llama3-70b-instruct-v1:0`,
           // Titan embeddings model (for retrieval)
           `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`,
+          // Cohere embeddings model (for retrieval)
+          `arn:aws:bedrock:us-east-1::foundation-model/cohere.embed-v4:0`,
         ],
       })
     );

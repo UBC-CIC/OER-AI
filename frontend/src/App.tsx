@@ -9,6 +9,7 @@ import FAQPage from "./pages/FAQ/FAQPage";
 import MaterialEditorPage from "./pages/MaterialEditor/MaterialEditorPage";
 import AdminLogin from "./pages/Admin/AdminLogin";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
+import TextbookDetailsPage from "./pages/Admin/TextbookDetailsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Amplify } from "aws-amplify";
 
@@ -49,6 +50,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/textbook/:id"
+              element={
+                <ProtectedRoute>
+                  <TextbookDetailsPage />
                 </ProtectedRoute>
               }
             />

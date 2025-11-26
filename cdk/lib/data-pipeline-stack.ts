@@ -313,7 +313,7 @@ export class DataPipelineStack extends cdk.Stack {
               effect: iam.Effect.ALLOW,
               actions: ["bedrock:InvokeModel"],
               resources: [
-                `arn:aws:bedrock:${this.region}::foundation-model/amazon.titan-embed-text-v2:0`,
+                `arn:aws:bedrock:us-east-1::foundation-model/cohere.embed-v4:0`,
               ],
             }),
           ],
@@ -321,23 +321,24 @@ export class DataPipelineStack extends cdk.Stack {
       },
     });
 
-    const PYTHON_VER = "3.9";
+    const PYTHON_VER = "3";
     const GLUE_VER = "5.0";
-    const MAX_CONCURRENT_RUNS = 1;
+    const MAX_CONCURRENT_RUNS = 5;
     const MAX_RETRIES = 0;
-    const MAX_CAPACITY = 1;
+    const MAX_CAPACITY = 2;
     const TIMEOUT = 2880;
+    // Specify versions to ensure compatibility with Cohere Embed v4
     const PYTHON_LIBS =
-      "scrapy,requests,beautifulsoup4,lxml,urllib3,pandas,psycopg2-binary,langchain-text-splitters,langchain-aws,langchain-postgres,langchain-core";
+      "scrapy,requests,beautifulsoup4==4.14.2,lxml,urllib3==2.5.0,pandas==2.3.3,psycopg2-binary==2.9.10,langchain-text-splitters==1.0.0,langchain-aws==1.0.0,langchain-postgres==0.0.16,langchain-core==1.0.7,boto3==1.40.72";
 
     // Glue Job for data processing
     const dataProcessingJob = new glue.CfnJob(this, "DataProcessingJob", {
       name: `${id}-data-processing-job`,
       role: glueJobRole.roleArn,
       command: {
-        name: "pythonshell",
+        name: "glueetl",
         scriptLocation: `s3://${this.glueBucket.bucketName}/glue/scripts/data_processing.py`,
-        pythonVersion: PYTHON_VER, // Python shell supports 3.9 max
+        pythonVersion: PYTHON_VER,
       },
       defaultArguments: {
         "--job-language": "python",
@@ -360,7 +361,7 @@ export class DataPipelineStack extends cdk.Stack {
         "--additional-python-modules": PYTHON_LIBS,
         // Custom modules/wheels from S3
         //"--extra-py-files": `s3://${this.glueBucket.bucketName}/glue/libs/`,
-        "--embedding_model_id": `amazon.titan-embed-text-v2:0`,
+        "--embedding_model_id": `cohere.embed-v4:0`,
       },
       connections: {
         connections: [this.glueConnection.ref],

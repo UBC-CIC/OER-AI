@@ -27,7 +27,7 @@ const mcqSchema = z.object({
   numQuestions: z
     .number()
     .min(1, "Must be at least 1")
-    .max(20, "Maximum 20 questions"),
+    .max(8, "Maximum 8 questions"),
   numOptions: z
     .number()
     .min(2, "Must be at least 2")

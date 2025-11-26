@@ -6,10 +6,12 @@ from typing import Any, Dict
 
 from helpers.vectorstore import get_textbook_retriever
 from langchain_aws import BedrockEmbeddings, ChatBedrock
+
+# Set up basic logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Environment
+# Environment variables
 REGION = os.environ.get("REGION", "ca-central-1")
 SM_DB_CREDENTIALS = os.environ.get("SM_DB_CREDENTIALS", "")
 RDS_PROXY_ENDPOINT = os.environ.get("RDS_PROXY_ENDPOINT", "")
@@ -17,10 +19,10 @@ PRACTICE_MATERIAL_MODEL_PARAM = os.environ.get("PRACTICE_MATERIAL_MODEL_PARAM")
 EMBEDDING_MODEL_PARAM = os.environ.get("EMBEDDING_MODEL_PARAM")
 BEDROCK_REGION_PARAM = os.environ.get("BEDROCK_REGION_PARAM")
 
-# Clients
+# AWS Clients
 secrets_manager = boto3.client("secretsmanager", region_name=REGION)
 ssm_client = boto3.client("ssm", region_name=REGION)
-# bedrock_runtime will be initialized in initialize_constants() with the correct region
+bedrock_runtime = boto3.client("bedrock-runtime", region_name='us-east-1')
 
 # Cache
 _db_secret: Dict[str, Any] | None = None
@@ -28,7 +30,6 @@ _practice_material_model_id: str | None = None
 _embedding_model_id: str | None = None
 _bedrock_region: str | None = None
 _embeddings = None
-_bedrock_runtime = None
 _llm = None
 
 
@@ -54,7 +55,7 @@ def get_parameter(param_name: str | None, cached_var: str | None) -> str | None:
 
 def initialize_constants():
     """Initialize model IDs and region from SSM parameters"""
-    global _practice_material_model_id, _embedding_model_id, _bedrock_region, _embeddings, _bedrock_runtime, _llm
+    global _practice_material_model_id, _embedding_model_id, _bedrock_region, _embeddings, _llm
     
     # Get practice material model ID from SSM
     _practice_material_model_id = get_parameter(PRACTICE_MATERIAL_MODEL_PARAM, _practice_material_model_id)
@@ -72,21 +73,17 @@ def initialize_constants():
         _bedrock_region = REGION
         logger.info(f"BEDROCK_REGION_PARAM not configured, using deployment region: {_bedrock_region}")
     
-    # Initialize bedrock_runtime client with the correct region (matching textGeneration pattern)
-    if _bedrock_runtime is None:
-        _bedrock_runtime = boto3.client("bedrock-runtime", region_name=_bedrock_region)
-        logger.info(f"Initialized bedrock_runtime client for region: {_bedrock_region}")
-    
-    # Initialize embeddings (use deployment region, matching textGeneration pattern)
     if _embeddings is None:
         _embeddings = BedrockEmbeddings(
             model_id=_embedding_model_id,
-            client=boto3.client("bedrock-runtime", region_name=REGION),  # Separate client for embeddings in deployment region
-            region_name=REGION,  # Use deployment region for embeddings, not _bedrock_region
+            client=bedrock_runtime,
+            region_name='us-east-1',
+            model_kwargs = {"input_type": "search_query"}
         )
     
-    # Initialize LLM using ChatBedrock (matching textGeneration pattern)
     if _llm is None:
+        # Create bedrock client for LLM in the appropriate region
+        llm_client = boto3.client("bedrock-runtime", region_name=_bedrock_region)
         model_kwargs = {
             "temperature": 0.6,
             "max_tokens": 2048,
@@ -98,7 +95,7 @@ def initialize_constants():
         _llm = ChatBedrock(
             model_id=_practice_material_model_id,
             model_kwargs=model_kwargs,
-            client=_bedrock_runtime
+            client=llm_client
         )
         logger.info("ChatBedrock LLM initialized successfully")
 
@@ -286,6 +283,24 @@ def build_short_answer_prompt(
         f"- WRONG: Sample answers that are too short or vague\n\n"
         f"Output the complete, valid JSON now:"
     )
+
+
+def extract_sources_from_docs(docs) -> list[str]:
+    """
+    Extract source citations from document objects.
+    Mirrors the function from textGeneration/src/helpers/chat.py
+    """
+    sources_used = []
+    for doc in docs:
+        if hasattr(doc, "metadata"):
+            source = doc.metadata.get("source", "")
+            page = doc.metadata.get("page", None)
+            if source and source not in sources_used:
+                source_entry = f"{source}"
+                if page:
+                    source_entry += f" (p. {page})"
+                sources_used.append(source_entry)
+    return sources_used
 
 
 def parse_body(body: str | None) -> Dict[str, Any]:
@@ -526,8 +541,12 @@ def handler(event, context):
             }
 
         # Pull a few relevant chunks as context
-        docs = retriever.get_relevant_documents(topic)
+        docs = retriever.invoke(topic)
         snippets = [d.page_content.strip()[:500] for d in docs][:6] #pulling chunks
+        
+        # Extract sources from retrieved documents 
+        sources_used = extract_sources_from_docs(docs)
+        logger.info(f"Extracted {len(sources_used)} sources: {sources_used}")
 
         # Build prompt based on material type
         if material_type == "mcq":
@@ -590,6 +609,12 @@ def handler(event, context):
                     })
                 }
 
+        # Add sources to response 
+        response_data = {
+            **result,
+            "sources_used": sources_used
+        }
+        
         return {
             "statusCode": 200,
             "headers": {
@@ -598,7 +623,7 @@ def handler(event, context):
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "*",
             },
-            "body": json.dumps(result),
+            "body": json.dumps(response_data)
         }
     except Exception as e:
         logger.exception("Error generating practice materials")

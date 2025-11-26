@@ -82,6 +82,7 @@ exports.handler = async (event) => {
             id, title, authors, publisher, publish_date, summary, language, level, created_at,
             COUNT(*) OVER() as total_count
           FROM textbooks
+          WHERE status = 'Active'
           ORDER BY created_at DESC
           LIMIT ${limit} OFFSET ${offset}
         `;

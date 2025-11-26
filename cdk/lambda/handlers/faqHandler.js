@@ -79,6 +79,9 @@ exports.handler = async (event) => {
           FROM faq_cache
           WHERE textbook_id = ${faqTextbookId}
           AND usage_count > 3
+          AND reported = false
+          AND sources IS NOT NULL
+          AND json_array_length(sources) > 0
           ORDER BY usage_count DESC, cached_at DESC
         `;
         

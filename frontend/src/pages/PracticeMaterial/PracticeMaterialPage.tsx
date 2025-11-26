@@ -72,7 +72,7 @@ export default function PracticeMaterialPage() {
       }
 
       const data: PracticeMaterial = await resp.json();
-      setMaterials((prev) => [...prev, data]);
+      setMaterials((prev) => [data, ...prev]);
     } catch (e) {
       const err = e as Error;
       console.error("Error generating practice material:", err);
@@ -116,6 +116,7 @@ export default function PracticeMaterialPage() {
                     key={index}
                     title={material.title}
                     questions={material.questions}
+                    sources_used={material.sources_used}
                     onDelete={() => handleDeleteMaterial(index)}
                   />
                 );
@@ -134,6 +135,7 @@ export default function PracticeMaterialPage() {
                     key={index}
                     title={material.title}
                     questions={material.questions}
+                    sources_used={material.sources_used}
                     onDelete={() => handleDeleteMaterial(index)}
                   />
                 );

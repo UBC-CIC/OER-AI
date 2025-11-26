@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import PromptCard from "./PromptCard";
+import SharedPromptCard from "./SharedPromptCard";
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "../ui/tabs";
 import type { PromptTemplate, SharedUserPrompt, GuidedPromptTemplate } from "@/types/Chat";
 
@@ -113,12 +114,16 @@ export default function PromptLibraryModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 items-stretch">
               {sharedPrompts.map((prompt) => (
-                <PromptCard
+                <SharedPromptCard
                   key={prompt.id}
-                  name={prompt.title}
+                  prompt={prompt}
                   onClick={() => {
                     onSelectPrompt?.(prompt.prompt_text);
                     onOpenChange(false);
+                  }}
+                  onReported={() => {
+                    // Refresh the shared prompts list
+                    onFetchSharedPrompts?.();
                   }}
                 />
               ))}

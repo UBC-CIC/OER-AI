@@ -207,6 +207,7 @@ export default function TextbookLayout() {
               textbookTitle={textbook?.title || ""}
               textbookAuthor={textbook?.authors?.join(", ") || ""}
               textbookId={id}
+              textbookSourceUrl={textbook?.source_url}
             />
             <main className="md:ml-64 flex flex-col flex-1 items-center justify-center max-w-screen">
               <Outlet />

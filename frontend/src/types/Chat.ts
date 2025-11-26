@@ -20,6 +20,7 @@ export interface SharedUserPrompt {
   created_at: string;
   updated_at: string;
   metadata: any;
+  reported?: boolean;
 }
 
 export interface GuidedPromptQuestion {
@@ -46,4 +47,11 @@ export interface Message {
     questionIndex: number;
     totalQuestions: number;
   };
+  isFromSharedChat?: boolean;
+}
+
+export interface SharedChatMetadata {
+  originalChatSessionId: string;
+  isSharedView: boolean;
+  hasForked: boolean;
 }

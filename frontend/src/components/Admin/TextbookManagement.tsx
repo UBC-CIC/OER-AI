@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import {
   Search,
   Upload,
@@ -48,6 +49,7 @@ export default function TextbookManagement() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const filteredTextbooks = textbooks.filter(
     (book) =>
@@ -55,21 +57,119 @@ export default function TextbookManagement() {
       book.author.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const toggleStatus = (id: string | number) => {
+  const toggleStatus = async (id: string | number) => {
+    const book = textbooks.find((b) => b.id === id);
+    if (!book) return;
+
+    const newStatus = book.status === "Active" ? "Disabled" : "Active";
+
+    // Optimistically update UI
     setTextbooks(
-      textbooks.map((book) =>
-        book.id === id
-          ? {
-              ...book,
-              status: book.status === "Active" ? "Disabled" : "Active",
-            }
-          : book
-      )
+      textbooks.map((b) => (b.id === id ? { ...b, status: newStatus } : b))
     );
+
+    try {
+      const session = await AuthService.getAuthSession(true);
+      const token = session.tokens.idToken;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_ENDPOINT}/admin/textbooks/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: token,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update textbook status");
+      }
+    } catch (err) {
+      console.error("Error updating status:", err);
+      // Revert on error
+      setTextbooks(
+        textbooks.map((b) => (b.id === id ? { ...b, status: book.status } : b))
+      );
+      setError("Failed to update textbook status");
+    }
   };
 
-  const handleDelete = (id: string | number) => {
+  const handleDelete = async (id: string | number) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this textbook? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    // Optimistically remove from UI
+    const originalTextbooks = [...textbooks];
     setTextbooks(textbooks.filter((book) => book.id !== id));
+
+    try {
+      const session = await AuthService.getAuthSession(true);
+      const token = session.tokens.idToken;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_ENDPOINT}/admin/textbooks/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: token,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete textbook");
+      }
+    } catch (err) {
+      console.error("Error deleting textbook:", err);
+      // Revert on error
+      setTextbooks(originalTextbooks);
+      setError("Failed to delete textbook");
+    }
+  };
+
+  const handleRefresh = async (id: string | number) => {
+    if (!confirm("This will trigger re-ingestion of the textbook. Continue?")) {
+      return;
+    }
+
+    try {
+      const session = await AuthService.getAuthSession(true);
+      const token = session.tokens.idToken;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_ENDPOINT}/admin/textbooks/${id}/refresh`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to refresh textbook");
+      }
+
+      const data = await response.json();
+      console.log("Refresh job created:", data);
+
+      // Update the textbook status to "Ingesting"
+      setTextbooks(
+        textbooks.map((b) => (b.id === id ? { ...b, status: "Ingesting" } : b))
+      );
+    } catch (err) {
+      console.error("Error refreshing textbook:", err);
+      setError("Failed to refresh textbook");
+    }
   };
 
   // Fetch textbooks from API
@@ -109,7 +209,7 @@ export default function TextbookManagement() {
           id: book.id,
           title: book.title,
           author: book.authors?.join(", ") || "Unknown Author",
-          status: "Active",
+          status: book.status || "Disabled",
           users: book.user_count,
           questions: book.question_count,
         }));
@@ -283,13 +383,23 @@ export default function TextbookManagement() {
                   </TableRow>
                 ) : (
                   filteredTextbooks.map((book) => (
-                    <TableRow key={book.id} className="hover:bg-gray-50/50">
+                    <TableRow
+                      key={book.id}
+                      className="hover:bg-gray-50/50 cursor-pointer"
+                      onClick={() => navigate(`/admin/textbook/${book.id}`)}
+                    >
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">
+                          <span
+                            className="font-medium text-gray-900 truncate max-w-[200px] sm:max-w-[300px]"
+                            title={book.title}
+                          >
                             {book.title}
                           </span>
-                          <span className="text-xs text-gray-500">
+                          <span
+                            className="text-xs text-gray-500 truncate max-w-[200px] sm:max-w-[300px]"
+                            title={book.author}
+                          >
                             {book.author}
                           </span>
                         </div>
@@ -302,6 +412,8 @@ export default function TextbookManagement() {
                           className={
                             book.status === "Active"
                               ? "bg-green-100 text-green-700 hover:bg-green-100 border-green-200 shadow-none"
+                              : book.status === "Ingesting"
+                              ? "bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-none"
                               : "bg-gray-100 text-gray-700 hover:bg-gray-100 border-gray-200 shadow-none"
                           }
                         >
@@ -325,12 +437,17 @@ export default function TextbookManagement() {
                             <Switch
                               checked={book.status === "Active"}
                               onCheckedChange={() => toggleStatus(book.id)}
+                              onClick={(e) => e.stopPropagation()}
                             />
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-gray-400 hover:text-[#2c5f7c]"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRefresh(book.id);
+                            }}
                           >
                             <RefreshCw className="h-4 w-4" />
                           </Button>
@@ -338,7 +455,10 @@ export default function TextbookManagement() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-gray-400 hover:text-red-600"
-                            onClick={() => handleDelete(book.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(book.id);
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

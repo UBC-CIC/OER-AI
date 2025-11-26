@@ -21,8 +21,11 @@ from langchain_aws import BedrockEmbeddings
 from langchain_postgres import PGVector
 from langchain_core.documents import Document
 from awsglue.utils import getResolvedOptions
+from awsglue.context import GlueContext
+from pyspark.context import SparkContext
 from urllib.parse import urljoin, urlparse
 import time
+import base64
 
 
 connection = None
@@ -59,6 +62,8 @@ try:
         'rds_proxy_endpoint',
         'embedding_model_id'
     ])
+    sc = SparkContext()
+    glueContext = GlueContext(sc)
     print("=== JOB PARAMETERS ===")
     for key, value in args.items():
         print(f"{key}: {value}")
@@ -140,7 +145,8 @@ def initialize_embeddings_and_vectorstore(textbook_id, textbook_title):
             logger.info(f"Initializing Bedrock embeddings with model: {EMBEDDING_MODEL_ID}")
             embeddings = BedrockEmbeddings(
                 model_id=EMBEDDING_MODEL_ID,
-                region_name=args['region_name']
+                region_name='us-east-1',
+                model_kwargs = {"input_type": "search_document"}
             )
             logger.info("Bedrock embeddings initialized successfully")
         
@@ -940,49 +946,68 @@ def upload_to_s3(content, s3_key, bucket_name, content_type='text/plain'):
         logger.error(f"Failed to upload to S3: {e}")
         raise
 
-def download_image(image_url, base_url):
-    """Download image from URL and return binary content and content type"""
+def get_base64_image_data_from_url(image_url):
+    """Downloads an image from a URL and converts its binary content to a Base64 encoded string."""
+    print(f"Attempting to download image from: {image_url}")
     try:
-        # Make URL absolute if it's relative
-        full_url = urljoin(base_url, image_url)
-        
-        # Add headers to mimic a browser request
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        
-        response = requests.get(full_url, headers=headers, timeout=30)
+        # Use requests to get the image data
+        response = requests.get(image_url)
         response.raise_for_status()
+        image_bytes = response.content
         
-        # Determine content type
-        content_type = response.headers.get('content-type', 'image/jpeg')
+        # Encode the bytes to base64, then decode to UTF-8 string
+        encoded_image = base64.b64encode(image_bytes).decode("utf8")
+        print("Image downloaded and Base64 encoded successfully.")
+        return encoded_image
         
-        return response.content, content_type, full_url
-        
-    except Exception as e:
-        logger.warning(f"Failed to download image {image_url}: {e}")
-        return None, None, None
+    except requests.exceptions.RequestException as e:
+        print(f"Error downloading image from URL: {e}")
+        return None
 
-def get_image_extension(content_type, url):
-    """Get appropriate file extension based on content type or URL"""
-    if 'jpeg' in content_type or 'jpg' in content_type:
-        return '.jpg'
-    elif 'png' in content_type:
-        return '.png'
-    elif 'gif' in content_type:
-        return '.gif'
-    elif 'webp' in content_type:
-        return '.webp'
-    elif 'svg' in content_type:
-        return '.svg'
-    else:
-        # Try to get extension from URL
-        parsed_url = urlparse(url)
-        path = parsed_url.path.lower()
-        if path.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg')):
-            return path[path.rfind('.'):]
-        else:
-            return '.jpg'  # Default fallback
+def create_cohere_embed_v4_image_body(base64_image_data, img_type):
+    """Constructs the request body for Cohere Embed v4 image embedding (Same as original)."""
+    return json.dumps({
+        "images":[f"data:image/{img_type};base64,{base64_image_data}"],
+        "input_type": "search_document",
+        "embedding_types": ["float"]
+    })
+
+def invoke_cohere_embed_v4_with_online_image(image_url):
+    """Invokes the Cohere Embed v4 model on Bedrock using an online image URL."""
+    base64_data = get_base64_image_data_from_url(image_url)
+    if not base64_data:
+        return None
+    
+    # Extract file type from URL
+    file_type = image_url.rsplit('.', 1)[-1].lower()
+    # Handle common image extensions
+    if file_type not in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+        file_type = 'jpeg'  # default fallback
+    
+    body = create_cohere_embed_v4_image_body(base64_data, file_type)
+    
+    bedrock_runtime = boto3.client(
+        service_name="bedrock-runtime",
+        region_name=args['region_name']
+    )
+
+    logger.info(f"Invoking Bedrock model for image: {image_url}")
+    try:
+        response = bedrock_runtime.invoke_model(
+            modelId=EMBEDDING_MODEL_ID,
+            body=body,
+            contentType='application/json',
+            accept='application/json'
+        )
+
+        response_body = json.loads(response.get('body').read())
+        image_embedding = response_body.get('embeddings', {}).get('float', [[]])[0]
+        
+        return image_embedding
+
+    except Exception as e:
+        logger.error(f"An error occurred during model invocation: {e}")
+        return None
 
 def sanitize_filename(text):
     """Sanitize text to be safe for use as filename"""
@@ -991,6 +1016,124 @@ def sanitize_filename(text):
     sanitized = re.sub(r'\s+', '_', sanitized)
     sanitized = sanitized.strip('._')
     return sanitized[:100]  # Limit length
+
+def process_image_embeddings(image_data_list, vector_store, textbook_id, book_title):
+    """
+    Process images and store their embeddings in the vector store.
+    
+    Args:
+        image_data_list: List of dicts with image metadata (url, alt, caption, etc.)
+        vector_store: PGVector store instance
+        textbook_id: ID of the textbook
+        book_title: Title of the textbook
+    """
+    if not image_data_list:
+        logger.info("No images to process")
+        return
+    
+    logger.info(f"Processing {len(image_data_list)} images for embedding...")
+    
+    texts = []
+    embeddings_list = []
+    metadatas = []
+    ids = []
+    
+    successful_count = 0
+    failed_count = 0
+    
+    for idx, img_data in enumerate(image_data_list):
+        try:
+            img_url = img_data['url']
+            logger.info(f"Processing image {idx + 1}/{len(image_data_list)}: {img_url}")
+            
+            # Generate embedding for the image
+            embedding = invoke_cohere_embed_v4_with_online_image(img_url)
+            
+            if embedding is None:
+                logger.warning(f"Failed to generate embedding for image: {img_url}")
+                failed_count += 1
+                continue
+            
+            # Create text description for the image (used as document text)
+            text_parts = []
+            if img_data.get('caption'):
+                text_parts.append(f"Caption: {img_data['caption']}")
+            if img_data.get('alt'):
+                text_parts.append(f"Alt text: {img_data['alt']}")
+            text_parts.append(f"Image from chapter {img_data['chapter_number']}: {img_data['chapter_title']}")
+            
+            text_description = " | ".join(text_parts) if text_parts else f"Image from {img_url}"
+            
+            # Prepare metadata
+            metadata = {
+                'type': 'image',
+                'image_url': img_url,
+                'alt_text': img_data.get('alt', ''),
+                'caption': img_data.get('caption', ''),
+                'chapter_number': img_data['chapter_number'],
+                'chapter_title': img_data['chapter_title'],
+                'source_url': img_data['source_url'],
+                'textbook_id': textbook_id,
+                'book_title': book_title
+            }
+            
+            # Generate unique ID for this image
+            image_id = f"img_{textbook_id}_{idx}"
+            
+            texts.append(text_description)
+            embeddings_list.append(embedding)
+            metadatas.append(metadata)
+            ids.append(image_id)
+            
+            successful_count += 1
+            
+            # Add to vector store in batches of 10 to avoid memory issues
+            if len(embeddings_list) >= 10:
+                try:
+                    vector_store.add_embeddings(
+                        texts=texts,
+                        embeddings=embeddings_list,
+                        metadatas=metadatas,
+                        ids=ids
+                    )
+                    logger.info(f"Added batch of {len(embeddings_list)} image embeddings to vector store")
+                    # Clear lists for next batch
+                    texts = []
+                    embeddings_list = []
+                    metadatas = []
+                    ids = []
+                except Exception as e:
+                    logger.error(f"Error adding image embeddings batch to vector store: {e}")
+                    failed_count += len(embeddings_list)
+                    # Clear lists and continue
+                    texts = []
+                    embeddings_list = []
+                    metadatas = []
+                    ids = []
+            
+            # Add small delay to avoid rate limiting
+            time.sleep(0.5)
+            
+        except Exception as e:
+            logger.error(f"Error processing image {img_data.get('url', 'unknown')}: {e}")
+            failed_count += 1
+            continue
+    
+    # Add remaining images
+    if embeddings_list:
+        try:
+            vector_store.add_embeddings(
+                texts=texts,
+                embeddings=embeddings_list,
+                metadatas=metadatas,
+                ids=ids
+            )
+            logger.info(f"Added final batch of {len(embeddings_list)} image embeddings to vector store")
+        except Exception as e:
+            logger.error(f"Error adding final image embeddings batch to vector store: {e}")
+            failed_count += len(embeddings_list)
+    
+    logger.info(f"Image embedding complete! Successfully processed: {successful_count}, Failed: {failed_count}")
 
 def process_chapter(chapter_url, base_url, book_metadata):
     """Process a single chapter and return text content and metadata"""
@@ -1050,7 +1193,8 @@ def process_chapter(chapter_url, base_url, book_metadata):
 def extract_text(start_url, combined_metadata, s3_bucket):
     """
     Extract text from textbook chapters and upload to S3.
-    Returns tuple of (extracted_chapters, image_sources).
+    Returns tuple of (extracted_chapters, image_data_list).
+    image_data_list contains dicts with 'url', 'alt', 'caption', 'chapter_number', 'source_url'
     """
     logger.info("Starting text extraction...")
     
@@ -1069,7 +1213,7 @@ def extract_text(start_url, combined_metadata, s3_bucket):
     
     # Process each chapter
     extracted_chapters = []
-    all_image_sources = []
+    all_image_data = []
     base_prefix = 'processed-textbooks'
     book_id = combined_metadata.get('bookId', 'unknown')
     book_title_safe = sanitize_filename(combined_metadata.get('title', 'unknown'))
@@ -1086,12 +1230,19 @@ def extract_text(start_url, combined_metadata, s3_bucket):
             text_s3_key = f"{chapter_s3_prefix}/extracted.txt"
             uploaded_text_key = upload_to_s3(chapter_data['text'], text_s3_key, s3_bucket)
             
-            # Collect image sources from this chapter
-            chapter_images = []
+            # Collect image data from this chapter with metadata
             for img in chapter_data['media'].get('images', []):
                 if img.get('src'):
-                    chapter_images.append(img['src'])
-            all_image_sources.extend(chapter_images)
+                    # Make image URL absolute
+                    img_url = urljoin(start_url, img['src'])
+                    all_image_data.append({
+                        'url': img_url,
+                        'alt': img.get('alt', ''),
+                        'caption': img.get('caption', ''),
+                        'chapter_number': i,
+                        'chapter_title': chapter_data['metadata']['title'],
+                        'source_url': chapter_data['metadata']['url']
+                    })
             
             # Create chapter result with required metadata structure
             chapter_result = {
@@ -1109,10 +1260,10 @@ def extract_text(start_url, combined_metadata, s3_bucket):
             
             extracted_chapters.append(chapter_result)
             
-            logger.info(f"Extracted chapter {i}/{len(chapters)}: {chapter_data['metadata']['title']} ({len(chapter_images)} images)")
+            logger.info(f"Extracted chapter {i}/{len(chapters)}: {chapter_data['metadata']['title']} ({len(chapter_data['media'].get('images', []))} images)")
     
-    logger.info(f"Text extraction complete! Processed {len(extracted_chapters)} chapters with {len(all_image_sources)} total images")
-    return extracted_chapters, all_image_sources
+    logger.info(f"Text extraction complete! Processed {len(extracted_chapters)} chapters with {len(all_image_data)} total images")
+    return extracted_chapters, all_image_data
 
 def main():
     """Main function to orchestrate textbook processing"""
@@ -1148,8 +1299,8 @@ def main():
             """
             
             # Parse authors from metadata
-            authors_str = combined_metadata.get('Author', '')
-            authors = [a.strip() for a in authors_str.split(",")] if authors_str else []
+            authors_str = combined_metadata.get('Authors', '')
+            authors = [a.strip() for a in re.split(r'[,;]|\band\b', s, flags=re.IGNORECASE) if a.strip()] if s else []
             
             # Parse publication date
             pub_date_str = combined_metadata.get('Publication Date', '')
@@ -1211,7 +1362,7 @@ def main():
                 cursor.close()
         
         # Extract text from all chapters
-        extracted_chapters, image_sources = extract_text(start_url, combined_metadata, s3_bucket)
+        extracted_chapters, image_data_list = extract_text(start_url, combined_metadata, s3_bucket)
         
         # Process chapters into vector embeddings if we have a vector store
         if vector_store and extracted_chapters:
@@ -1222,6 +1373,21 @@ def main():
                 logger.error(f"Error processing chapters to vectors: {e}")
                 # Continue to show results even if vector processing fails
         
+        # Process image embeddings if we have a vector store and images
+        """
+        if vector_store and image_data_list:
+            logger.info("Processing image embeddings...")
+            try:
+                process_image_embeddings(
+                    image_data_list, 
+                    vector_store, 
+                    textbook_id,
+                    combined_metadata.get('Title', 'Unknown Title')
+                )
+            except Exception as e:
+                logger.error(f"Error processing image embeddings: {e}")
+                # Continue to show results even if image processing fails
+        """
         if not extracted_chapters:
             logger.warning("No chapters were successfully processed")
             return
@@ -1231,7 +1397,7 @@ def main():
         print(f"Book: {metadata.get('title', 'Unknown')}")
         print(f"Textbook ID: {textbook_id}")
         print(f"Chapters processed: {len(extracted_chapters)}")
-        print(f"Image sources found: {len(image_sources)}")
+        print(f"Images found: {len(image_data_list)}")
         print(f"S3 bucket: {s3_bucket}")
         
         # Create base prefix for S3 keys
@@ -1245,12 +1411,12 @@ def main():
         print("Files uploaded:")
         for key in all_s3_keys:
             print(f"  - s3://{s3_bucket}/{key}")
-        if image_sources:
-            print("Image sources:")
-            for img_src in image_sources[:10]:  # Show first 10 to avoid too much output
-                print(f"  - {img_src}")
-            if len(image_sources) > 10:
-                print(f"  ... and {len(image_sources) - 10} more images")
+        if image_data_list:
+            print("Images processed:")
+            for img_data in image_data_list[:10]:  # Show first 10 to avoid too much output
+                print(f"  - {img_data['url']} (Chapter {img_data['chapter_number']})")
+            if len(image_data_list) > 10:
+                print(f"  ... and {len(image_data_list) - 10} more images")
         
     except Exception as e:
         logger.error(f"Error in main processing: {e}")

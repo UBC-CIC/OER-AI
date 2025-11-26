@@ -84,7 +84,7 @@ exports.handler = async (event) => {
           result = await sqlConnection`
             SELECT 
               id, title, prompt_text, owner_session_id, owner_user_id, 
-              textbook_id, role, visibility, tags, created_at, updated_at, metadata,
+              textbook_id, role, visibility, tags, created_at, updated_at, metadata, reported,
               COUNT(*) OVER() as total_count
             FROM shared_user_prompts
             WHERE textbook_id = ${sharedTextbookId} AND role = ${role}
@@ -95,7 +95,7 @@ exports.handler = async (event) => {
           result = await sqlConnection`
             SELECT 
               id, title, prompt_text, owner_session_id, owner_user_id, 
-              textbook_id, role, visibility, tags, created_at, updated_at, metadata,
+              textbook_id, role, visibility, tags, created_at, updated_at, metadata, reported,
               COUNT(*) OVER() as total_count
             FROM shared_user_prompts
             WHERE textbook_id = ${sharedTextbookId}
@@ -159,7 +159,7 @@ exports.handler = async (event) => {
         const prompt = await sqlConnection`
           SELECT 
             id, title, prompt_text, owner_session_id, owner_user_id, 
-            textbook_id, role, visibility, tags, created_at, updated_at, metadata
+            textbook_id, role, visibility, tags, created_at, updated_at, metadata, reported
           FROM shared_user_prompts
           WHERE id = ${promptId}
         `;
@@ -183,15 +183,15 @@ exports.handler = async (event) => {
         }
         
         const updateData = parseBody(event.body);
-        const { title: updateTitle, prompt_text: updatePromptText, visibility: updateVisibility, tags: updateTags, metadata: updateMetadata } = updateData;
+        const { title: updateTitle, prompt_text: updatePromptText, visibility: updateVisibility, tags: updateTags, metadata: updateMetadata, reported: updateReported } = updateData;
         
         const updated = await sqlConnection`
           UPDATE shared_user_prompts 
           SET title = ${updateTitle}, prompt_text = ${updatePromptText}, visibility = ${updateVisibility}, 
-              tags = ${updateTags}, metadata = ${updateMetadata || {}}, updated_at = NOW()
+              tags = ${updateTags}, metadata = ${updateMetadata || {}}, reported = ${updateReported !== undefined ? updateReported : false}, updated_at = NOW()
           WHERE id = ${updatePromptId}
           RETURNING id, title, prompt_text, owner_session_id, owner_user_id, 
-                    textbook_id, role, visibility, tags, created_at, updated_at, metadata
+                    textbook_id, role, visibility, tags, created_at, updated_at, metadata, reported
         `;
         
         if (updated.length === 0) {
@@ -225,6 +225,58 @@ exports.handler = async (event) => {
         
         response.statusCode = 204;
         response.body = "";
+        break;
+        
+      case "POST /shared_prompts/{shared_prompt_id}/report":
+        const reportPromptId = event.pathParameters?.shared_prompt_id;
+        if (!reportPromptId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Prompt ID is required" });
+          break;
+        }
+        
+        const reportData = parseBody(event.body);
+        const { comment } = reportData;
+        
+        // Check if prompt exists
+        const existingPrompt = await sqlConnection`
+          SELECT id FROM shared_user_prompts WHERE id = ${reportPromptId}
+        `;
+        
+        if (existingPrompt.length === 0) {
+          response.statusCode = 404;
+          response.body = JSON.stringify({ error: "Prompt not found" });
+          break;
+        }
+        
+        // Update the prompt to mark it as reported and store report details in metadata
+        const reportMetadata = {
+          comment: comment || '',
+          reported_at: new Date().toISOString()
+        };
+        
+        const reportedPrompt = await sqlConnection`
+          UPDATE shared_user_prompts
+          SET 
+            reported = true,
+            metadata = jsonb_set(
+              COALESCE(metadata::jsonb, '{}'::jsonb),
+              '{report}',
+              ${JSON.stringify(reportMetadata)}::jsonb
+            ),
+            updated_at = NOW()
+          WHERE id = ${reportPromptId}
+          RETURNING id, title, reported, metadata
+        `;
+        
+        data = {
+          id: reportedPrompt[0].id,
+          reported_at: reportMetadata.reported_at,
+          message: "Prompt has been reported successfully"
+        };
+        
+        response.statusCode = 200;
+        response.body = JSON.stringify(data);
         break;
         
       default:

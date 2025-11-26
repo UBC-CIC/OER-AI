@@ -200,7 +200,7 @@ export function MCQEditable({
                 ) : (
                   <XCircle className="h-4 w-4 text-red-600"></XCircle>
                 )}
-                {answer.correct ? " Correct Answer" : " Incorrect Answer"}
+                {answer.correct ? " Correct Answer" : " Wrong Answer"}
               </Label>
               
               <Button
