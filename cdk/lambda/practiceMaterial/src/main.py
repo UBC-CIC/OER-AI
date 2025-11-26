@@ -541,7 +541,7 @@ def handler(event, context):
             }
 
         # Pull a few relevant chunks as context
-        docs = retriever.get_relevant_documents(topic)
+        docs = retriever.invoke(topic)
         snippets = [d.page_content.strip()[:500] for d in docs][:6] #pulling chunks
         
         # Extract sources from retrieved documents 
