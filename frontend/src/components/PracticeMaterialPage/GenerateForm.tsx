@@ -217,9 +217,10 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
                       id="num-questions"
                       type="number"
                       placeholder="Enter a number"
-                      onChange={(e) =>
-                        field.onChange(parseInt(e.target.value) || 0)
-                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value === "" ? "" : parseInt(value));
+                      }}
                       className={(currentMaterialType === "mcq" && "numQuestions" in errors && errors.numQuestions) ? "border-red-500" : ""}
                     />
                   )}
@@ -243,9 +244,10 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
                       id="num-options"
                       type="number"
                       placeholder="Enter a number"
-                      onChange={(e) =>
-                        field.onChange(parseInt(e.target.value) || 0)
-                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value === "" ? "" : parseInt(value));
+                      }}
                       className={(currentMaterialType === "mcq" && "numOptions" in errors && errors.numOptions) ? "border-red-500" : ""}
                     />
                   )}
@@ -300,9 +302,10 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
                       id="num-cards"
                       type="number"
                       placeholder="Enter a number"
-                      onChange={(e) =>
-                        field.onChange(parseInt(e.target.value) || 0)
-                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value === "" ? "" : parseInt(value));
+                      }}
                       className={(currentMaterialType === "flashcards" && "numCards" in errors && errors.numCards) ? "border-red-500" : ""}
                     />
                   )}
@@ -381,9 +384,10 @@ export function GenerateForm({ onGenerate }: GenerateFormProps) {
                       id="num-questions-sa"
                       type="number"
                       placeholder="Enter a number"
-                      onChange={(e) =>
-                        field.onChange(parseInt(e.target.value) || 0)
-                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value === "" ? "" : parseInt(value));
+                      }}
                       className={(currentMaterialType === "shortAnswer" && "numQuestions" in errors && errors.numQuestions) ? "border-red-500" : ""}
                     />
                   )}
