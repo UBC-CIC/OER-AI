@@ -26,8 +26,10 @@ export default function HomePage() {
     const fetchTextbooks = async () => {
       try {
         // Get public token
-        const tokenResp = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
-        if (!tokenResp.ok) throw new Error('Failed to get public token');
+        const tokenResp = await fetch(
+          `${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`
+        );
+        if (!tokenResp.ok) throw new Error("Failed to get public token");
         const { token } = await tokenResp.json();
 
         // Use the token to fetch textbooks
@@ -35,7 +37,7 @@ export default function HomePage() {
           `${import.meta.env.VITE_API_ENDPOINT}/textbooks`,
           {
             headers: {
-              'Authorization': `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
             },
           }
         );
@@ -83,12 +85,13 @@ export default function HomePage() {
       <main className="container mx-auto flex-1 flex-col justify-center px-6 py-16">
         <div className="mx-auto max-w-6xl">
           {/* Hero Section */}
-          <div className="mb-12 text-center">
-            <h2 className="mb-3 text-5xl font-bold text-gray-900">
+          <div className="mb-12 text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <h2 className="text-5xl font-bold tracking-tight text-primary">
               BCcampus Textbook Catalogue
             </h2>
-            <p className="text-lg text-gray-600">
-              Select a textbook to get started
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Select a textbook to get started with your AI-powered learning
+              journey
             </p>
           </div>
 
