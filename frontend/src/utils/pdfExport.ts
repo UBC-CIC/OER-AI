@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import type { IH5PMinimalQuestionSet, IH5PAnswerOption } from "@/types/MaterialEditor";
-import { isMultiChoiceQuestion, isEssayQuestion } from "@/types/MaterialEditor";
+import { isMultiChoiceQuestion, isEssayQuestion, isFlashcard } from "@/types/MaterialEditor";
 
 /**
  * Export options for PDF generation
@@ -271,6 +271,96 @@ export function exportQuestionSetAsPDF(
       // Space between questions
       currentY += 8;
       return; // End Essay processing
+    }
+
+    // Handle Flashcards
+    if (isFlashcard(question)) {
+      const { cards } = question.params;
+
+      // Process each flashcard
+      cards.forEach((card, cardIndex) => {
+        const cardNumber = cardIndex + 1;
+
+        // Check if we need a new page for this card
+        checkPageBreak(30);
+
+        // Card number and header
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Card ${cardNumber}:`, margin, currentY);
+        currentY += 6;
+
+        // Worksheet style: Show only front side with answer lines
+        if (style === "worksheet") {
+          // Front side (question/term)
+          doc.setFontSize(11);
+          doc.setFont("helvetica", "bold");
+          doc.text("Front:", margin + 5, currentY);
+          currentY += 5;
+
+          doc.setFont("helvetica", "normal");
+          addWrappedText(card.text, margin + 5, 11, contentWidth - 5, false);
+          currentY += 6;
+
+          // Answer space
+          doc.setFontSize(10);
+          doc.setFont("helvetica", "italic");
+          doc.text("Answer:", margin + 5, currentY);
+          currentY += 6;
+
+          // Draw lines for writing the answer
+          const numLines = 4;
+          const lineSpacing = 7;
+          for (let i = 0; i < numLines; i++) {
+            checkPageBreak(lineSpacing + 2);
+            doc.setLineWidth(0.2);
+            doc.setDrawColor(200, 200, 200);
+            doc.line(margin + 5, currentY, pageWidth - margin, currentY);
+            currentY += lineSpacing;
+          }
+          currentY += 6;
+        }
+
+        // Answer key style: Show front, back, and tip
+        if (style === "answer-key") {
+          // Front side
+          doc.setFontSize(11);
+          doc.setFont("helvetica", "bold");
+          doc.text("Front:", margin + 5, currentY);
+          currentY += 5;
+
+          doc.setFont("helvetica", "normal");
+          addWrappedText(card.text, margin + 5, 11, contentWidth - 5, false);
+          currentY += 5;
+
+          // Back side
+          doc.setFont("helvetica", "bold");
+          doc.text("Back:", margin + 5, currentY);
+          currentY += 5;
+
+          doc.setFont("helvetica", "normal");
+          addWrappedText(card.answer, margin + 5, 11, contentWidth - 5, false);
+          currentY += 5;
+
+          // Tip (if available)
+          if (card.tip) {
+            checkPageBreak(15);
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "italic");
+            doc.text("Tip:", margin + 5, currentY);
+            currentY += 4;
+            addWrappedText(card.tip, margin + 5, 10, contentWidth - 5, false);
+            currentY += 3;
+          }
+        }
+
+        // Space between cards
+        currentY += 6;
+      });
+
+      // Extra space after all cards in the set
+      currentY += 2;
+      return; // End Flashcard processing
     }
   });
 

@@ -45,9 +45,20 @@ const shortAnswerSchema = z.object({
   difficulty: z.enum(["beginner", "intermediate", "advanced"]),
 });
 
+const flashcardSchema = z.object({
+  materialType: z.literal("flashcards"),
+  topic: z.string().min(1, "Topic is required").max(200, "Topic too long"),
+  numCards: z
+    .number()
+    .min(1, "Must be at least 1")
+    .max(20, "Maximum 20 flashcards"),
+  difficulty: z.enum(["beginner", "intermediate", "advanced"]),
+});
+
 const formSchema = z.discriminatedUnion("materialType", [
   mcqSchema,
   shortAnswerSchema,
+  flashcardSchema,
 ]);
 
 type FormData = z.infer<typeof formSchema>;
@@ -58,7 +69,7 @@ interface MaterialEditorFormProps {
 
 export function MaterialEditorForm({ onGenerate }: MaterialEditorFormProps) {
   const [_currentMaterialType, setCurrentMaterialType] = useState<
-    "mcq" | "shortAnswer"
+    "mcq" | "shortAnswer" | "flashcards"
   >("mcq");
 
   const {
@@ -86,7 +97,7 @@ export function MaterialEditorForm({ onGenerate }: MaterialEditorFormProps) {
 
   // Handle material type change
   const handleMaterialTypeChange = (
-    value: "mcq" | "shortAnswer"
+    value: "mcq" | "shortAnswer" | "flashcards"
   ) => {
     setCurrentMaterialType(value);
 
@@ -95,6 +106,13 @@ export function MaterialEditorForm({ onGenerate }: MaterialEditorFormProps) {
         materialType: value,
         topic: "",
         numQuestions: 5,
+        difficulty: "intermediate",
+      } as any);
+    } else if (value === "flashcards") {
+      reset({
+        materialType: value,
+        topic: "",
+        numCards: 10,
         difficulty: "intermediate",
       } as any);
     } else {
@@ -138,7 +156,7 @@ export function MaterialEditorForm({ onGenerate }: MaterialEditorFormProps) {
                   onValueChange={(value) => {
                     field.onChange(value);
                     handleMaterialTypeChange(
-                      value as "mcq" | "shortAnswer"
+                      value as "mcq" | "shortAnswer" | "flashcards"
                     );
                   }}
                 >
@@ -153,6 +171,7 @@ export function MaterialEditorForm({ onGenerate }: MaterialEditorFormProps) {
                       Multiple Choice Questions
                     </SelectItem>
                     <SelectItem value="shortAnswer">Short Answer</SelectItem>
+                    <SelectItem value="flashcards">Flashcards</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -204,6 +223,35 @@ export function MaterialEditorForm({ onGenerate }: MaterialEditorFormProps) {
               {(errors as any).numQuestions && (
                 <p className="text-sm text-red-500">
                   {(errors as any).numQuestions.message}
+                </p>
+              )}
+            </div>
+          )}
+
+          {materialType === "flashcards" && (
+            <div className="space-y-2">
+              <Label htmlFor="num-cards">Number of Flashcards</Label>
+              <Controller
+                name="numCards"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="num-cards"
+                    type="number"
+                    placeholder="Enter a number"
+                    onChange={(e) =>
+                      field.onChange(parseInt(e.target.value) || 0)
+                    }
+                    className={
+                      (errors as any).numCards ? "border-red-500" : ""
+                    }
+                  />
+                )}
+              />
+              {(errors as any).numCards && (
+                <p className="text-sm text-red-500">
+                  {(errors as any).numCards.message}
                 </p>
               )}
             </div>
