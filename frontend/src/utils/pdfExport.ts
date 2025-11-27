@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import type { IH5PMinimalQuestionSet, IH5PAnswerOption } from "@/types/MaterialEditor";
-import { isMultiChoiceQuestion } from "@/types/MaterialEditor";
+import { isMultiChoiceQuestion, isEssayQuestion } from "@/types/MaterialEditor";
 
 /**
  * Export options for PDF generation
@@ -95,11 +95,10 @@ export function exportQuestionSetAsPDF(
   // Process each question
   questionSet.questions.forEach((question, qIndex) => {
     const questionNumber = qIndex + 1;
-    if (!isMultiChoiceQuestion(question)) {
-      // We only handle multi-choice questions in this export function
-      return;
-    }
-    const { question: questionText, answers } = question.params;
+    
+    // Handle Multi-Choice Questions
+    if (isMultiChoiceQuestion(question)) {
+      const { question: questionText, answers } = question.params;
 
     // Check if we need a new page for this question
     checkPageBreak(30); // Minimum space needed for a question
@@ -193,8 +192,86 @@ export function exportQuestionSetAsPDF(
       }
     }
 
-    // Space between questions
-    currentY += 8;
+      // Space between questions
+      currentY += 8;
+      return; // End MCQ processing
+    }
+
+    // Handle Essay Questions
+    if (isEssayQuestion(question)) {
+      const { taskDescription, keywords } = question.params;
+
+      // Check if we need a new page for this question
+      checkPageBreak(30);
+
+      // Question number and text
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Question ${questionNumber}:`, margin, currentY);
+      currentY += 6;
+
+      addWrappedText(taskDescription, margin, 11, contentWidth, false);
+      currentY += 6;
+
+      // Add answer space for worksheet style
+      if (style === "worksheet") {
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "italic");
+        doc.text("Answer:", margin, currentY);
+        currentY += 6;
+
+        // Draw lines for writing
+        const numLines = 8;
+        const lineSpacing = 7;
+        for (let i = 0; i < numLines; i++) {
+          checkPageBreak(lineSpacing + 2);
+          doc.setLineWidth(0.2);
+          doc.setDrawColor(200, 200, 200);
+          doc.line(margin, currentY, pageWidth - margin, currentY);
+          currentY += lineSpacing;
+        }
+        currentY += 4;
+      }
+
+      // Add keywords and rubric for answer key style
+      if (style === "answer-key" && keywords && keywords.length > 0) {
+        checkPageBreak(20);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text("Key Points to Include:", margin + 5, currentY);
+        currentY += 5;
+
+        doc.setFont("helvetica", "normal");
+        keywords.forEach((kw) => {
+          checkPageBreak(10);
+          const keywordText = `• ${kw.keyword}${
+            kw.alternatives && kw.alternatives.length > 0
+              ? ` (or: ${kw.alternatives.join(", ")})`
+              : ""
+          }`;
+          addWrappedText(keywordText, margin + 8, 10, contentWidth - 8, false);
+          currentY += 2;
+
+          if (kw.options?.feedbackIncluded) {
+            doc.setFont("helvetica", "italic");
+            addWrappedText(
+              `  ${kw.options.feedbackIncluded}`,
+              margin + 10,
+              9,
+              contentWidth - 10,
+              false
+            );
+            doc.setFont("helvetica", "normal");
+            currentY += 2;
+          }
+        });
+        currentY += 4;
+      }
+
+      // Space between questions
+      currentY += 8;
+      return; // End Essay processing
+    }
   });
 
   // Add footer with page numbers

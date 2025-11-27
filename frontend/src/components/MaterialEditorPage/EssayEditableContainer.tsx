@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { EssayEditable } from "./EssayEditable";
+import { ExportDialog } from "./ExportDialog";
 import type { I5HPEssayQuestion } from "@/types/MaterialEditor";
 import { ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
 import {
@@ -36,6 +37,7 @@ export function EssayEditableContainer({
   const [isExpanded, setIsExpanded] = useState(true);
   const [title, setTitle] = useState("Untitled Essay Set");
   const [exportFormat, setExportFormat] = useState<string>("json");
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   const handleQuestionUpdate = (
     index: number,
@@ -175,6 +177,12 @@ export function EssayEditableContainer({
     if (exportFormat === "h5p") {
       exportAsH5P();
     }
+
+    if (exportFormat === "pdf") {
+      // Open dialog to choose PDF style
+      setShowExportDialog(true);
+      return;
+    }
   };
 
   return (
@@ -264,6 +272,9 @@ export function EssayEditableContainer({
                   <SelectItem className="cursor-pointer" value="h5p">
                     H5P
                   </SelectItem>
+                  <SelectItem className="cursor-pointer" value="pdf">
+                    PDF
+                  </SelectItem>
                 </SelectContent>
               </Select>
 
@@ -278,6 +289,13 @@ export function EssayEditableContainer({
           </CardFooter>
         </>
       )}
+      
+      <ExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        questionSet={{ questions }}
+        title={title}
+      />
     </Card>
   );
 }

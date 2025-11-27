@@ -50,9 +50,9 @@ export function ExportDialog({
         <DialogHeader>
           <DialogTitle>Export to PDF</DialogTitle>
           <DialogDescription>
-            Choose the PDF style you want to export. The worksheet is blank for
-            students to fill in, while the answer key includes correct answers
-            and explanations.
+            Choose the PDF style you want to export. The worksheet provides
+            questions for students to complete, while the answer key includes
+            correct answers and explanations.
           </DialogDescription>
         </DialogHeader>
 
@@ -77,8 +77,8 @@ export function ExportDialog({
             </Select>
             <p className="text-sm text-muted-foreground">
               {exportStyle === "worksheet" 
-                ? "Questions and answer choices only. Perfect for giving to students to complete."
-                : "Includes correct answers marked with checkmarks, plus explanations and tips. Perfect for instructors."}
+                ? "Questions only. Perfect for giving to students to complete."
+                : "Includes correct answers, explanations, and tips. Perfect for instructors."}
             </p>
           </div>
         </div>
