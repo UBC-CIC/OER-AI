@@ -365,7 +365,7 @@ export default function TextbookDetailsPage() {
       {/* Header */}
       <header className="bg-gradient-to-r from-[#2c5f7c] to-[#3d7a9a] text-white h-[70px] flex items-center px-6 shadow-md z-10 justify-between">
         <div className="flex items-center gap-2">
-          <BookOpen className="h-6 w-6" />
+          <img src="/src/assets/OER_logo_black.png" alt="OpenED AI Logo" className="h-6 w-6" />
           <h1 className="text-xl font-semibold">OpenED AI Admin</h1>
         </div>
         <Button

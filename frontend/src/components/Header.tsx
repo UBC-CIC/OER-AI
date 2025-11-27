@@ -8,10 +8,13 @@ import {
 import { Menu, X } from "lucide-react";
 import { useSidebar } from "@/providers/sidebar";
 import { useMode, type Mode } from "@/providers/mode";
+import { useNavigate } from "react-router";
+import logoImage from "@/assets/OER_logo_black.png";
 
 export default function Header() {
   const { mobileOpen, toggleMobile } = useSidebar();
   const { mode, setMode } = useMode();
+  const navigate = useNavigate();
 
   return (
     <header className="z-50 h-[70px] fixed top-0 w-screen border-b border-white/10 bg-gradient-to-r from-[#2c5f7c] to-[#3d7a9a]">
@@ -30,7 +33,15 @@ export default function Header() {
               <Menu className="h-5 w-5 text-white" />
             )}
           </button>
-          <h1 className="text-xl font-semibold text-white">OpenED AI</h1>
+          <div 
+            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => navigate("/")}
+          >
+            <img src={logoImage} alt="OpenED AI Logo" className="h-6 w-6" />
+            <h1 className="text-xl font-semibold text-white">
+              OpenED AI
+            </h1>
+          </div>
         </div>
         <Select value={mode} onValueChange={(v) => setMode(v as Mode)}>
           <SelectTrigger className="w-fit border-primary-foreground bg-transparent text-white  [&_svg:not([class*='text-'])]:text-primary-foreground hover:bg-white/10">
