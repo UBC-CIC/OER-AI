@@ -59,7 +59,8 @@ export function MCQEditableContainer({
         ],
       },
     };
-    setQuestions([...questions, newQuestion]);
+    // Add new question at the beginning instead of the end
+    setQuestions([newQuestion, ...questions]);
   };
 
   const handleDeleteQuestion = (index: number) => {

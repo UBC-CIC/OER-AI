@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { BookOpen } from "lucide-react";
 import AdminSidebar from "@/components/Admin/AdminSidebar";
 import TextbookManagement from "@/components/Admin/TextbookManagement";
 import Analytics from "@/components/Admin/Analytics";
 import AISettings from "@/components/Admin/AISettings";
+import logoImage from "@/assets/OER_logo_black.png";
 
 // --- Components ---
 
@@ -17,7 +17,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="bg-gradient-to-r from-[#2c5f7c] to-[#3d7a9a] text-white h-[70px] flex items-center px-6 shadow-md z-10">
         <div className="flex items-center gap-2">
-          <BookOpen className="h-6 w-6" />
+          <img src={logoImage} alt="OpenED AI Logo" className="h-6 w-auto" />
           <h1 className="text-xl font-semibold">OpenED AI Admin</h1>
         </div>
       </header>

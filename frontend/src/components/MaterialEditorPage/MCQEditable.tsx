@@ -177,7 +177,6 @@ export function MCQEditable({
         <Textarea
           value={question.params.question}
           onChange={(e) => handleQuestionChange(e.target.value)}
-          autoFocus
           className="text-sm py-1 border-text-muted-foreground min-h-fit"
         />
       </CardHeader>
