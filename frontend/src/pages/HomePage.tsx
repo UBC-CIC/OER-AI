@@ -13,6 +13,7 @@ type TextbookForCard = {
   title: string;
   author: string[];
   category: string;
+  logo_url?: string;
 };
 
 export default function HomePage() {
@@ -60,6 +61,7 @@ export default function HomePage() {
       title: book.title,
       author: book.authors || [],
       category: book.level || "General",
+      logo_url: book.textbook_logo_url,
     }));
 
     const q = userSearch.trim().toLowerCase();

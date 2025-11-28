@@ -27,7 +27,7 @@ import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 
 interface ApiGatewayStackProps extends cdk.StackProps {
   ecrRepositories: { [key: string]: ecr.Repository };
-  dataPipelineStack: DataPipelineStack;
+  csvBucket: s3.Bucket;
 }
 
 export class ApiGatewayStack extends cdk.Stack {
@@ -680,6 +680,33 @@ export class ApiGatewayStack extends cdk.Stack {
     const apiGW_publicTokenFunction = publicTokenLambda.node
       .defaultChild as lambda.CfnFunction;
     apiGW_publicTokenFunction.overrideLogicalId("PublicTokenFunction");
+
+    const presignedUrlFunction = new lambda.Function(
+      this,
+      `${id}-PresignedUrlFunction`,
+      {
+        runtime: lambda.Runtime.PYTHON_3_11,
+        code: lambda.Code.fromAsset("lambda/generatePresignedURL"),
+        handler: "generatePreSignedURL.lambda_handler",
+        timeout: Duration.seconds(30),
+        memorySize: 128,
+        environment: {
+          BUCKET: props.csvBucket.bucketName,
+          REGION: this.region,
+        },
+        role: lambdaRole,
+      }
+    );
+
+    props.csvBucket.grantPut(presignedUrlFunction);
+
+    presignedUrlFunction.grantInvoke(
+      new iam.ServicePrincipal("apigateway.amazonaws.com")
+    );
+
+    const apiGW_presignedUrlFunction = presignedUrlFunction.node
+      .defaultChild as lambda.CfnFunction;
+    apiGW_presignedUrlFunction.overrideLogicalId("presignedUrlFunction");
 
     const preSignupLambda = new lambda.Function(this, `preSignupLambda`, {
       runtime: lambda.Runtime.NODEJS_22_X,

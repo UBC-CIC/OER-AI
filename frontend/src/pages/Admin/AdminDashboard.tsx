@@ -3,13 +3,14 @@ import AdminSidebar from "@/components/Admin/AdminSidebar";
 import TextbookManagement from "@/components/Admin/TextbookManagement";
 import Analytics from "@/components/Admin/Analytics";
 import AISettings from "@/components/Admin/AISettings";
+import FAQsAndPrompts from "@/components/Admin/FAQsAndPrompts";
 import logoImage from "@/assets/OER_logo_black.png";
 
 // --- Components ---
 
 export default function AdminDashboard() {
   const [activeView, setActiveView] = useState<
-    "dashboard" | "analytics" | "ai-settings"
+    "dashboard" | "analytics" | "ai-settings" | "faqs-prompts"
   >("dashboard");
 
   return (
@@ -30,6 +31,7 @@ export default function AdminDashboard() {
           {activeView === "dashboard" && <TextbookManagement />}
           {activeView === "analytics" && <Analytics />}
           {activeView === "ai-settings" && <AISettings />}
+          {activeView === "faqs-prompts" && <FAQsAndPrompts />}
         </main>
       </div>
     </div>

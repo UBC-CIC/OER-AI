@@ -6035,6 +6035,49 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
+  /generate-presigned-url:
+    <<: *commonOptions
+    get:
+      tags:
+        - Admin
+      summary: Generate a presigned URL for file upload
+      operationId: generate_presigned_url
+      security:
+        - adminAuthorizer: []
+      parameters:
+        - name: file_name
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: content_type
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Presigned URL generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  presignedurl:
+                    type: string
+                  key:
+                    type: string
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${presignedUrlFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
 components:
   securitySchemes:
     adminAuthorizer:

@@ -1,12 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { LayoutDashboard, BarChart3, LogOut, Bot } from "lucide-react";
+import {
+  LayoutDashboard,
+  BarChart3,
+  LogOut,
+  Bot,
+  MessageSquare,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthService } from "@/functions/authService";
 
 type AdminSidebarProps = {
-  activeView: "dashboard" | "analytics" | "ai-settings";
-  onViewChange: (view: "dashboard" | "analytics" | "ai-settings") => void;
+  activeView: "dashboard" | "analytics" | "ai-settings" | "faqs-prompts";
+  onViewChange: (
+    view: "dashboard" | "analytics" | "ai-settings" | "faqs-prompts"
+  ) => void;
 };
 
 export default function AdminSidebar({
@@ -79,6 +87,18 @@ export default function AdminSidebar({
         >
           <Bot className="mr-2 h-4 w-4" />
           AI Settings
+        </Button>
+        <Button
+          variant={activeView === "faqs-prompts" ? "secondary" : "ghost"}
+          className={`w-full justify-start ${
+            activeView === "faqs-prompts"
+              ? "bg-[#2c5f7c]/10 text-[#2c5f7c] font-medium"
+              : "text-gray-600"
+          }`}
+          onClick={() => onViewChange("faqs-prompts")}
+        >
+          <MessageSquare className="mr-2 h-4 w-4" />
+          FAQs & Prompts
         </Button>
       </div>
 

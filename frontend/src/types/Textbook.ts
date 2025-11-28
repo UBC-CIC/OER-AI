@@ -8,5 +8,6 @@ export interface Textbook {
   language?: string;
   level?: string;
   source_url?: string;
+  textbook_logo_url?: string;
   created_at: string;
 }

@@ -14,6 +14,7 @@ type Textbook = {
   title: string;
   author: string[];
   category: string;
+  logo_url?: string;
 };
 
 // Proper formatting of authors tags
@@ -39,7 +40,25 @@ export default function TextbookCard({ textbook }: { textbook: Textbook }) {
       >
         {/* Visual Header / Cover Placeholder */}
         <div className="relative h-32 w-full bg-gradient-to-br from-[#2c5f7c] to-[#3d7a9a] flex items-center justify-center overflow-hidden group-hover:from-[#234b62] group-hover:to-[#326580] transition-colors border-b">
-          <Library className="h-12 w-12 text-white/20 group-hover:scale-110 group-hover:text-white/30 transition-all duration-500" />
+          {textbook.logo_url ? (
+            <img
+              src={textbook.logo_url}
+              alt={`${textbook.title} logo`}
+              className="h-full w-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
+              onError={(e) => {
+                // Fallback to Library icon if image fails to load
+                e.currentTarget.style.display = "none";
+                const fallback = e.currentTarget
+                  .nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = "block";
+              }}
+            />
+          ) : null}
+          <Library
+            className={`h-12 w-12 text-white/20 group-hover:scale-110 group-hover:text-white/30 transition-all duration-500 ${
+              textbook.logo_url ? "hidden" : ""
+            }`}
+          />
 
           <div className="absolute top-3 right-3 max-w-[70%]">
             <Tooltip>
