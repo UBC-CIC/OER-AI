@@ -7,9 +7,9 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { EssayEditable } from "./EssayEditable";
+import { FlashcardEditable } from "./FlashcardEditable";
 import { ExportDialog } from "./ExportDialog";
-import type { I5HPEssayQuestion } from "@/types/MaterialEditor";
+import type { IH5PFlashcard, IH5PFlashcardCard } from "@/types/MaterialEditor";
 import { ChevronDown, ChevronUp, Download, Plus, Trash2 } from "lucide-react";
 import {
   Select,
@@ -19,66 +19,50 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
-interface EssayEditableContainerProps {
-  initialQuestions: I5HPEssayQuestion[];
-  exportToH5P: (questions: I5HPEssayQuestion[]) => void;
+interface FlashcardEditableContainerProps {
+  initialFlashcards: IH5PFlashcard;
+  exportToH5P?: (flashcards: IH5PFlashcard[]) => void;
   onDelete: () => void;
   textbookId?: string;
 }
 
-export function EssayEditableContainer({
-  initialQuestions,
-  // exportToH5P: onExport,
+export function FlashcardEditableContainer({
+  initialFlashcards,
+  exportToH5P,
   onDelete,
-  textbookId,
-}: EssayEditableContainerProps) {
-  const [questions, setQuestions] =
-    useState<I5HPEssayQuestion[]>(initialQuestions);
+  textbookId: _textbookId,
+}: FlashcardEditableContainerProps) {
+  const [flashcards, setFlashcards] = useState<IH5PFlashcardCard[]>(
+    initialFlashcards.params.cards
+  );
   const [isExpanded, setIsExpanded] = useState(true);
-  const [title, setTitle] = useState("Untitled Essay Set");
+  const [title, setTitle] = useState("Untitled Flashcard Set");
   const [exportFormat, setExportFormat] = useState<string>("json");
   const [showExportDialog, setShowExportDialog] = useState(false);
 
-  const handleQuestionUpdate = (
+  const handleFlashcardUpdate = (
     index: number,
-    updatedQuestion: I5HPEssayQuestion
+    updatedFlashcard: IH5PFlashcardCard
   ) => {
-    const newQuestions = [...questions];
-    newQuestions[index] = updatedQuestion;
-    setQuestions(newQuestions);
+    const newFlashcards = [...flashcards];
+    newFlashcards[index] = updatedFlashcard;
+    setFlashcards(newFlashcards);
   };
 
-  const handleAddQuestion = () => {
-    const newQuestion: I5HPEssayQuestion = {
-      library: "H5P.Essay 1.5",
-      params: {
-        taskDescription: "New essay question?",
-        keywords: [
-          {
-            keyword: "example",
-            alternatives: [],
-            options: {
-              points: 1,
-              occurrences: 1,
-              caseSensitive: false,
-              forgiveMistakes: true,
-              feedbackIncluded: "",
-              feedbackMissed: "",
-              feedbackIncludedWord: "keyword",
-              feedbackMissedWord: "keyword",
-            },
-          },
-        ],
-      },
+  const handleAddFlashcard = () => {
+    const newFlashcard: IH5PFlashcardCard = {
+      text: "",
+      answer: "",
+      tip: "",
     };
-    // Add new question at the beginning instead of the end
-    setQuestions([newQuestion, ...questions]);
+    // Add new flashcard at the beginning instead of the end
+    setFlashcards([newFlashcard, ...flashcards]);
   };
 
-  const handleDeleteQuestion = (index: number) => {
-    if (questions.length <= 1) return; // enforce at least 1
-    const newQuestions = questions.filter((_, i) => i !== index);
-    setQuestions(newQuestions);
+  const handleDeleteFlashcard = (index: number) => {
+    if (flashcards.length <= 1) return; // enforce at least 1
+    const newFlashcards = flashcards.filter((_, i) => i !== index);
+    setFlashcards(newFlashcards);
   };
 
   const downloadFile = (
@@ -97,74 +81,36 @@ export function EssayEditableContainer({
     URL.revokeObjectURL(url);
   };
 
-  const exportAsJSON = (qs = questions) => {
-    const contents = JSON.stringify({ questions: qs }, null, 2);
-    downloadFile(contents, `${title || "essay-set"}.json`, "application/json");
+  const exportAsJSON = () => {
+    const flashcardSet: IH5PFlashcard = {
+      library: "H5P.Flashcards 1.5",
+      params: {
+        cards: flashcards,
+        description: title,
+      },
+    };
+    const contents = JSON.stringify(
+      { title, flashcards: flashcardSet },
+      null,
+      2
+    );
+    downloadFile(
+      contents,
+      `${title || "flashcard-set"}.json`,
+      "application/json"
+    );
   };
 
-  const exportAsH5P = async () => {
-    try {
-      // Validate textbook ID
-      if (!textbookId) {
-        alert("Please select a textbook before exporting H5P");
-        return;
-      }
-
-      // Get auth token
-      const tokenResp = await fetch(
-        `${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`
-      );
-      if (!tokenResp.ok) throw new Error("Failed to get public token");
-      const { token } = await tokenResp.json();
-
-      // Send questions in H5P format (Lambda expects this structure)
-      const response = await fetch(
-        `${
-          import.meta.env.VITE_API_ENDPOINT
-        }/textbooks/${textbookId}/practice_materials/export-h5p`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            title: title || "Essay Set",
-            questions: questions, // Send in original H5P format
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Failed to export H5P package");
-      }
-
-      const data = await response.json();
-
-      // Decode base64 and download
-      const binaryString = atob(data.content);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      const blob = new Blob([bytes], { type: "application/zip" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = data.filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error exporting H5P:", error);
-      alert(
-        `Failed to export H5P: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
+  const exportAsH5P = () => {
+    if (exportToH5P) {
+      const flashcardSet: IH5PFlashcard = {
+        library: "H5P.Flashcards 1.5",
+        params: {
+          cards: flashcards,
+          description: title,
+        },
+      };
+      exportToH5P([flashcardSet]);
     }
   };
 
@@ -176,6 +122,7 @@ export function EssayEditableContainer({
 
     if (exportFormat === "h5p") {
       exportAsH5P();
+      return;
     }
 
     if (exportFormat === "pdf") {
@@ -211,8 +158,8 @@ export function EssayEditableContainer({
                 className="text-lg font-semibold border-none shadow-none p-0 h-auto focus-visible:ring-0"
               />
               <p className="text-sm text-muted-foreground mt-1">
-                {questions.length}{" "}
-                {questions.length === 1 ? "essay question" : "essay questions"}
+                {flashcards.length}{" "}
+                {flashcards.length === 1 ? "flashcard" : "flashcards"}
               </p>
             </div>
           </div>
@@ -234,15 +181,15 @@ export function EssayEditableContainer({
       {isExpanded && (
         <>
           <CardContent className="space-y-4">
-            {questions.map((question, index) => (
-              <EssayEditable
+            {flashcards.map((flashcard, index) => (
+              <FlashcardEditable
                 key={index}
-                question={question}
-                questionNumber={index + 1}
-                onUpdate={(updatedQuestion) =>
-                  handleQuestionUpdate(index, updatedQuestion)
+                flashcard={flashcard}
+                cardNumber={index + 1}
+                onUpdate={(updatedFlashcard) =>
+                  handleFlashcardUpdate(index, updatedFlashcard)
                 }
-                onDelete={() => handleDeleteQuestion(index)}
+                onDelete={() => handleDeleteFlashcard(index)}
               />
             ))}
           </CardContent>
@@ -250,11 +197,11 @@ export function EssayEditableContainer({
           <CardFooter className="flex flex-col md:flex-row gap-2 justify-end">
             <Button
               variant="outline"
-              onClick={handleAddQuestion}
+              onClick={handleAddFlashcard}
               className="cursor-pointer w-full sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Question
+              Add Flashcard
             </Button>
 
             <div className="flex w-full md:w-fit gap-2">
@@ -269,9 +216,9 @@ export function EssayEditableContainer({
                   <SelectItem className="cursor-pointer" value="json">
                     JSON
                   </SelectItem>
-                  <SelectItem className="cursor-pointer" value="h5p">
+                  {/* <SelectItem className="cursor-pointer" value="h5p">
                     H5P
-                  </SelectItem>
+                  </SelectItem> */}
                   <SelectItem className="cursor-pointer" value="pdf">
                     PDF
                   </SelectItem>
@@ -289,11 +236,20 @@ export function EssayEditableContainer({
           </CardFooter>
         </>
       )}
-      
+
       <ExportDialog
         open={showExportDialog}
         onOpenChange={setShowExportDialog}
-        questionSet={{ questions }}
+        questionSet={{
+          questions: [
+            {
+              library: "H5P.Flashcards 1.5",
+              params: {
+                cards: flashcards,
+              },
+            },
+          ],
+        }}
         title={title}
       />
     </Card>

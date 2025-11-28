@@ -241,7 +241,6 @@ export function EssayEditable({
         <Textarea
           value={question.params.taskDescription}
           onChange={(e) => handleTaskDescriptionChange(e.target.value)}
-          autoFocus
           className="text-sm py-1 border-text-muted-foreground min-h-[80px]"
           placeholder="Enter the essay question or task description..."
         />

@@ -49,12 +49,7 @@ export default function SideBar({
 
   const SidebarContent = () => (
     <>
-      <Card
-        className="cursor-pointer py-[10px] hover:bg-gray-50 gap-2 mb-4"
-        onClick={() => {
-          navigate("/");
-        }}
-      >
+      <Card className="py-[10px] gap-2 mb-4">
         <CardContent
           className="line-clamp-2 leading-[1.25] overflow-hidden"
           style={{ minHeight: `calc(1em * 1.25 * 2)` }}

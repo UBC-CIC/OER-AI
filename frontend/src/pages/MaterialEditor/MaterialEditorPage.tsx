@@ -1,230 +1,30 @@
 import { useState } from "react";
 import { MCQEditableContainer } from "@/components/MaterialEditorPage/MCQEditableContainer";
 import { EssayEditableContainer } from "@/components/MaterialEditorPage/EssayEditableContainer";
-import type { I5HPMultiChoiceQuestion, I5HPEssayQuestion, IH5PQuestion } from "@/types/MaterialEditor";
-import { isMultiChoiceQuestion, isEssayQuestion } from "@/types/MaterialEditor";
+import { FlashcardEditableContainer } from "@/components/MaterialEditorPage/FlashcardEditableContainer";
+import type {
+  I5HPMultiChoiceQuestion,
+  I5HPEssayQuestion,
+  IH5PFlashcard,
+  IH5PQuestion,
+} from "@/types/MaterialEditor";
+import {
+  isMultiChoiceQuestion,
+  isEssayQuestion,
+  isFlashcard,
+} from "@/types/MaterialEditor";
 import { Card, CardDescription } from "@/components/ui/card";
 import { MaterialEditorForm } from "@/components/MaterialEditorPage/MaterialEditorForm";
 import { useTextbookView } from "@/providers/textbookView";
 
-// Dummy H5P MCQ question data
-const dummyMCQQuestions: I5HPMultiChoiceQuestion[] = [
-  {
-    library: "H5P.MultiChoice 1.17",
-    params: {
-      question: "What is the derivative of x²?",
-      answers: [
-        {
-          text: "A. x",
-          correct: false,
-          tipsAndFeedback: {
-            tip: "Remember the power rule: bring down the exponent and subtract 1",
-            chosenFeedback: "Not quite. The power rule states that d/dx(xⁿ) = n·x^(n-1)",
-            notChosenFeedback: "",
-          },
-        },
-        {
-          text: "B. 2x",
-          correct: true,
-          tipsAndFeedback: {
-            tip: "Use the power rule",
-            chosenFeedback: "Correct! Using the power rule: d/dx(x²) = 2·x^(2-1) = 2x",
-            notChosenFeedback: "This is the correct answer - review the power rule",
-          },
-        },
-        {
-          text: "C. x²",
-          correct: false,
-          tipsAndFeedback: {
-            tip: "The derivative changes the function",
-            chosenFeedback: "Not quite. This is the original function, not its derivative",
-            notChosenFeedback: "",
-          },
-        },
-        {
-          text: "D. 2",
-          correct: false,
-          tipsAndFeedback: {
-            tip: "Don't forget the variable x",
-            chosenFeedback: "Not correct. The derivative should still contain the variable x",
-            notChosenFeedback: "",
-          },
-        },
-      ],
-    },
-  },
-  {
-    library: "H5P.MultiChoice 1.17",
-    params: {
-      question: "What is the integral of 2x?",
-      answers: [
-        {
-          text: "A. x² + C",
-          correct: true,
-          tipsAndFeedback: {
-            tip: "Integration is the reverse of differentiation",
-            chosenFeedback: "Correct! The integral of 2x is x² + C",
-            notChosenFeedback: "This is the correct answer",
-          },
-        },
-        {
-          text: "B. 2x² + C",
-          correct: false,
-          tipsAndFeedback: {
-            tip: "Check your calculation",
-            chosenFeedback: "Not quite. This would be the integral of 4x",
-            notChosenFeedback: "",
-          },
-        },
-        {
-          text: "C. x + C",
-          correct: false,
-          tipsAndFeedback: {
-            tip: "Remember to account for the coefficient",
-            chosenFeedback: "Not quite. You need to consider the coefficient 2",
-            notChosenFeedback: "",
-          },
-        },
-      ],
-    },
-  },
-];
-
-// Dummy H5P Essay question data
-const dummyEssayQuestions: I5HPEssayQuestion[] = [
-  {
-    library: "H5P.Essay 1.5",
-    params: {
-      taskDescription: "Explain the concept of photosynthesis and describe the main stages involved in the process.",
-      keywords: [
-        {
-          keyword: "photosynthesis",
-          alternatives: ["photo synthesis", "photosynthetic process"],
-          options: {
-            points: 2,
-            occurrences: 1,
-            caseSensitive: false,
-            forgiveMistakes: true,
-            feedbackIncluded: "Good! You mentioned photosynthesis.",
-            feedbackMissed: "Don't forget to define what photosynthesis is.",
-            feedbackIncludedWord: "keyword",
-            feedbackMissedWord: "keyword",
-          },
-        },
-        {
-          keyword: "light-dependent",
-          alternatives: ["light dependent", "light reaction", "light reactions"],
-          options: {
-            points: 3,
-            occurrences: 1,
-            caseSensitive: false,
-            forgiveMistakes: true,
-            feedbackIncluded: "Excellent! You identified the light-dependent reactions.",
-            feedbackMissed: "Remember to mention the light-dependent stage.",
-            feedbackIncludedWord: "keyword",
-            feedbackMissedWord: "keyword",
-          },
-        },
-        {
-          keyword: "Calvin cycle",
-          alternatives: ["calvin-cycle", "light-independent", "light independent", "dark reaction"],
-          options: {
-            points: 3,
-            occurrences: 1,
-            caseSensitive: false,
-            forgiveMistakes: true,
-            feedbackIncluded: "Great! You mentioned the Calvin cycle.",
-            feedbackMissed: "Don't forget the Calvin cycle (light-independent reactions).",
-            feedbackIncludedWord: "alternative",
-            feedbackMissedWord: "keyword",
-          },
-        },
-        {
-          keyword: "chloroplast",
-          alternatives: ["chloroplasts"],
-          options: {
-            points: 2,
-            occurrences: 1,
-            caseSensitive: false,
-            forgiveMistakes: true,
-            feedbackIncluded: "Good! You identified where photosynthesis occurs.",
-            feedbackMissed: "Remember to mention where photosynthesis takes place.",
-            feedbackIncludedWord: "keyword",
-            feedbackMissedWord: "none",
-          },
-        },
-      ],
-    },
-  },
-  {
-    library: "H5P.Essay 1.5",
-    params: {
-      taskDescription: "Describe Newton's First Law of Motion and provide a real-world example.",
-      keywords: [
-        {
-          keyword: "inertia",
-          alternatives: ["inertial"],
-          options: {
-            points: 3,
-            occurrences: 1,
-            caseSensitive: false,
-            forgiveMistakes: true,
-            feedbackIncluded: "Excellent! You mentioned inertia.",
-            feedbackMissed: "The concept of inertia is key to Newton's First Law.",
-            feedbackIncludedWord: "keyword",
-            feedbackMissedWord: "keyword",
-          },
-        },
-        {
-          keyword: "rest",
-          alternatives: ["at rest", "stationary"],
-          options: {
-            points: 2,
-            occurrences: 1,
-            caseSensitive: false,
-            forgiveMistakes: true,
-            feedbackIncluded: "Good! You mentioned objects at rest.",
-            feedbackMissed: "Remember to discuss what happens to objects at rest.",
-            feedbackIncludedWord: "alternative",
-            feedbackMissedWord: "keyword",
-          },
-        },
-        {
-          keyword: "motion",
-          alternatives: ["moving", "movement"],
-          options: {
-            points: 2,
-            occurrences: 1,
-            caseSensitive: false,
-            forgiveMistakes: true,
-            feedbackIncluded: "Good! You discussed motion.",
-            feedbackMissed: "Don't forget to explain what happens to objects in motion.",
-            feedbackIncludedWord: "keyword",
-            feedbackMissedWord: "keyword",
-          },
-        },
-        {
-          keyword: "force",
-          alternatives: ["forces", "external force"],
-          options: {
-            points: 3,
-            occurrences: 1,
-            caseSensitive: false,
-            forgiveMistakes: true,
-            feedbackIncluded: "Excellent! You mentioned the role of force.",
-            feedbackMissed: "Remember to discuss what changes an object's state of motion.",
-            feedbackIncludedWord: "answer",
-            feedbackMissedWord: "none",
-          },
-        },
-      ],
-    },
-  },
-];
-
 export default function MaterialEditorPage() {
-  const [mcqQuestionSets, setMcqQuestionSets] = useState<I5HPMultiChoiceQuestion[][]>([dummyMCQQuestions]);
-  const [essayQuestionSets, setEssayQuestionSets] = useState<I5HPEssayQuestion[][]>([dummyEssayQuestions]);
+  const [mcqQuestionSets, setMcqQuestionSets] = useState<
+    I5HPMultiChoiceQuestion[][]
+  >([]);
+  const [essayQuestionSets, setEssayQuestionSets] = useState<
+    I5HPEssayQuestion[][]
+  >([]);
+  const [flashcardSets, setFlashcardSets] = useState<IH5PFlashcard[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { textbook } = useTextbookView();
@@ -232,27 +32,36 @@ export default function MaterialEditorPage() {
   const handleQuizDelete = (index: number) => {
     const newQuestionSets = mcqQuestionSets.filter((_, i) => i !== index);
     setMcqQuestionSets(newQuestionSets);
-  }
+  };
 
   const handleEssayDelete = (index: number) => {
     const newQuestionSets = essayQuestionSets.filter((_, i) => i !== index);
     setEssayQuestionSets(newQuestionSets);
-  }
+  };
+
+  const handleFlashcardDelete = (index: number) => {
+    const newFlashcardSets = flashcardSets.filter((_, i) => i !== index);
+    setFlashcardSets(newFlashcardSets);
+  };
 
   const handleGenerate = async (formData: any) => {
     console.log("Generate form data:", formData);
     setErrorMsg(null);
-    
+
     if (!textbook?.id) {
-      setErrorMsg("Please select a textbook before generating practice materials.");
+      setErrorMsg(
+        "Please select a textbook before generating practice materials."
+      );
       return;
     }
 
     try {
       setIsGenerating(true);
-      
+
       // Get public token
-      const tokenResp = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
+      const tokenResp = await fetch(
+        `${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`
+      );
       if (!tokenResp.ok) throw new Error("Failed to get public token");
       const { token } = await tokenResp.json();
 
@@ -277,7 +86,9 @@ export default function MaterialEditorPage() {
 
       // Call practice materials API
       const resp = await fetch(
-        `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${textbook.id}/practice_materials`,
+        `${import.meta.env.VITE_API_ENDPOINT}/textbooks/${
+          textbook.id
+        }/practice_materials`,
         {
           method: "POST",
           headers: {
@@ -294,55 +105,70 @@ export default function MaterialEditorPage() {
       }
 
       const data = await resp.json();
-      
+
       // Convert based on material type
       if (formData.materialType === "flashcards" && data.cards) {
-        // Flashcards are displayed in Essay format for H5P - not implemented yet
-        // For now, just log it
-        console.log("Flashcards generated:", data.cards);
-        alert("Flashcard export to H5P is not yet implemented. Generated flashcards are logged to console.");
+        // Convert flashcards to H5P format
+        const h5pFlashcard: IH5PFlashcard = {
+          library: "H5P.Flashcards 1.5",
+          params: {
+            cards: data.cards.map((card: any) => ({
+              text: card.front || card.text || "",
+              answer: card.back || card.answer || "",
+              tip: card.tip || "",
+            })),
+            description: formData.topic || "Flashcard Set",
+          },
+        };
+
+        setFlashcardSets((prev) => [h5pFlashcard, ...prev]);
       } else if (formData.materialType === "shortAnswer" && data.questions) {
         // Convert short answer to H5P Essay format
-        const h5pQuestions: I5HPEssayQuestion[] = data.questions.map((q: any) => ({
-          library: "H5P.Essay 1.5",
-          params: {
-            taskDescription: q.questionText + (q.context ? `\n\nContext: ${q.context}` : ""),
-            keywords: (q.keyPoints || []).map((kp: string) => ({
-              keyword: kp,
-              alternatives: [],
-              options: {
-                points: 1,
-                occurrences: 1,
-                caseSensitive: false,
-                forgiveMistakes: true,
-                feedbackIncluded: `Good! You mentioned: ${kp}`,
-                feedbackMissed: `Consider including: ${kp}`,
-                feedbackIncludedWord: "keyword" as const,
-                feedbackMissedWord: "keyword" as const,
-              },
-            })),
-          },
-        }));
-        
+        const h5pQuestions: I5HPEssayQuestion[] = data.questions.map(
+          (q: any) => ({
+            library: "H5P.Essay 1.5",
+            params: {
+              taskDescription:
+                q.questionText + (q.context ? `\n\nContext: ${q.context}` : ""),
+              keywords: (q.keyPoints || []).map((kp: string) => ({
+                keyword: kp,
+                alternatives: [],
+                options: {
+                  points: 1,
+                  occurrences: 1,
+                  caseSensitive: false,
+                  forgiveMistakes: true,
+                  feedbackIncluded: `Good! You mentioned: ${kp}`,
+                  feedbackMissed: `Consider including: ${kp}`,
+                  feedbackIncludedWord: "keyword" as const,
+                  feedbackMissedWord: "keyword" as const,
+                },
+              })),
+            },
+          })
+        );
+
         setEssayQuestionSets((prev) => [h5pQuestions, ...prev]);
       } else if (data.questions) {
         // Convert MCQ to H5P format
-        const h5pQuestions: I5HPMultiChoiceQuestion[] = data.questions.map((q: any) => ({
-          library: "H5P.MultiChoice 1.17",
-          params: {
-            question: q.questionText,
-            answers: q.options.map((opt: any) => ({
-              text: opt.text,
-              correct: opt.id === q.correctAnswer,
-              tipsAndFeedback: {
-                tip: "",
-                chosenFeedback: opt.explanation || "",
-                notChosenFeedback: "",
-              },
-            })),
-          },
-        }));
-        
+        const h5pQuestions: I5HPMultiChoiceQuestion[] = data.questions.map(
+          (q: any) => ({
+            library: "H5P.MultiChoice 1.17",
+            params: {
+              question: q.questionText,
+              answers: q.options.map((opt: any) => ({
+                text: opt.text,
+                correct: opt.id === q.correctAnswer,
+                tipsAndFeedback: {
+                  tip: "",
+                  chosenFeedback: opt.explanation || "",
+                  notChosenFeedback: "",
+                },
+              })),
+            },
+          })
+        );
+
         setMcqQuestionSets((prev) => [h5pQuestions, ...prev]);
       }
     } catch (e) {
@@ -368,8 +194,14 @@ export default function MaterialEditorPage() {
     } else if (isEssayQuestion(firstQuestion)) {
       console.log("Exporting Essay questions:", questions);
       // TODO: call api to export Essay questions as h5p
+    } else if (isFlashcard(firstQuestion)) {
+      console.log("Exporting Flashcard questions:", questions);
+      // TODO: call api to export Flashcard questions as h5p
     } else {
-      console.error("Unknown question type:", (firstQuestion as IH5PQuestion).library);
+      console.error(
+        "Unknown question type:",
+        (firstQuestion as IH5PQuestion).library
+      );
     }
   };
 
@@ -379,7 +211,9 @@ export default function MaterialEditorPage() {
         <div className="w-full md:w-[30%]">
           <MaterialEditorForm onGenerate={handleGenerate} />
           {isGenerating && (
-            <p className="text-sm text-muted-foreground mt-2">Generating practice materials...</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Generating practice materials...
+            </p>
           )}
           {errorMsg && (
             <p className="text-sm text-destructive mt-2">{errorMsg}</p>
@@ -388,30 +222,41 @@ export default function MaterialEditorPage() {
 
         <div className="w-full md:w-[70%] space-y-6">
           <h2 className="text-2xl font-semibold">Practice Questions</h2>
-          {mcqQuestionSets.length === 0 && essayQuestionSets.length === 0 ? (
+          {mcqQuestionSets.length === 0 &&
+          essayQuestionSets.length === 0 &&
+          flashcardSets.length === 0 ? (
             <Card>
               <CardDescription className="flex flex-col justify-center items-center p-6">
-                <p className="text-center text-muted-foreground">No practice materials have been generated for this session</p>
-                <p className="text-destructive text-center mt-2">Reminder: All Sessions are temporary and will not persist after exiting</p>
+                <p className="text-center text-muted-foreground">
+                  No practice materials have been generated for this session
+                </p>
+                <p className="text-destructive text-center mt-2">
+                  Reminder: All Sessions are temporary and will not persist
+                  after exiting
+                </p>
               </CardDescription>
             </Card>
           ) : (
             <>
               {mcqQuestionSets.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-xl font-semibold">Multiple Choice Questions</h3>
+                  <h3 className="text-xl font-semibold">
+                    Multiple Choice Questions
+                  </h3>
                   {mcqQuestionSets.map((questions, index) => (
                     <MCQEditableContainer
                       key={`mcq-${index}`}
                       initialQuestions={questions}
                       exportToH5P={handleExportToH5P}
-                      onDelete={() => {handleQuizDelete(index)}}
+                      onDelete={() => {
+                        handleQuizDelete(index);
+                      }}
                       textbookId={textbook?.id}
                     />
                   ))}
                 </div>
               )}
-              
+
               {essayQuestionSets.length > 0 && (
                 <div className="space-y-4">
                   <h3 className="text-xl font-semibold">Essay Questions</h3>
@@ -420,7 +265,26 @@ export default function MaterialEditorPage() {
                       key={`essay-${index}`}
                       initialQuestions={questions}
                       exportToH5P={handleExportToH5P}
-                      onDelete={() => {handleEssayDelete(index)}}
+                      onDelete={() => {
+                        handleEssayDelete(index);
+                      }}
+                      textbookId={textbook?.id}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {flashcardSets.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold">Flashcards</h3>
+                  {flashcardSets.map((flashcard, index) => (
+                    <FlashcardEditableContainer
+                      key={`flashcard-${index}`}
+                      initialFlashcards={flashcard}
+                      exportToH5P={handleExportToH5P}
+                      onDelete={() => {
+                        handleFlashcardDelete(index);
+                      }}
                       textbookId={textbook?.id}
                     />
                   ))}

@@ -967,7 +967,7 @@ export default function AIChatPage() {
                   What can I help with?
                 </h1>
 
-                {/* Source URL Button */}
+                {/* Source URL Button
                 {textbook?.source_url && (
                   <div className="flex justify-center mb-12">
                     <Button
@@ -986,7 +986,7 @@ export default function AIChatPage() {
                       </a>
                     </Button>
                   </div>
-                )}
+                )} */}
               </>
             ) : (
               /* messages area */

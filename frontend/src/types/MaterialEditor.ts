@@ -82,9 +82,35 @@ export interface I5HPEssayQuestion {
 }
 
 /**
+ * Defines a single flashcard with front and back content
+ */
+export interface IH5PFlashcardCard {
+  text: string;      // Front of card (question/term)
+  answer: string;    // Back of card (answer/definition)
+  tip?: string;      // Optional hint
+}
+
+/**
+ * Parameters for H5P Flashcards
+ */
+export interface IH5PFlashcardParams {
+  cards: IH5PFlashcardCard[];
+  description?: string;
+}
+
+/**
+ * H5P Flashcard question structure
+ */
+export interface IH5PFlashcard {
+  /** * The H5P library type, e.g., "H5P.Flashcards 1.5". */
+  library: string;
+  params: IH5PFlashcardParams;
+}
+
+/**
  * Union type for all H5P question types
  */
-export type IH5PQuestion = I5HPMultiChoiceQuestion | I5HPEssayQuestion;
+export type IH5PQuestion = I5HPMultiChoiceQuestion | I5HPEssayQuestion | IH5PFlashcard;
 
 /**
  * Type guard to check if a question is a multiple choice question
@@ -101,10 +127,17 @@ export function isEssayQuestion(question: IH5PQuestion): question is I5HPEssayQu
 }
 
 /**
+ * Type guard to check if a question is a flashcard
+ */
+export function isFlashcard(question: IH5PQuestion): question is IH5PFlashcard {
+  return question.library.startsWith("H5P.Flashcards");
+}
+
+/**
  * This is the root-level object you should ask the LLM to generate.
  * It represents the minimal data payload for a list of questions.
  */
 export interface IH5PMinimalQuestionSet {
   /** * The list of questions. */
-  questions: I5HPMultiChoiceQuestion[] | I5HPEssayQuestion[];
+  questions: I5HPMultiChoiceQuestion[] | I5HPEssayQuestion[] | IH5PFlashcard[];
 }
