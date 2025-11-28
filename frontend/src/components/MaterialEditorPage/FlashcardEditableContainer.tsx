@@ -21,14 +21,16 @@ import {
 
 interface FlashcardEditableContainerProps {
   initialFlashcards: IH5PFlashcard;
+  exportToH5P?: (flashcards: IH5PFlashcard[]) => void;
   onDelete: () => void;
   textbookId?: string;
 }
 
 export function FlashcardEditableContainer({
   initialFlashcards,
+  exportToH5P,
   onDelete,
-  textbookId,
+  textbookId: _textbookId,
 }: FlashcardEditableContainerProps) {
   const [flashcards, setFlashcards] = useState<IH5PFlashcardCard[]>(
     initialFlashcards.params.cards
@@ -99,9 +101,27 @@ export function FlashcardEditableContainer({
     );
   };
 
+  const exportAsH5P = () => {
+    if (exportToH5P) {
+      const flashcardSet: IH5PFlashcard = {
+        library: "H5P.Flashcards 1.5",
+        params: {
+          cards: flashcards,
+          description: title,
+        },
+      };
+      exportToH5P([flashcardSet]);
+    }
+  };
+
   const handleExport = () => {
     if (exportFormat === "json") {
       exportAsJSON();
+      return;
+    }
+
+    if (exportFormat === "h5p") {
+      exportAsH5P();
       return;
     }
 
@@ -196,6 +216,9 @@ export function FlashcardEditableContainer({
                   <SelectItem className="cursor-pointer" value="json">
                     JSON
                   </SelectItem>
+                  {/* <SelectItem className="cursor-pointer" value="h5p">
+                    H5P
+                  </SelectItem> */}
                   <SelectItem className="cursor-pointer" value="pdf">
                     PDF
                   </SelectItem>
