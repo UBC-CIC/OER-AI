@@ -3,6 +3,7 @@ import { Outlet, useParams, useNavigate } from "react-router";
 import { TextbookViewProvider } from "@/providers/TextbookViewContext";
 import { SidebarProvider } from "@/providers/SidebarContext";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import SideBar from "@/components/ChatInterface/SideBar";
 import type { Textbook } from "@/types/Textbook";
 import type { ChatSession } from "@/providers/textbookView";
@@ -213,6 +214,7 @@ export default function TextbookLayout() {
               <Outlet />
             </main>
           </div>
+          <Footer />
         </div>
       </SidebarProvider>
     </TextbookViewProvider>

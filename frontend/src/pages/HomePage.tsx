@@ -1,4 +1,5 @@
 import HomePageHeader from "@/components/HomePageHeader";
+import Footer from "@/components/Footer";
 import TextbookCard from "@/components/HomePage/TextbookCard";
 import { Input } from "@/components/ui/input";
 import {
@@ -176,6 +177,7 @@ export default function HomePage() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router";
 import AIChatPage from "./pages/ChatInterface/ChatInterface";
 import HomePage from "./pages/HomePage";
+import UserGuidelines from "./pages/UserGuidelines";
 import { UserSessionProvider } from "./providers/UserSessionContext";
 import { ModeProvider } from "@/providers/ModeContext";
 import TextbookLayout from "./layouts/TextbookLayout";
@@ -36,6 +37,7 @@ function App() {
         <ModeProvider>
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/guidelines" element={<UserGuidelines />} />
             <Route path="/textbook/:id" element={<TextbookLayout />}>
               <Route path="chat" element={<AIChatPage />} />
               <Route path="practice" element={<PracticeMaterialPage />} />
