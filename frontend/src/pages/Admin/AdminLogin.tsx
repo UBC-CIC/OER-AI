@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Footer from "@/components/Footer";
 import {
   Card,
   CardContent,
@@ -230,6 +231,7 @@ export default function AdminLogin() {
           )}
         </CardContent>
       </Card>
+      <Footer />
     </div>
   );
 }

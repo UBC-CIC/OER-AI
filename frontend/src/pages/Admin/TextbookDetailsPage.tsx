@@ -11,6 +11,7 @@ import {
   Share2,
   AlertTriangle,
 } from "lucide-react";
+import Footer from "@/components/Footer";
 import logoImage from "@/assets/OER_logo_black.png";
 import {
   LineChart,
@@ -817,6 +818,7 @@ export default function TextbookDetailsPage() {
           </div>
         </main>
       </div>
+      <Footer />
     </div>
   );
 }
