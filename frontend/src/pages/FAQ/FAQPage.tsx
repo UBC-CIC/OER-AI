@@ -109,11 +109,14 @@ export default function FAQPage() {
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-4 text-balance">
             Frequently Asked Questions
           </h1>
+          <p className="text-muted-foreground max-w-3xl mx-auto">
+            If you find a question here that violates our <a href="/guidelines" target="_blank" className="underline text-primary hover:text-primary/80">User Guidelines</a> (e.g., uses offensive language, promotes illegal activities, or is harmful), please report it.
+          </p>
           {loading && (
-            <p className="text-muted-foreground">Loading FAQs...</p>
+            <p className="text-muted-foreground mt-4">Loading FAQs...</p>
           )}
           {error && (
-            <p className="text-destructive">Error: {error}</p>
+            <p className="text-destructive mt-4">Error: {error}</p>
           )}
         </div>
 
