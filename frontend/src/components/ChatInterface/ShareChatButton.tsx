@@ -41,17 +41,17 @@ export default function ShareChatButton({
     try {
       // Copy to clipboard
       await navigator.clipboard.writeText(shareUrl);
-      
+
       // Show success feedback
       setCopied(true);
-      
+
       // Reset after 2 seconds
       setTimeout(() => {
         setCopied(false);
       }, 2000);
     } catch (error) {
       console.error("Failed to copy to clipboard:", error);
-      
+
       // Fallback: show alert with URL for manual copy
       alert(`Share URL: ${shareUrl}\n\nPlease copy this URL manually.`);
     }
@@ -60,7 +60,7 @@ export default function ShareChatButton({
   const handleShareClick = () => {
     // Check if user has dismissed the privacy notice
     const hasSeenNotice = localStorage.getItem(PRIVACY_NOTICE_KEY) === "true";
-    
+
     if (hasSeenNotice) {
       // Proceed directly to share
       handleShare();
@@ -75,13 +75,13 @@ export default function ShareChatButton({
     if (dontShowAgain) {
       localStorage.setItem(PRIVACY_NOTICE_KEY, "true");
     }
-    
+
     // Close modal
     setShowPrivacyNotice(false);
-    
+
     // Proceed with share
     handleShare();
-    
+
     // Reset the checkbox for next time
     setDontShowAgain(false);
   };
@@ -123,18 +123,20 @@ export default function ShareChatButton({
               Share Chat Conversation
             </DialogTitle>
             <DialogDescription className="text-left space-y-3 pt-2">
-              <p>
-                You are about to share this chat conversation. Please be aware:
-              </p>
+              <p>Before you share, please know the following:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li>Anyone with the link can view this conversation</li>
                 <li>The shared chat is publicly accessible</li>
                 <li>Shared conversations cannot be deleted or revoked</li>
-                <li>Do not share conversations containing sensitive information</li>
+                <li>Sensitive information should not be shared</li>
+                <li>
+                  Inappropriate content is flagged by fellow users and removed
+                  by administrators
+                </li>
               </ul>
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="flex items-center space-x-2 py-2">
             <Switch
               id="dont-show-again"
@@ -150,17 +152,10 @@ export default function ShareChatButton({
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={handleCancelShare}
-            >
+            <Button variant="outline" onClick={handleCancelShare}>
               Cancel
             </Button>
-            <Button
-              onClick={handleConfirmShare}
-            >
-              Share Conversation
-            </Button>
+            <Button onClick={handleConfirmShare}>Share Conversation</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

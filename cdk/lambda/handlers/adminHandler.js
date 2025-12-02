@@ -1060,6 +1060,68 @@ exports.handler = async (event) => {
         }
         break;
 
+      // GET /admin/settings/system-prompt - Get system prompt
+      case "GET /admin/settings/system-prompt":
+        try {
+          const result = await sqlConnection`
+            SELECT value FROM system_settings WHERE key = 'system_prompt'
+          `;
+
+          const systemPrompt = result.length > 0 ? result[0].value : "";
+
+          response.statusCode = 200;
+          response.body = JSON.stringify({
+            systemPrompt: systemPrompt,
+          });
+        } catch (error) {
+          console.error("Error getting system prompt:", error);
+          response.statusCode = 500;
+          response.body = JSON.stringify({
+            error: "Failed to get system prompt",
+          });
+        }
+        break;
+
+      // PUT /admin/settings/system-prompt - Update system prompt
+      case "PUT /admin/settings/system-prompt":
+        let promptData;
+        try {
+          promptData = parseBody(event.body);
+        } catch (error) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: error.message });
+          break;
+        }
+
+        const { systemPrompt } = promptData;
+
+        if (systemPrompt === undefined || systemPrompt === null) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "systemPrompt is required" });
+          break;
+        }
+
+        try {
+          await sqlConnection`
+            INSERT INTO system_settings (key, value, updated_at)
+            VALUES ('system_prompt', ${systemPrompt}, NOW())
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+          `;
+
+          response.statusCode = 200;
+          response.body = JSON.stringify({
+            message: "System prompt updated successfully",
+            systemPrompt: String(systemPrompt),
+          });
+        } catch (error) {
+          console.error("Error updating system prompt:", error);
+          response.statusCode = 500;
+          response.body = JSON.stringify({
+            error: "Failed to update system prompt",
+          });
+        }
+        break;
+
       // GET /admin/reported-items - Get all reported FAQs and shared prompts
       case "GET /admin/reported-items":
         // Get reported FAQs grouped by textbook
