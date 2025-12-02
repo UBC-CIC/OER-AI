@@ -131,7 +131,6 @@ export default function ShareChatButton({
               <p className="font-semibold">
                 Before you share, please know the following:
               </p>
-              <p>Before you share, please know the following:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li>Anyone with the link can view this conversation</li>
                 <li>The shared chat is publicly accessible</li>
@@ -142,10 +141,6 @@ export default function ShareChatButton({
                   by administrators
                 </li>
                 <li>Sensitive information should not be shared</li>
-                <li>
-                  Inappropriate content is flagged by fellow users and removed
-                  by administrators
-                </li>
               </ul>
             </DialogDescription>
           </DialogHeader>
