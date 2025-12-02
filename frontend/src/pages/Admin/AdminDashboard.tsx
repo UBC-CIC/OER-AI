@@ -4,6 +4,7 @@ import TextbookManagement from "@/components/Admin/TextbookManagement";
 import Analytics from "@/components/Admin/Analytics";
 import AISettings from "@/components/Admin/AISettings";
 import FAQsAndPrompts from "@/components/Admin/FAQsAndPrompts";
+import Footer from "@/components/Footer";
 import logoImage from "@/assets/OER_logo_black.png";
 
 // --- Components ---
@@ -34,6 +35,7 @@ export default function AdminDashboard() {
           {activeView === "faqs-prompts" && <FAQsAndPrompts />}
         </main>
       </div>
+      <Footer />
     </div>
   );
 }

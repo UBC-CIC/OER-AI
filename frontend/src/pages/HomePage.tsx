@@ -1,6 +1,14 @@
 import HomePageHeader from "@/components/HomePageHeader";
+import Footer from "@/components/Footer";
 import TextbookCard from "@/components/HomePage/TextbookCard";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Textbook } from "@/types/Textbook";
@@ -21,6 +29,20 @@ export default function HomePage() {
   const [textbooks, setTextbooks] = useState<Textbook[]>([]);
   const [filteredBooks, setFilteredBooks] = useState<TextbookForCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  // Check if user has seen the welcome message
+  useEffect(() => {
+    try {
+      const hasSeenWelcome = localStorage.getItem("hasSeenWelcome");
+      if (!hasSeenWelcome) {
+        setShowWelcome(true);
+        localStorage.setItem("hasSeenWelcome", "true");
+      }
+    } catch (error) {
+      console.error("Failed to access localStorage:", error);
+    }
+  }, []);
 
   // Fetch textbooks from API
   useEffect(() => {
@@ -83,6 +105,37 @@ export default function HomePage() {
     <div className="pt-[70px] flex min-h-screen flex-col bg-background">
       <HomePageHeader />
 
+      {/* Welcome Dialog */}
+      <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">
+              Welcome to Opterna
+            </DialogTitle>
+            <DialogDescription className="text-base leading-relaxed pt-4 space-y-4">
+              <p>
+                Welcome to Opterna - the open AI study companion created by BCcampus, 
+                UBC Cloud Innovation Centre, students, and faculty and generously funded 
+                by the William and Flora Hewlett Foundation.
+              </p>
+              <p>
+                Opterna is informed by Socratic questioning and dialogic approaches to 
+                learning and a growth mindset. We encourage you to take your learning 
+                beyond interacting with Opterna and out into your study groups, your 
+                work with teaching assistants, faculty, and others.
+              </p>
+              <p>
+                Opterna will prompt you to extend your thinking and offer support as you 
+                develop new connections and explore different ways of thinking about topics.
+              </p>
+              <p className="font-semibold">
+                Be curious and happy learning!
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
       {/* Main Content */}
       <main className="container mx-auto flex-1 flex-col justify-center px-6 py-16">
         <div className="mx-auto max-w-6xl">
@@ -128,6 +181,7 @@ export default function HomePage() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

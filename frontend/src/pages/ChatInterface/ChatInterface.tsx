@@ -1113,6 +1113,13 @@ export default function AIChatPage() {
                 />
               </Button>
             </div>
+
+            {/* AI Disclaimer */}
+            <div className="mt-4 text-center">
+              <p className="text-xs text-muted-foreground">
+                Opterna can make mistakes. Check important info.
+              </p>
+            </div>
           </div>
         </div>
         {/* Prompt Library Modal */}

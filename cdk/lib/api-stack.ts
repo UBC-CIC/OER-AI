@@ -299,9 +299,50 @@ export class ApiGatewayStack extends cdk.Stack {
           user: true,
         }),
         methodOptions: {
+          // Default for all endpoints
           "/*/*": {
             throttlingRateLimit: 100,
             throttlingBurstLimit: 200,
+          },
+
+          // EXPENSIVE: Practice material generation (AI calls to Bedrock)
+          "/textbooks/*/practice_materials/POST": {
+            throttlingRateLimit: 5, // Only 5/sec (down from 100)
+            throttlingBurstLimit: 10, // Only 10 concurrent (down from 200)
+          },
+
+          // MODERATE: Chat endpoints (streaming AI)
+          "/textbooks/*/chat_sessions/POST": {
+            throttlingRateLimit: 20, // 20/sec (down from 100)
+            throttlingBurstLimit: 40,
+          },
+
+          "/textbooks/*/chat_sessions/*/messages/POST": {
+            throttlingRateLimit: 20,
+            throttlingBurstLimit: 40,
+          },
+
+          // CHEAP: Read operations (just database queries)
+          "/textbooks/GET": {
+            throttlingRateLimit: 200, // 200/sec (UP from 100)
+            throttlingBurstLimit: 400,
+          },
+
+          "/textbooks/*/GET": {
+            throttlingRateLimit: 200,
+            throttlingBurstLimit: 400,
+          },
+
+          // MODERATE: FAQ operations
+          "/textbooks/*/faq/POST": {
+            throttlingRateLimit: 10,
+            throttlingBurstLimit: 20,
+          },
+
+          // FREQUENT: Public token endpoint
+          "/user/publicToken/GET": {
+            throttlingRateLimit: 50,
+            throttlingBurstLimit: 100,
           },
         },
       },
@@ -310,17 +351,18 @@ export class ApiGatewayStack extends cdk.Stack {
     this.stageARN_APIGW = this.api.deploymentStage.stageArn;
     this.apiGW_basedURL = this.api.urlForPath();
 
-    // Waf Firewall
+    // Waf Firewall - Enhanced with endpoint-specific and authentication-aware rate limiting
     const waf = new wafv2.CfnWebACL(this, `${id}-waf`, {
-      description: "waf for DFO",
+      description: "WAF for OER",
       scope: "REGIONAL",
       defaultAction: { allow: {} },
       visibilityConfig: {
         sampledRequestsEnabled: true,
         cloudWatchMetricsEnabled: true,
-        metricName: "DFO-firewall",
+        metricName: "OER-firewall",
       },
       rules: [
+        // Rule 1: AWS Managed Common Rule Set (SQL injection, XSS, etc.)
         {
           name: "AWS-AWSManagedRulesCommonRuleSet",
           priority: 1,
@@ -337,22 +379,141 @@ export class ApiGatewayStack extends cdk.Stack {
             metricName: "AWS-AWSManagedRulesCommonRuleSet",
           },
         },
+
+        // Rule 2: Strict limit for unauthenticated requests (100 req/5min per IP)
         {
-          name: "LimitRequests1000",
+          name: "LimitUnauthenticatedRequests",
           priority: 2,
           action: {
             block: {},
           },
           statement: {
             rateBasedStatement: {
-              limit: 1000,
+              limit: 100, // Reduced from 1000 to 100 for anonymous users
               aggregateKeyType: "IP",
+              scopeDownStatement: {
+                // Only apply to requests WITHOUT Authorization header
+                notStatement: {
+                  statement: {
+                    byteMatchStatement: {
+                      searchString: "Bearer",
+                      fieldToMatch: {
+                        singleHeader: {
+                          name: "authorization",
+                        },
+                      },
+                      textTransformations: [
+                        {
+                          priority: 0,
+                          type: "NONE",
+                        },
+                      ],
+                      positionalConstraint: "CONTAINS",
+                    },
+                  },
+                },
+              },
             },
           },
           visibilityConfig: {
             sampledRequestsEnabled: true,
             cloudWatchMetricsEnabled: true,
-            metricName: "LimitRequests1000",
+            metricName: "LimitUnauthenticatedRequests",
+          },
+        },
+
+        // Rule 3: More lenient for authenticated requests (2000 req/5min per IP)
+        {
+          name: "LimitAuthenticatedRequests",
+          priority: 3,
+          action: {
+            block: {},
+          },
+          statement: {
+            rateBasedStatement: {
+              limit: 2000, // Increased from 1000 to 2000 for authenticated users
+              aggregateKeyType: "IP",
+              scopeDownStatement: {
+                // Only apply to requests WITH Authorization header
+                byteMatchStatement: {
+                  searchString: "Bearer",
+                  fieldToMatch: {
+                    singleHeader: {
+                      name: "authorization",
+                    },
+                  },
+                  textTransformations: [
+                    {
+                      priority: 0,
+                      type: "NONE",
+                    },
+                  ],
+                  positionalConstraint: "CONTAINS",
+                },
+              },
+            },
+          },
+          visibilityConfig: {
+            sampledRequestsEnabled: true,
+            cloudWatchMetricsEnabled: true,
+            metricName: "LimitAuthenticatedRequests",
+          },
+        },
+
+        // Rule 4: Very strict limit for expensive AI endpoints (50 req/5min per IP)
+        {
+          name: "LimitExpensiveEndpoints",
+          priority: 4,
+          action: {
+            block: {},
+          },
+          statement: {
+            rateBasedStatement: {
+              limit: 50, // Very strict for AI generation endpoints
+              aggregateKeyType: "IP",
+              scopeDownStatement: {
+                // Apply to practice_materials and chat_sessions endpoints
+                orStatement: {
+                  statements: [
+                    {
+                      byteMatchStatement: {
+                        searchString: "/practice_materials",
+                        fieldToMatch: {
+                          uriPath: {},
+                        },
+                        textTransformations: [
+                          {
+                            priority: 0,
+                            type: "NONE",
+                          },
+                        ],
+                        positionalConstraint: "CONTAINS",
+                      },
+                    },
+                    {
+                      byteMatchStatement: {
+                        searchString: "/chat_sessions",
+                        fieldToMatch: {
+                          uriPath: {},
+                        },
+                        textTransformations: [
+                          {
+                            priority: 0,
+                            type: "NONE",
+                          },
+                        ],
+                        positionalConstraint: "CONTAINS",
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          visibilityConfig: {
+            sampledRequestsEnabled: true,
+            cloudWatchMetricsEnabled: true,
+            metricName: "LimitExpensiveEndpoints",
           },
         },
       ],

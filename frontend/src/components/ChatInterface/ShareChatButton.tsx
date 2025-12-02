@@ -123,11 +123,24 @@ export default function ShareChatButton({
               Share Chat Conversation
             </DialogTitle>
             <DialogDescription className="text-left space-y-3 pt-2">
+              <p>
+                Thank you for sharing your chat conversation. Doing this means
+                that you can help someone else who might find your interaction
+                with Opterna useful in their learning.
+              </p>
+              <p className="font-semibold">
+                Before you share, please know the following:
+              </p>
               <p>Before you share, please know the following:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li>Anyone with the link can view this conversation</li>
                 <li>The shared chat is publicly accessible</li>
                 <li>Shared conversations cannot be deleted or revoked</li>
+                <li>Sensitive information should not be shared</li>
+                <li>
+                  Inappropriate content is flagged by fellow users and removed
+                  by administrators
+                </li>
                 <li>Sensitive information should not be shared</li>
                 <li>
                   Inappropriate content is flagged by fellow users and removed

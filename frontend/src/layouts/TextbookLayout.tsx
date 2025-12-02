@@ -3,6 +3,7 @@ import { Outlet, useParams, useNavigate } from "react-router";
 import { TextbookViewProvider } from "@/providers/TextbookViewContext";
 import { SidebarProvider } from "@/providers/SidebarContext";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import SideBar from "@/components/ChatInterface/SideBar";
 import type { Textbook } from "@/types/Textbook";
 import type { ChatSession } from "@/providers/textbookView";
@@ -202,16 +203,19 @@ export default function TextbookLayout() {
       <SidebarProvider>
         <div className="flex flex-col min-h-screen bg-background">
           <Header />
-          <div className="pt-[70px] flex-1 flex">
+          <div className="pt-[70px] flex flex-1">
             <SideBar
               textbookTitle={textbook?.title || ""}
               textbookAuthor={textbook?.authors?.join(", ") || ""}
               textbookId={id}
               textbookSourceUrl={textbook?.source_url}
             />
-            <main className="md:ml-64 flex flex-col flex-1 items-center justify-center max-w-screen">
-              <Outlet />
-            </main>
+            <div className="md:ml-64 flex flex-col flex-1">
+              <main className="flex-1 flex flex-col items-center justify-center max-w-screen">
+                <Outlet />
+              </main>
+              <Footer />
+            </div>
           </div>
         </div>
       </SidebarProvider>

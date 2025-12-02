@@ -108,7 +108,8 @@ export default function PromptLibraryModal({
             <DialogHeader className="text-left">
               <DialogTitle>User Shared Prompts</DialogTitle>
               <DialogDescription>
-                Select a community-made prompt template to use in the chat.
+                Select a community-made prompt template to use in the chat.{" "}
+                If you find a prompt that violates our <a href="/guidelines" target="_blank" rel="noopener noreferrer" aria-label="User Guidelines (opens in a new tab)" className="underline text-primary hover:text-primary/80">User Guidelines<span aria-hidden="true" className="ml-1">↗</span></a> (e.g., uses offensive language, promotes illegal activities, or is harmful), please report it by clicking the flag by the prompt.
               </DialogDescription>
             </DialogHeader>
 
