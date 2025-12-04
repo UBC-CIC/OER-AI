@@ -128,21 +128,11 @@ export default function HomePage() {
                   <p key={idx}>{para}</p>
                 ))
               ) : (
-                <p>Welcome to Opterna - the open AI study companion.</p>
+                // If the welcome message hasn't loaded for some reason, show the
+                // default message (which will mirror the previous hardcoded content)
+                // or a loading indicator.
+                <p>Loading welcome message...</p>
               )}
-              <p>
-                Opterna is informed by Socratic questioning and dialogic approaches to 
-                learning and a growth mindset. We encourage you to take your learning 
-                beyond interacting with Opterna and out into your study groups, your 
-                work with teaching assistants, faculty, and others.
-              </p>
-              <p>
-                Opterna will prompt you to extend your thinking and offer support as you 
-                develop new connections and explore different ways of thinking about topics.
-              </p>
-              <p className="font-semibold">
-                Be curious and happy learning!
-              </p>
             </DialogDescription>
           </DialogHeader>
         </DialogContent>
