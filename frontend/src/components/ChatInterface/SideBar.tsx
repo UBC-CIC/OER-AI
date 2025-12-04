@@ -14,13 +14,10 @@ import { useNavigate, useLocation } from "react-router";
 import { Separator } from "@/components/ui/separator";
 import { useMode } from "@/providers/mode";
 import { useTextbookView } from "@/providers/textbookView";
-import { Plus, MessageSquare, ExternalLink, Volume2, ChevronDown } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
+import { Plus, MessageSquare, ExternalLink, Volume2, ChevronRight } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 import { useSpeech } from "@/contexts/SpeechContext";
 
 type StudentSideBarProps = {
@@ -64,7 +61,12 @@ export default function SideBar({
     }
   };
 
-  const SidebarContent = () => (
+  const SidebarContent = () => {
+    const [audioOpen, setAudioOpen] = useState(false);
+
+    // No debug logs here; keep popover state local
+
+    return (
     <>
       <Card className="py-[10px] gap-2 mb-4">
         <CardContent
@@ -140,14 +142,45 @@ export default function SideBar({
             <Volume2 className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-xs font-semibold text-muted-foreground tracking-wide">AUDIO</h3>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Audio settings">
-                <ChevronDown className="h-4 w-4" />
+          <Popover open={audioOpen} onOpenChange={(o) => setAudioOpen(o)}>
+              <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Audio settings"
+              >
+                <ChevronRight
+                  className={cn(
+                    "h-4 w-4 transition-transform duration-150",
+                    audioOpen ? "rotate-90" : "rotate-0"
+                  )}
+                />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="left">
-              <DropdownMenuLabel className="text-xs">Audio settings</DropdownMenuLabel>
+            </PopoverTrigger>
+              <PopoverContent
+              side="right"
+              align="start"
+              forceMount
+              onOpenAutoFocus={(e) => {
+                // Prevent auto focus of the first focusable element on mount. Keeping focus where the
+                // user clicked avoids immediate focusOutside dismissals by Radix.
+                e.preventDefault();
+              }}
+              onFocusOutside={(e: any) => {
+                try {
+                  const target = (e?.detail?.originalEvent as FocusEvent | undefined)?.relatedTarget as Element | null;
+                  // If focus is moving to the popover trigger, don't dismiss the popover.
+                  if (target && target.closest("[data-slot=popover-trigger]")) {
+                    e.preventDefault?.();
+                    return;
+                  }
+                } catch (err) {
+                  // Ignore and allow default behavior
+                }
+              }}
+              
+            >
+              <div className="text-xs font-medium mb-1">Audio settings</div>
               <div className="px-3 py-2 space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs">Narration</Label>
@@ -240,8 +273,8 @@ export default function SideBar({
                   </Button>
                 </div>
               </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
       <Separator className="mb-4" />
@@ -298,6 +331,7 @@ export default function SideBar({
       )}
     </>
   );
+  };
 
   return (
     <>
