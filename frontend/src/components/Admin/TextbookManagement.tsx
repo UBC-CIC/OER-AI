@@ -360,18 +360,21 @@ export default function TextbookManagement() {
           value={loading ? "..." : totalUsers.toString()}
           icon={<Users className="h-5 w-5 text-[#2c5f7c]" />}
           trend="Unique users with chat sessions"
+          tooltip="Calculated by summing the user count from each textbook."
         />
         <MetricCard
           title="Total Questions"
           value={loading ? "..." : totalQuestions.toLocaleString()}
           icon={<HelpCircle className="h-5 w-5 text-[#3d7a9a]" />}
           trend="Questions asked across all textbooks"
+          tooltip="Calculated by summing the question count from each textbook."
         />
         <MetricCard
           title="Total Textbooks"
           value={loading ? "..." : textbooks.length.toString()}
           icon={<FileText className="h-5 w-5 text-[#2c5f7c]" />}
           trend="Active textbooks in the system"
+          tooltip="Total count of textbooks currently registered in the system."
         />
       </div>
 

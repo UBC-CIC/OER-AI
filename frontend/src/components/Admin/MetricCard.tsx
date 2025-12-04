@@ -1,10 +1,17 @@
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type MetricCardProps = {
   title: string;
   value: string;
   icon: React.ReactNode;
   trend: string;
+  tooltip?: string;
 };
 
 export default function MetricCard({
@@ -12,6 +19,7 @@ export default function MetricCard({
   value,
   icon,
   trend,
+  tooltip,
 }: MetricCardProps) {
   return (
     <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
@@ -19,7 +27,20 @@ export default function MetricCard({
         <div className="flex items-center justify-between space-y-0 pb-2">
           <p className="text-sm font-medium text-gray-500">{title}</p>
           <div className="h-8 w-8 rounded-full bg-gray-50 flex items-center justify-center">
-            {icon}
+            {tooltip ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="cursor-help">{icon}</div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs text-xs">{tooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              icon
+            )}
           </div>
         </div>
         <div className="flex flex-col gap-1">
