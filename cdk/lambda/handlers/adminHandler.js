@@ -478,6 +478,86 @@ exports.handler = async (event) => {
         response.body = JSON.stringify({ prompts: sharedPrompts });
         break;
 
+      // GET /admin/analytics/practice - Get aggregated practice material analytics
+      case "GET /admin/analytics/practice":
+        // Get total count
+        const totalPracticeAggResult = await sqlConnection`
+          SELECT COUNT(*) as count 
+          FROM practice_material_analytics
+        `;
+        const totalPracticeAgg = parseInt(totalPracticeAggResult[0].count) || 0;
+
+        // Get count by type
+        const typeBreakdownAgg = await sqlConnection`
+          SELECT material_type, COUNT(*) as count
+          FROM practice_material_analytics
+          GROUP BY material_type
+        `;
+
+        response.statusCode = 200;
+        response.body = JSON.stringify({
+          total_generated: totalPracticeAgg,
+          by_type: typeBreakdownAgg,
+        });
+        break;
+
+      // GET /admin/textbooks/{textbook_id}/practice_analytics - Get practice material analytics
+      case "GET /admin/textbooks/{textbook_id}/practice_analytics":
+        const practiceTextbookId = event.pathParameters?.textbook_id;
+        if (!practiceTextbookId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "Textbook ID is required" });
+          break;
+        }
+
+        // Get total count
+        const totalPracticeResult = await sqlConnection`
+          SELECT COUNT(*) as count 
+          FROM practice_material_analytics 
+          WHERE textbook_id = ${practiceTextbookId}
+        `;
+        const totalPractice = parseInt(totalPracticeResult[0].count) || 0;
+
+        // Get count by type
+        const typeBreakdown = await sqlConnection`
+          SELECT material_type, COUNT(*) as count
+          FROM practice_material_analytics
+          WHERE textbook_id = ${practiceTextbookId}
+          GROUP BY material_type
+        `;
+
+        // Get count by difficulty
+        const difficultyBreakdown = await sqlConnection`
+          SELECT difficulty, COUNT(*) as count
+          FROM practice_material_analytics
+          WHERE textbook_id = ${practiceTextbookId}
+          GROUP BY difficulty
+        `;
+
+        // Get recent generations
+        const recentGenerations = await sqlConnection`
+          SELECT 
+            id,
+            material_type,
+            topic,
+            num_items,
+            difficulty,
+            created_at
+          FROM practice_material_analytics
+          WHERE textbook_id = ${practiceTextbookId}
+          ORDER BY created_at DESC
+          LIMIT 20
+        `;
+
+        response.statusCode = 200;
+        response.body = JSON.stringify({
+          total_generated: totalPractice,
+          by_type: typeBreakdown,
+          by_difficulty: difficultyBreakdown,
+          recent_activity: recentGenerations,
+        });
+        break;
+
       // GET /admin/textbooks/{textbook_id}/ingestion_status - Get detailed ingestion status
       case "GET /admin/textbooks/{textbook_id}/ingestion_status":
         const statusTextbookId = event.pathParameters?.textbook_id;

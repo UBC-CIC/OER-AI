@@ -693,6 +693,123 @@ paths:
         passthroughBehavior: "when_no_match"
         httpMethod: POST
         type: aws_proxy
+
+  /admin/analytics/practice:
+    <<: *commonOptions
+    get:
+      tags:
+        - Admin
+      summary: Get aggregated practice material analytics
+      operationId: get_admin_aggregated_practice_analytics
+      security:
+        - adminAuthorizer: []
+      responses:
+        "200":
+          description: Aggregated practice material analytics data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_generated:
+                    type: integer
+                  by_type:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        material_type:
+                          type: string
+                        count:
+                          type: integer
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${adminFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
+  /admin/textbooks/{textbook_id}/practice_analytics:
+    <<: *commonOptions
+    get:
+      tags:
+        - Admin
+      summary: Get practice material analytics for a specific textbook
+      operationId: get_admin_practice_analytics
+      security:
+        - adminAuthorizer: []
+      parameters:
+        - name: textbook_id
+          in: path
+          required: true
+          description: Textbook UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Practice material analytics data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_generated:
+                    type: integer
+                  by_type:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        material_type:
+                          type: string
+                        count:
+                          type: integer
+                  by_difficulty:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        difficulty:
+                          type: string
+                        count:
+                          type: integer
+                  recent_activity:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        material_type:
+                          type: string
+                        topic:
+                          type: string
+                        num_items:
+                          type: integer
+                        difficulty:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+        "400":
+          description: Invalid textbook ID
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${adminFunction.Arn}/invocations
+        passthroughBehavior: "when_no_match"
+        httpMethod: POST
+        type: aws_proxy
+
     put:
       tags:
         - Admin

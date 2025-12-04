@@ -17,6 +17,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from "recharts";
 import { AuthService } from "@/functions/authService";
 
@@ -31,9 +32,15 @@ type ChatSessionData = {
   sessions: number;
 };
 
+type PracticeAnalyticsData = {
+  total_generated: number;
+  by_type: { material_type: string; count: number }[];
+};
+
 type AnalyticsData = {
   timeSeries: TimeSeriesData[];
   chatSessionsByTextbook: ChatSessionData[];
+  practiceAnalytics: PracticeAnalyticsData | null;
 };
 
 type ChartCardProps = {
@@ -68,7 +75,7 @@ function CustomTooltip({ active, payload, label }: any) {
           >
             <div
               className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: entry.color }}
+              style={{ backgroundColor: entry.color || entry.fill }}
             />
             <span className="capitalize">{entry.name}:</span>
             <span className="font-bold text-gray-900">{entry.value}</span>
@@ -85,6 +92,7 @@ export default function Analytics() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
     timeSeries: [],
     chatSessionsByTextbook: [],
+    practiceAnalytics: null,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,30 +109,57 @@ export default function Analytics() {
       const session = await AuthService.getAuthSession(true);
       const token = session.tokens.idToken;
 
-      const response = await fetch(
-        `${
-          import.meta.env.VITE_API_ENDPOINT
-        }/admin/analytics?timeRange=${timeRange}`,
-        {
+      const [generalResponse, practiceResponse] = await Promise.all([
+        fetch(
+          `${
+            import.meta.env.VITE_API_ENDPOINT
+          }/admin/analytics?timeRange=${timeRange}`,
+          {
+            headers: {
+              Authorization: token,
+              "Content-Type": "application/json",
+            },
+          }
+        ),
+        fetch(`${import.meta.env.VITE_API_ENDPOINT}/admin/analytics/practice`, {
           headers: {
             Authorization: token,
             "Content-Type": "application/json",
           },
-        }
-      );
+        }),
+      ]);
 
-      if (!response.ok) {
+      if (!generalResponse.ok || !practiceResponse.ok) {
         throw new Error("Failed to fetch analytics data");
       }
 
-      const data = await response.json();
-      setAnalyticsData(data);
+      const generalData = await generalResponse.json();
+      const practiceData = await practiceResponse.json();
+
+      setAnalyticsData({
+        ...generalData,
+        practiceAnalytics: practiceData,
+      });
     } catch (err) {
       console.error("Error fetching analytics:", err);
       setError("Failed to load analytics data");
     } finally {
       setLoading(false);
     }
+  };
+
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
+
+  const formatMaterialType = (type: string) => {
+    const map: Record<string, string> = {
+      short_answer: "Short Answer",
+      flashcard: "Flashcards",
+      mcq: "Multiple Choice",
+    };
+    return (
+      map[type] ||
+      type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+    );
   };
 
   return (
@@ -257,16 +292,41 @@ export default function Analytics() {
             </ResponsiveContainer>
           </ChartCard>
 
-          {/* Total Practice Materials Chart - Placeholder */}
+          {/* Aggregated Practice Materials Chart */}
           <ChartCard
-            title="Total Practice Materials"
-            subtitle="Generated practice sets (Coming Soon)"
+            title="Practice Materials Generated"
+            subtitle="Distribution by type across all textbooks"
           >
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-400 text-sm">
-                Practice materials analytics will be available soon
-              </p>
-            </div>
+            {analyticsData.practiceAnalytics ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analyticsData.practiceAnalytics.by_type}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="material_type"
+                    tickFormatter={formatMaterialType}
+                  />
+                  <YAxis />
+                  <Tooltip
+                    content={<CustomTooltip />}
+                    labelFormatter={formatMaterialType}
+                  />
+                  <Bar dataKey="count" fill="#2c5f7c">
+                    {analyticsData.practiceAnalytics.by_type.map(
+                      (entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      )
+                    )}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-400 text-sm">No data available</p>
+              </div>
+            )}
           </ChartCard>
 
           {/* Chat Sessions per Textbook Bar Chart */}

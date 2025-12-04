@@ -10,6 +10,7 @@ import {
   HelpCircle,
   Share2,
   AlertTriangle,
+  BookOpen,
 } from "lucide-react";
 import Footer from "@/components/Footer";
 import logoImage from "@/assets/OER_logo_black.png";
@@ -21,6 +22,10 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell,
+  Legend,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +60,20 @@ type TimeSeriesData = {
 
 type TextbookAnalyticsData = {
   timeSeries: TimeSeriesData[];
+};
+
+type PracticeAnalyticsData = {
+  total_generated: number;
+  by_type: { material_type: string; count: number }[];
+  by_difficulty: { difficulty: string; count: number }[];
+  recent_activity: {
+    id: string;
+    material_type: string;
+    topic: string;
+    num_items: number;
+    difficulty: string;
+    created_at: string;
+  }[];
 };
 
 type FAQ = {
@@ -119,7 +138,7 @@ function CustomTooltip({ active, payload, label }: any) {
           >
             <div
               className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: entry.color }}
+              style={{ backgroundColor: entry.color || entry.fill }}
             />
             <span className="capitalize">{entry.name}:</span>
             <span className="font-bold text-gray-900">{entry.value}</span>
@@ -134,13 +153,15 @@ function CustomTooltip({ active, payload, label }: any) {
 export default function TextbookDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<"analytics" | "faq" | "status">(
-    "analytics"
-  );
+  const [activeView, setActiveView] = useState<
+    "analytics" | "faq" | "status" | "practice"
+  >("analytics");
   const [textbook, setTextbook] = useState<TextbookDetails | null>(null);
   const [analyticsData, setAnalyticsData] = useState<TextbookAnalyticsData>({
     timeSeries: [],
   });
+  const [practiceAnalytics, setPracticeAnalytics] =
+    useState<PracticeAnalyticsData | null>(null);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [sharedPrompts, setSharedPrompts] = useState<SharedPrompt[]>([]);
   const [ingestionStatus, setIngestionStatus] =
@@ -163,6 +184,9 @@ export default function TextbookDetailsPage() {
     }
     if (id && activeView === "status") {
       fetchIngestionStatus();
+    }
+    if (id && activeView === "practice") {
+      fetchPracticeAnalytics();
     }
   }, [id, activeView]);
 
@@ -221,6 +245,34 @@ export default function TextbookDetailsPage() {
       console.error("Error fetching analytics:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPracticeAnalytics = async () => {
+    try {
+      const session = await AuthService.getAuthSession(true);
+      const token = session.tokens.idToken;
+
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_ENDPOINT
+        }/admin/textbooks/${id}/practice_analytics`,
+        {
+          headers: {
+            Authorization: token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch practice analytics");
+      }
+
+      const data = await response.json();
+      setPracticeAnalytics(data);
+    } catch (err) {
+      console.error("Error fetching practice analytics:", err);
     }
   };
 
@@ -361,6 +413,8 @@ export default function TextbookDetailsPage() {
     0
   );
 
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       {/* Header */}
@@ -413,6 +467,18 @@ export default function TextbookDetailsPage() {
             >
               <BarChart3 className="mr-2 h-4 w-4" />
               Analytics
+            </Button>
+            <Button
+              variant={activeView === "practice" ? "secondary" : "ghost"}
+              className={`w-full justify-start ${
+                activeView === "practice"
+                  ? "bg-[#2c5f7c]/10 text-[#2c5f7c] font-medium"
+                  : "text-gray-600"
+              }`}
+              onClick={() => setActiveView("practice")}
+            >
+              <BookOpen className="mr-2 h-4 w-4" />
+              Practice Analytics
             </Button>
             <Button
               variant={activeView === "faq" ? "secondary" : "ghost"}
@@ -594,6 +660,152 @@ export default function TextbookDetailsPage() {
                           </LineChart>
                         </ResponsiveContainer>
                       </ChartCard>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeView === "practice" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Practice Material Analytics
+                  </h2>
+                  <p className="text-gray-500">
+                    Insights into practice material generation and usage.
+                  </p>
+                </div>
+
+                {!practiceAnalytics ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2c5f7c]"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <MetricCard
+                        title="Total Generated"
+                        value={practiceAnalytics.total_generated.toString()}
+                        icon={<BookOpen className="h-5 w-5 text-blue-600" />}
+                        trend="Total practice sets"
+                      />
+                      <MetricCard
+                        title="Most Popular Type"
+                        value={
+                          practiceAnalytics.by_type.sort(
+                            (a, b) => b.count - a.count
+                          )[0]?.material_type || "N/A"
+                        }
+                        icon={
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        }
+                        trend="By volume"
+                      />
+                      <MetricCard
+                        title="Most Popular Difficulty"
+                        value={
+                          practiceAnalytics.by_difficulty.sort(
+                            (a, b) => b.count - a.count
+                          )[0]?.difficulty || "N/A"
+                        }
+                        icon={
+                          <AlertTriangle className="h-5 w-5 text-orange-600" />
+                        }
+                        trend="By volume"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <ChartCard
+                        title="Generation by Type"
+                        subtitle="Distribution of practice material types"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={practiceAnalytics.by_type}>
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              vertical={false}
+                            />
+                            <XAxis dataKey="material_type" />
+                            <YAxis />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Bar dataKey="count" fill="#2c5f7c">
+                              {practiceAnalytics.by_type.map((entry, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={COLORS[index % COLORS.length]}
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </ChartCard>
+
+                      <ChartCard
+                        title="Generation by Difficulty"
+                        subtitle="Distribution of difficulty levels"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={practiceAnalytics.by_difficulty}>
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              vertical={false}
+                            />
+                            <XAxis dataKey="difficulty" />
+                            <YAxis />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Bar dataKey="count" fill="#82ca9d">
+                              {practiceAnalytics.by_difficulty.map(
+                                (entry, index) => (
+                                  <Cell
+                                    key={`cell-${index}`}
+                                    fill={COLORS[index % COLORS.length]}
+                                  />
+                                )
+                              )}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </ChartCard>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Recent Activity
+                      </h3>
+                      <div className="grid gap-4">
+                        {practiceAnalytics.recent_activity.map((activity) => (
+                          <Card key={activity.id}>
+                            <CardContent className="p-4 flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {activity.topic || "Untitled Topic"}
+                                </p>
+                                <div className="flex gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {activity.material_type}
+                                  </Badge>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    {activity.difficulty}
+                                  </Badge>
+                                  <span className="text-xs text-gray-500 flex items-center">
+                                    {activity.num_items} items
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {new Date(
+                                  activity.created_at
+                                ).toLocaleDateString()}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
                     </div>
                   </>
                 )}
@@ -805,11 +1017,9 @@ export default function TextbookDetailsPage() {
                         </Card>
                       ))
                     ) : (
-                      <Card className="bg-gray-50 border-dashed">
-                        <CardContent className="p-6 text-center text-gray-500">
-                          No associated media found.
-                        </CardContent>
-                      </Card>
+                      <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-lg border border-dashed">
+                        No media items found for this textbook.
+                      </div>
                     )}
                   </div>
                 </div>
