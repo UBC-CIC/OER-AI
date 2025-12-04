@@ -2,9 +2,12 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { SpeechProvider } from './contexts/SpeechContext'
 
 createRoot(document.getElementById('root')!).render(
   //<StrictMode>
-    <App />
+    <SpeechProvider>
+      <App />
+    </SpeechProvider>
   //</StrictMode>,
 )
