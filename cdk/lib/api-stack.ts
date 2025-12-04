@@ -951,6 +951,18 @@ export class ApiGatewayStack extends cdk.Stack {
       }
     );
 
+    // Create SSM parameter for welcome message (frontend display)
+    const welcomeMessageParameter = new ssm.StringParameter(
+      this,
+      "WelcomeMessageParameter",
+      {
+        parameterName: `/${id}/OER/WelcomeMessage`,
+        description: "Frontend welcome message shown on first visit",
+        stringValue:
+          "Welcome to Opterna - the open AI study companion created by BCcampus, UBC Cloud Innovation Centre, students, and faculty.",
+      }
+    );
+
     // Create DynamoDB table for session management with 30-day TTL
     const sessionTable = new dynamodb.Table(this, `${id}-ConversationTable`, {
       tableName: `${id}-DynamoDB-Conversation-Table`,
@@ -1260,6 +1272,61 @@ export class ApiGatewayStack extends cdk.Stack {
     const cfnLambda_user = lambdaUserFunction.node
       .defaultChild as lambda.CfnFunction;
     cfnLambda_user.overrideLogicalId("userFunction");
+
+    // --- Welcome message: public GET and admin PUT ---
+    const getWelcomeMessageFunction = new lambda.Function(this, `${id}-GetWelcomeMessageFunction`, {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      code: lambda.Code.fromAsset("lambda/config"),
+      handler: "getWelcomeMessageFunction.handler",
+      timeout: Duration.seconds(10),
+      functionName: `${id}-GetWelcomeMessageFunction`,
+      memorySize: 128,
+      role: lambdaRole,
+      environment: {
+        WELCOME_MESSAGE_PARAM_NAME: welcomeMessageParameter.parameterName,
+      },
+    });
+
+    // Grant read access to SSM parameter for GET
+    welcomeMessageParameter.grantRead(getWelcomeMessageFunction);
+
+    getWelcomeMessageFunction.addPermission("AllowPublicApiGatewayInvoke", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+      action: "lambda:InvokeFunction",
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/public/config/welcomeMessage`,
+    });
+
+    const cfnGetWelcome = getWelcomeMessageFunction.node.defaultChild as lambda.CfnFunction;
+    cfnGetWelcome.overrideLogicalId("GetWelcomeMessageFunction");
+
+    const setWelcomeMessageFunction = new lambda.Function(this, `${id}-AdminSetWelcomeMessageFunction`, {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      code: lambda.Code.fromAsset("lambda/config"),
+      handler: "setWelcomeMessageFunction.handler",
+      timeout: Duration.seconds(10),
+      functionName: `${id}-AdminSetWelcomeMessageFunction`,
+      memorySize: 128,
+      role: lambdaRole,
+      environment: {
+        WELCOME_MESSAGE_PARAM_NAME: welcomeMessageParameter.parameterName,
+      },
+    });
+
+    welcomeMessageParameter.grantRead(setWelcomeMessageFunction);
+    setWelcomeMessageFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ["ssm:PutParameter"],
+      resources: [welcomeMessageParameter.parameterArn],
+    }));
+
+    setWelcomeMessageFunction.addPermission("AllowAdminApiGatewayInvoke", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+      action: "lambda:InvokeFunction",
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:${this.api.restApiId}/*/*/admin/config/welcomeMessage`,
+    });
+
+    const cfnSetWelcome = setWelcomeMessageFunction.node.defaultChild as lambda.CfnFunction;
+    cfnSetWelcome.overrideLogicalId("AdminSetWelcomeMessageFunction");
 
     lambdaUserFunction.addPermission("AllowAdminApiGatewayInvoke", {
       principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),

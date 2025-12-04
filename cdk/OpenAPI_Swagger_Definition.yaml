@@ -533,6 +533,69 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
+    /public/config/welcomeMessage:
+      <<: *commonOptions
+      get:
+        tags:
+          - User
+        summary: Get the welcome message displayed on the homepage
+        operationId: get_public_welcome_message
+        responses:
+          "200":
+            description: Returns a JSON object with the welcome message
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    welcomeMessage:
+                      type: string
+          "500":
+            description: Internal Server Error
+        x-amazon-apigateway-integration:
+          uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${getWelcomeMessageFunction.Arn}/invocations
+          passthroughBehavior: "when_no_match"
+          httpMethod: POST
+          type: aws_proxy
+
+    /admin/config/welcomeMessage:
+      <<: *commonOptions
+      put:
+        tags:
+          - Admin
+        summary: Update the welcome message displayed on the homepage
+        operationId: set_admin_welcome_message
+        security:
+          - adminAuthorizer: []
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - welcomeMessage
+                properties:
+                  welcomeMessage:
+                    type: string
+                    maxLength: 5000
+        responses:
+          "200":
+            description: Welcome message updated
+          "400":
+            description: Bad request
+          "401":
+            description: Unauthorized
+          "500":
+            description: Internal Server Error
+        x-amazon-apigateway-integration:
+          uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${adminSetWelcomeMessageFunction.Arn}/invocations
+          passthroughBehavior: "when_no_match"
+          httpMethod: POST
+          type: aws_proxy
+
   /admin/textbooks/{textbook_id}:
     <<: *commonOptions
     get:
