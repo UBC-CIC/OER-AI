@@ -83,7 +83,7 @@ def initialize_constants():
         )
     
     if _llm is None:
-        # Create bedrock client for LLM in the appropriate region
+        # Create bedrock client for LLM in the appropriate region (easter egg)
         llm_client = boto3.client("bedrock-runtime", region_name=_bedrock_region)
         model_kwargs = {
             "temperature": 0.6,
