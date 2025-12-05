@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { SaveIcon } from "lucide-react";
+import { SaveIcon, Play, Pause } from "lucide-react";
+import { useSpeech } from "@/contexts/SpeechContext";
 import { Button } from "../ui/button";
 import {
   Dialog,
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUserSession } from "@/providers/usersession";
 import { useMode } from "@/providers/mode";
 
@@ -21,9 +22,12 @@ type UserChatMessageProps = {
   textbookId: string; // textbook to associate the prompt with
   onSaveSuccess?: (promptId: string) => void; // optional callback on success
   onSaveError?: (error: Error) => void; // optional callback on error
+  messageTime?: number;
+  initialLoadTime?: number | null;
+  id?: string;
 };
 
-export default function UserChatMessage({ text, textbookId, onSaveSuccess, onSaveError }: UserChatMessageProps) {
+export default function UserChatMessage({ text, textbookId, onSaveSuccess, onSaveError, messageTime, initialLoadTime, id }: UserChatMessageProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState(text);
@@ -31,6 +35,21 @@ export default function UserChatMessage({ text, textbookId, onSaveSuccess, onSav
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { sessionUuid } = useUserSession();
   const { mode } = useMode();
+  const { settings, speak, cancel, isSpeaking, currentUtteranceId } = useSpeech();
+  const isPlaying = isSpeaking && currentUtteranceId === id;
+
+  useEffect(() => {
+    try {
+      if (!settings.enabled) return;
+      if (!settings.autoplay) return;
+      if (settings.mode === "ai") return; // don't autoplay AI only if set
+      if (!messageTime || !initialLoadTime) return;
+      if (messageTime < initialLoadTime) return;
+      speak(text, { id });
+    } catch (e) {
+      console.error("Speech autoplay failed", e);
+    }
+  }, [settings, messageTime, initialLoadTime, speak]);
 
   function handleOpen() {
     setName("");
@@ -103,6 +122,16 @@ export default function UserChatMessage({ text, textbookId, onSaveSuccess, onSav
 
       {/* hover save button */}
       <div className="flex justify-end">
+        <button
+          className="text-muted-foreground hover:text-foreground p-1 mr-2"
+            onClick={() => {
+            if (isPlaying) cancel();
+            else speak(text, { enabled: true, id });
+          }}
+          aria-label={isSpeaking ? "Stop narration" : "Read aloud"}
+        >
+          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+        </button>
         <button
           // visible by default on small (touch) screens, hidden on md+ until hover/focus
           className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity focus:opacity-100 p-0"

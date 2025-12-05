@@ -34,6 +34,7 @@ export default function AIChatPage() {
   );
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [initialMessageLoadTime, setInitialMessageLoadTime] = useState<number | null>(null);
   const [seeMore, setSeeMore] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
 
@@ -89,6 +90,13 @@ export default function AIChatPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  // Capture the initial messages load time to avoid autoplaying historical messages
+  useEffect(() => {
+    if (!isLoadingHistory && initialMessageLoadTime === null) {
+      setInitialMessageLoadTime(Date.now());
+    }
+  }, [isLoadingHistory, initialMessageLoadTime]);
 
   // Initialize chat session if needed
   useEffect(() => {
@@ -919,6 +927,9 @@ export default function AIChatPage() {
           key={message.id}
           text={message.text}
           textbookId={textbook?.id || ""}
+          messageTime={message.time}
+          initialLoadTime={initialMessageLoadTime}
+          id={message.id}
         />
       );
     } else if (message.isGuidedQuestion && message.guidedData) {
@@ -937,6 +948,9 @@ export default function AIChatPage() {
           text={message.text}
           sources={message.sources_used}
           isTyping={message.isTyping}
+          messageTime={message.time}
+          initialLoadTime={initialMessageLoadTime}
+          id={message.id}
         />
       );
     }

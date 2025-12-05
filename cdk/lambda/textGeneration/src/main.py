@@ -492,3 +492,15 @@ def handler(event, context):
             },
             "body": json.dumps({"error": f"Internal server error: {str(e)}"})
         }
+    except Exception as e:
+        logger.error(f"Error processing request: {e}", exc_info=True)
+        return {
+            "statusCode": 500,
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*"
+            },
+            "body": json.dumps({"error": f"Internal server error: {str(e)}"})
+        }

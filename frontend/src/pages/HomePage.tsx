@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
+import { getWelcomeMessage } from "@/lib/welcomeMessage";
 import type { Textbook } from "@/types/Textbook";
 
 // Define a custom UUID type to avoid the crypto module import
@@ -30,6 +31,7 @@ export default function HomePage() {
   const [filteredBooks, setFilteredBooks] = useState<TextbookForCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [welcomeMsg, setWelcomeMsg] = useState<string | null>(null);
 
   // Check if user has seen the welcome message
   useEffect(() => {
@@ -42,6 +44,14 @@ export default function HomePage() {
     } catch (error) {
       console.error("Failed to access localStorage:", error);
     }
+  }, []);
+
+  useEffect(() => {
+    const fetchMessage = async () => {
+      const msg = await getWelcomeMessage();
+      setWelcomeMsg(msg);
+    };
+    fetchMessage();
   }, []);
 
   // Fetch textbooks from API
@@ -113,24 +123,16 @@ export default function HomePage() {
               Welcome to Opterna
             </DialogTitle>
             <DialogDescription className="text-base leading-relaxed pt-4 space-y-4">
-              <p>
-                Welcome to Opterna - the open AI study companion created by BCcampus, 
-                UBC Cloud Innovation Centre, students, and faculty and generously funded 
-                by the William and Flora Hewlett Foundation.
-              </p>
-              <p>
-                Opterna is informed by Socratic questioning and dialogic approaches to 
-                learning and a growth mindset. We encourage you to take your learning 
-                beyond interacting with Opterna and out into your study groups, your 
-                work with teaching assistants, faculty, and others.
-              </p>
-              <p>
-                Opterna will prompt you to extend your thinking and offer support as you 
-                develop new connections and explore different ways of thinking about topics.
-              </p>
-              <p className="font-semibold">
-                Be curious and happy learning!
-              </p>
+              {welcomeMsg ? (
+                welcomeMsg.split("\n\n").map((para, idx) => (
+                  <p key={idx}>{para}</p>
+                ))
+              ) : (
+                // If the welcome message hasn't loaded for some reason, show the
+                // default message (which will mirror the previous hardcoded content)
+                // or a loading indicator.
+                <p>Loading welcome message...</p>
+              )}
             </DialogDescription>
           </DialogHeader>
         </DialogContent>
@@ -142,7 +144,7 @@ export default function HomePage() {
           {/* Hero Section */}
           <div className="mb-12 text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <h2 className="text-5xl font-bold tracking-tight text-primary">
-              OpenEd Textbook Catalogue
+              OpenED Textbook Catalogue
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Select a textbook to get started with your AI-powered learning

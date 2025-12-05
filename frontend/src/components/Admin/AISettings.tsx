@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { AuthService } from "@/functions/authService";
+import WelcomeMessageEditor from "@/components/Admin/WelcomeMessageEditor";
 
 export default function AISettings() {
   const [tokenLimit, setTokenLimit] = useState(1000);
@@ -302,6 +303,9 @@ export default function AISettings() {
           )}
         </CardContent>
       </Card>
+
+      {/* Welcome Message Editor */}
+      <WelcomeMessageEditor />
     </div>
   );
 }
