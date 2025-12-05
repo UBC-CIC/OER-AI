@@ -1,5 +1,5 @@
 export async function getWelcomeMessage(): Promise<string> {
-  const defaultMessage = `Welcome to Opterna - the open AI study companion created by BCcampus, UBC Cloud Innovation Centre, students, and faculty and generously funded by the William and Flora Hewlett Foundation.`;
+  const defaultMessage = `Welcome to Opterna - the  AI study companion.`;
   try {
     const resp = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/public/config/welcomeMessage`);
     if (!resp.ok) return defaultMessage;
