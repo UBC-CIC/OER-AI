@@ -2,15 +2,16 @@
 
 This prototype explores how Large Language Models (LLMs) can enhance educational experiences by enabling intelligent interaction with Open Educational Resources (OER) textbooks. By leveraging Retrieval-Augmented Generation (RAG), multimodal embeddings, and conversational AI, it provides students with personalized learning assistance, practice material generation, and adaptive tutoring through natural language conversations with textbook content.
 
-| Index                                               | Description                                             |
-| :-------------------------------------------------- | :------------------------------------------------------ |
-| [High Level Architecture](#high-level-architecture) | High level overview illustrating component interactions |
-| [Deployment](#deployment-guide)                     | How to deploy the project                               |
-| [User Guide](#user-guide)                           | The working solution                                    |
-| [Directories](#directories)                         | General project directory structure                     |
-| [Database Schema](#database-schema)                 | Database schema visualization                           |
-| [Credits](#credits)                                 | Meet the team behind the solution                       |
-| [License](#license)                                 | License details                                         |
+| Index                                                 | Description                                             |
+| :---------------------------------------------------- | :------------------------------------------------------ |
+| [High Level Architecture](#high-level-architecture)   | High level overview illustrating component interactions |
+| [Deployment](#deployment-guide)                       | How to deploy the project                               |
+| [User Guide](#user-guide)                             | The working solution                                    |
+| [Directories](#directories)                           | General project directory structure                     |
+| [Database Schema](#database-schema)                   | Database schema visualization                           |
+| [Additional Documentation](#additional-documentation) | Comprehensive guides and references                     |
+| [Credits](#credits)                                   | Meet the team behind the solution                       |
+| [License](#license)                                   | License details                                         |
 
 ## High-Level Architecture
 
@@ -217,6 +218,30 @@ For a detailed visualization of the database schema, see the [DBML schema file](
 - **AWS CodePipeline** for CI/CD
 - **Amazon RDS** for managed PostgreSQL
 - **Amazon VPC** for network isolation
+
+## Additional Documentation
+
+For more detailed information about specific aspects of the OER-AI system, please refer to the following documentation:
+
+### Architecture & Design
+
+- **[Architecture Deep Dive](Docs/ARCHITECTURE_DEEP_DIVE.md)**: Comprehensive overview of system architecture, component interactions, and database schema details
+
+### Deployment & Configuration
+
+- **[Deployment Guide](Docs/DEPLOYMENT_GUIDE.md)**: Step-by-step instructions for deploying the OER-AI system to AWS
+- **[Modification Guide](Docs/MODIFICATION_GUIDE.md)**: Guidelines for customizing and extending the application functionality
+- **[Bedrock Guardrails](Docs/BEDROCK_GUARDRAILS.md)**: Configuration and management of AWS Bedrock guardrails for AI safety and content filtering
+
+### Development & Maintenance
+
+- **[Database Migrations](Docs/DATABASE_MIGRATIONS.md)**: Complete guide to the database migration system, creating new migrations, and best practices
+- **[Dependency Management](Docs/DEPENDENCY_MANAGEMENT.MD)**: Instructions for managing Python dependencies in Lambda functions using pip-tools
+
+### API & Usage
+
+- **[API Documentation](Docs/API_DOCUMENTATION.pdf)**: Comprehensive API reference for all REST and WebSocket endpoints
+- **[User Guide](Docs/USER_GUIDE.md)**: Complete guide for end-users on how to interact with the OER-AI Assistant
 
 ## Credits
 
