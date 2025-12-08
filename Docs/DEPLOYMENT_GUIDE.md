@@ -27,10 +27,12 @@ Before you deploy, you must have the following installed on your device:
 - [git](https://git-scm.com/downloads)
 - [AWS Account](https://aws.amazon.com/account/)
 - [GitHub Account](https://github.com/)
-- [AWS CLI](https://aws.amazon.com/cli/)
-- [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/cli.html) _(v2.146.0 > required)_
-- [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
-- [node](https://nodejs.org/en/ln/getting-started/how-to-install-nodejs) _(v20.0.0 > required)_
+- [AWS CLI](https://aws.amazon.com/cli/) _(v2.0.0+ required)_
+- [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/cli.html) _(v2.1022.0+ required)_
+- [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) _(v10.0.0+ required)_
+- [node](https://nodejs.org/en/ln/getting-started/how-to-install-nodejs) _(v22.7.9+ required)_
+- [Python](https://www.python.org/downloads/) _(v3.11+ required)_
+
 
 ### Request Higher Bedrock LLM Invocation Quotas
 
