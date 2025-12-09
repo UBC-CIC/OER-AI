@@ -16,8 +16,11 @@ export default function DeleteChatButton({ chatSessionId, userSessionId, onDelet
 
     try {
       // Try to get admin/user auth token first (Cognito) so admins can delete too.
-      let tokenResult = await AuthService.getAuthToken(true).catch(() => ({ success: false }));
-      let token = tokenResult?.token;
+      const tokenResult = await AuthService.getAuthToken(true).catch(() => ({ success: false }));
+      let token: string | undefined = undefined;
+      if (tokenResult && typeof tokenResult === "object" && (tokenResult as any).token) {
+        token = (tokenResult as any).token;
+      }
       if (!token) {
         const tokenResp = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/user/publicToken`);
         if (!tokenResp.ok) throw new Error("Failed to acquire public token");
@@ -28,11 +31,10 @@ export default function DeleteChatButton({ chatSessionId, userSessionId, onDelet
       const url = new URL(`${import.meta.env.VITE_API_ENDPOINT}/chat_sessions/${chatSessionId}`);
       if (userSessionId) url.searchParams.set("user_session_id", userSessionId);
 
+      const headers: Record<string, string> | undefined = token ? { Authorization: `Bearer ${token}` } : undefined;
       const response = await fetch(url.toString(), {
         method: "DELETE",
-        headers: {
-          Authorization: token,
-        },
+        headers,
       });
 
       if (!response.ok) throw new Error("Failed to delete chat session");

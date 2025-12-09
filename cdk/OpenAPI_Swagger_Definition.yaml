@@ -1767,11 +1767,11 @@ paths:
     <<: *commonOptions
     delete:
       tags:
-        - Admin
-      summary: Delete a specific chat session (admins or owning user may delete)
+        - User
+      summary: Delete a specific chat session (only the owning user may delete)
       operationId: delete_chat_session
       security:
-        - adminAuthorizer: []
+        - userAuthorizer: []
       parameters:
         - name: chat_session_id
           in: path
@@ -1782,21 +1782,16 @@ paths:
             format: uuid
         - name: user_session_id
           in: query
-          required: false
-          description: Optional user session UUID used to verify ownership when deleting as a non-admin user
-          schema:
-            type: string
-            format: uuid
-        - name: x-user-session-id
-          in: header
-          required: false
-          description: Optional header to supply a user session UUID when calling as a non-admin user to verify ownership
+          required: true
+          description: User session UUID used to verify ownership when deleting
           schema:
             type: string
             format: uuid
       responses:
         "204":
           description: Chat session deleted successfully
+        "403":
+          description: Forbidden - User does not own this chat session
         "404":
           description: Chat session not found
         "401":
@@ -1805,7 +1800,7 @@ paths:
           description: Internal Server Error
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${adminFunction.Arn}/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${chatSessionFunction.Arn}/invocations
         passthroughBehavior: "when_no_match"
         httpMethod: POST
         type: aws_proxy

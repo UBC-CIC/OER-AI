@@ -305,6 +305,55 @@ exports.handler = async (event) => {
         response.body = JSON.stringify(data);
         break;
         
+      case "DELETE /chat_sessions/{chat_session_id}":
+        const deleteChatSessionId = event.pathParameters?.chat_session_id;
+        const deleteUserSessionId = event.queryStringParameters?.user_session_id;
+        
+        if (!deleteChatSessionId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "chat_session_id is required" });
+          break;
+        }
+        
+        if (!deleteUserSessionId) {
+          response.statusCode = 400;
+          response.body = JSON.stringify({ error: "user_session_id is required" });
+          break;
+        }
+        
+        // Verify the chat session exists and belongs to the user
+        const chatSessionToDelete = await sqlConnection`
+          SELECT id, user_session_id FROM chat_sessions WHERE id = ${deleteChatSessionId}
+        `;
+        
+        if (chatSessionToDelete.length === 0) {
+          response.statusCode = 404;
+          response.body = JSON.stringify({ error: "Chat session not found" });
+          break;
+        }
+        
+        // Verify ownership
+        if (chatSessionToDelete[0].user_session_id !== deleteUserSessionId) {
+          response.statusCode = 403;
+          response.body = JSON.stringify({ error: "You can only delete your own chat sessions" });
+          break;
+        }
+        
+        // Delete interactions first (although FK cascade should handle it)
+        await sqlConnection`
+          DELETE FROM user_interactions WHERE chat_session_id = ${deleteChatSessionId}
+        `;
+        
+        // Delete the chat session
+        await sqlConnection`
+          DELETE FROM chat_sessions WHERE id = ${deleteChatSessionId}
+        `;
+        
+        console.log(`Chat session ${deleteChatSessionId} deleted by user session ${deleteUserSessionId}`);
+        response.statusCode = 204;
+        response.body = "";
+        break;
+        
       default:
         throw new Error(`Unsupported route: "${pathData}"`);
     }
