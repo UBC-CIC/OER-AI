@@ -15,7 +15,7 @@ This prototype explores how Large Language Models (LLMs) can enhance educational
 
 ## High-Level Architecture
 
-The following architecture diagram illustrates the various AWS components utilized to deliver the solution. For an in-depth explanation of the frontend and backend stacks, please look at the [Architecture Deep Dive](Docs/ArchitectureDeepDive.md).
+The following architecture diagram illustrates the various AWS components utilized to deliver the solution. For an in-depth explanation of the frontend and backend stacks, please look at the [Architecture Deep Dive](Docs/ARCHITECTURE_DEEP_DIVE.md).
 
 ![Architecture Diagram](Docs/media/architecture-diagram.png)
 
@@ -63,6 +63,11 @@ Please refer to the [Web App User Guide](Docs/USER_GUIDE.md) for instructions on
 │   ├── media/
 │   ├── API_DOCUMENTATION.pdf/
 │   ├── USER_GUIDE.md
+│   ├── ARCHITECTURE_DEEP_DIVE.md
+│   ├── BEDROCK_GUARDRAILS.md
+│   ├── DATABASE_MIGRATIONS.md
+│   ├── DEPENDENCY_MANAGEMENT.md
+│   ├── MODIFICATION_GUIDE.md
 │   └── DEPLOYMENT_GUIDE.md
 
 ├── frontend/
@@ -131,6 +136,11 @@ Please refer to the [Web App User Guide](Docs/USER_GUIDE.md) for instructions on
 2. `/Docs`: Contains comprehensive documentation for the application
    - `DEPLOYMENT_GUIDE.md`: Step-by-step deployment instructions
    - `USER_GUIDE.md` : Complete overview on how to use the application
+   - `ARCHITECTURE_DEEP_DIVE.md` : Detailed explanation of the backend is built.
+   - `BEDROCK_GUARDRAILS.md` : Explanation of what guardrails are and how to change them.
+   - `DATABASE_MIGRATIONS.md` : Explanation on how to modify the database.
+   - `DEPENDENCY_MANAGEMENT.md` : Documentation on how python dependencies are locked and managed.
+   - `MODIFICATION_GUIDE.md` : Documentation on how to modify components of the frontend such as colours, text and licensing information.
    - `API_DOCUMENTATION.pdf` : Documentation of all API endpoints
 3. `/frontend`: Contains the React + TypeScript user interface
    - `/src/assets`: Static assets (images, icons, etc.)
