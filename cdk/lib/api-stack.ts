@@ -959,7 +959,7 @@ export class ApiGatewayStack extends cdk.Stack {
         parameterName: `/${id}/OER/WelcomeMessage`,
         description: "Frontend welcome message shown on first visit",
         stringValue:
-          "Welcome to Opterna - the open AI study companion. Happy learning! :-)",
+          "Welcome to the open AI study companion. Happy learning! :-)",
       }
     );
 

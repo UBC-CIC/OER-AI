@@ -126,7 +126,7 @@ export default function ShareChatButton({
               <p>
                 Thank you for sharing your chat conversation. Doing this means
                 that you can help someone else who might find your interaction
-                with Opterna useful in their learning.
+                useful in their learning.
               </p>
               <p className="font-semibold">
                 Before you share, please know the following:

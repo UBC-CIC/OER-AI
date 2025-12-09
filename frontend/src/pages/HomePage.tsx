@@ -120,7 +120,7 @@ export default function HomePage() {
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">
-              Welcome to Opterna
+              Welcome
             </DialogTitle>
             <DialogDescription className="text-base leading-relaxed pt-4 space-y-4">
               {welcomeMsg ? (

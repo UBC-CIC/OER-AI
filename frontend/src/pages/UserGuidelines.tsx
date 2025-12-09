@@ -16,7 +16,7 @@ export default function UserGuidelines() {
               User Guidelines
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Please review these guidelines before using Opterna
+              Please review these guidelines 
             </p>
           </div>
 
@@ -80,13 +80,13 @@ export default function UserGuidelines() {
             </CardHeader>
             <CardContent className="space-y-4 text-base leading-relaxed">
               <p>
-                BCcampus believes in protecting your privacy and recognizes the sensitivity of Personal Information. This statement outlines how we manage your Personal Information and safeguard your privacy. Please refer to BCcampus’ Privacy Policy for more information.
+                We believe in protecting your privacy and recognizes the sensitivity of Personal Information. This statement outlines how we manage your Personal Information and safeguard your privacy. 
               </p>
-              <h4 className="text-lg font-semibold">Your Information in Opterna</h4>
+              <h4 className="text-lg font-semibold">Your Information </h4>
               <ul className="list-disc list-inside">
-                <li>Personal information is not collected when using Opterna unless explicitly submitted and saved by you (e.g., when creating a shared prompt that includes personal data).</li>
+                <li>Personal information is not collected when using  unless explicitly submitted and saved by you (e.g., when creating a shared prompt that includes personal data).</li>
                 <li>User history is stored for 30 days. Local session data is persisted in your browser for approximately 30 days to provide continuity of session across reloads.</li>
-                <li>Only user prompts that you choose to save will remain in Opterna beyond this timeframe; those saved prompts cannot be traced back to a user via the frontend UI.</li>
+                <li>Only user prompts that you choose to save will remain in  beyond this timeframe; those saved prompts cannot be traced back to a user via the frontend UI.</li>
               </ul>
             </CardContent>
           </Card>

@@ -7,7 +7,7 @@ exports.handler = async function (event) {
     const paramName = process.env.WELCOME_MESSAGE_PARAM_NAME;
     const cmd = new GetParameterCommand({ Name: paramName, WithDecryption: false });
     const resp = await ssm.send(cmd);
-    const welcomeMessage = (resp.Parameter && resp.Parameter.Value) || "Welcome to Opterna - the open AI study companion";
+    const welcomeMessage = (resp.Parameter && resp.Parameter.Value) || "Welcome to the open AI study companion";
 
     return {
       statusCode: 200,

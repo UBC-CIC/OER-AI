@@ -1,6 +1,6 @@
-# OER-AI / Opterna - Project Modification Guide
+# OER-AI - Project Modification Guide
 
-This guide provides instructions on how to modify and extend the OER-AI (Opterna) project. It focuses on practical edits developers commonly need to make: styling, authentication, adding endpoints, frontend components, LLM configuration, database migrations, and deployment. For guardrail configuration and operational guidance, see `Docs/BEDROCK_GUARDRAILS.md`.
+This guide provides instructions on how to modify and extend the OER-AI project. It focuses on practical edits developers commonly need to make: styling, authentication, adding endpoints, frontend components, LLM configuration, database migrations, and deployment. For guardrail configuration and operational guidance, see `Docs/BEDROCK_GUARDRAILS.md`.
 
 ---
 
@@ -279,12 +279,12 @@ To change the website license statement (the footer text), edit the site `Footer
 
 Example steps:
 
-1. Open `frontend/src/components/Footer.tsx` and update the displayed text. Currently the repository has the footer defined as: `© {new Date().getFullYear()} OpenED.` Modify the string to your desired website license, e.g., `© {new Date().getFullYear()} Opterna` or `© 2025 Opterna`.
+1. Open `frontend/src/components/Footer.tsx` and update the displayed text. Currently the repository has the footer defined as: `© {new Date().getFullYear()} OpenED.` Modify the string to your desired website license, e.g., `© {new Date().getFullYear()}`.
 
 ```tsx
 // frontend/src/components/Footer.tsx
 <div className="text-sm text-muted-foreground">
-  © {new Date().getFullYear()} Opterna.
+  © {new Date().getFullYear()} Generic License.
 </div>
 ```
 
@@ -293,7 +293,7 @@ Example steps:
 ```tsx
 // Example: using Vite env variable
 <div className="text-sm text-muted-foreground">
-  © {new Date().getFullYear()} {import.meta.env.VITE_WEBSITE_NAME || 'Opterna'}.
+  © {new Date().getFullYear()} {import.meta.env.VITE_WEBSITE_NAME || 'Generic License '}.
 </div>
 ```
 
