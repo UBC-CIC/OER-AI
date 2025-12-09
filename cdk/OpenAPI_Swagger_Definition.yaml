@@ -235,7 +235,6 @@ paths:
       operationId: delete_reported_faq
       security:
         - adminAuthorizer: []
-        - userAuthorizer: []
       parameters:
         - name: faq_id
           in: path
@@ -6307,7 +6306,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
-  /admin-generate-presigned-url:
+  /generate-presigned-url:
     <<: *commonOptions
     get:
       tags:
