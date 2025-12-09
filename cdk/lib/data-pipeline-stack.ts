@@ -131,73 +131,6 @@ export class DataPipelineStack extends cdk.Stack {
       })
     );
 
-    // Create Lambda function to process SQS messages and trigger Glue jobs
-    const jobProcessorRole = new iam.Role(this, `${id}-JobProcessorRole`, {
-      assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName(
-          "service-role/AWSLambdaBasicExecutionRole"
-        ),
-      ],
-      inlinePolicies: {
-        SQSAccess: new iam.PolicyDocument({
-          statements: [
-            new iam.PolicyStatement({
-              effect: iam.Effect.ALLOW,
-              actions: [
-                "sqs:ReceiveMessage",
-                "sqs:DeleteMessage",
-                "sqs:GetQueueAttributes",
-              ],
-              resources: [this.textbookIngestionQueue.queueArn],
-            }),
-          ],
-        }),
-        GlueAccess: new iam.PolicyDocument({
-          statements: [
-            new iam.PolicyStatement({
-              effect: iam.Effect.ALLOW,
-              actions: [
-                "glue:StartJobRun",
-                "glue:GetJobRun",
-                "glue:GetJobRuns",
-              ],
-              resources: [
-                `arn:aws:glue:${this.region}:${this.account}:job/${id}-data-processing-job`,
-              ],
-            }),
-          ],
-        }),
-      },
-    });
-
-    this.jobProcessorLambda = new lambda.Function(
-      this,
-      `${id}-JobProcessorLambda`,
-      {
-        functionName: `${id}-job-processor`,
-        runtime: lambda.Runtime.PYTHON_3_11,
-        handler: "main.lambda_handler",
-        code: lambda.Code.fromAsset("lambda/jobProcessor"),
-        timeout: Duration.minutes(15),
-        memorySize: 512,
-        role: jobProcessorRole,
-        environment: {
-          DATA_PROCESSING_BUCKET: this.csvBucket.bucketName,
-          REGION: this.region,
-          MAX_CONCURRENT_GLUE_JOBS: "3",
-        },
-      }
-    );
-
-    // Connect SQS queue to Lambda function
-    this.jobProcessorLambda.addEventSource(
-      new lambdaEventSources.SqsEventSource(this.textbookIngestionQueue, {
-        batchSize: 1,
-        maxConcurrency: 2,
-      })
-    );
-
     // Create security group for Glue jobs
     const glueSecurityGroup = new ec2.SecurityGroup(
       this,
@@ -374,6 +307,74 @@ export class DataPipelineStack extends cdk.Stack {
       glueVersion: GLUE_VER,
     });
 
+    // Create Lambda function to process SQS messages and trigger Glue jobs
+    const jobProcessorRole = new iam.Role(this, `${id}-JobProcessorRole`, {
+      assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          "service-role/AWSLambdaBasicExecutionRole"
+        ),
+      ],
+      inlinePolicies: {
+        SQSAccess: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                "sqs:ReceiveMessage",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes",
+              ],
+              resources: [this.textbookIngestionQueue.queueArn],
+            }),
+          ],
+        }),
+        GlueAccess: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                "glue:StartJobRun",
+                "glue:GetJobRun",
+                "glue:GetJobRuns",
+              ],
+              resources: [
+                `arn:aws:glue:${this.region}:${this.account}:job/${dataProcessingJob.name}`,
+              ],
+            }),
+          ],
+        }),
+      },
+    });
+
+    this.jobProcessorLambda = new lambda.Function(
+      this,
+      `${id}-JobProcessorLambda`,
+      {
+        functionName: `${id}-job-processor`,
+        runtime: lambda.Runtime.PYTHON_3_11,
+        handler: "main.lambda_handler",
+        code: lambda.Code.fromAsset("lambda/jobProcessor"),
+        timeout: Duration.minutes(15),
+        memorySize: 512,
+        role: jobProcessorRole,
+        environment: {
+          DATA_PROCESSING_BUCKET: this.csvBucket.bucketName,
+          REGION: this.region,
+          MAX_CONCURRENT_GLUE_JOBS: "3",
+          GLUE_JOB_NAME: dataProcessingJob.name!,
+        },
+      }
+    );
+
+    // Connect SQS queue to Lambda function
+    this.jobProcessorLambda.addEventSource(
+      new lambdaEventSources.SqsEventSource(this.textbookIngestionQueue, {
+        batchSize: 1,
+        maxConcurrency: 2,
+      })
+    );
+
     // Output the Glue job name
     new cdk.CfnOutput(this, "GlueJobName", {
       value: dataProcessingJob.name!,
@@ -384,10 +385,5 @@ export class DataPipelineStack extends cdk.Stack {
       value: this.glueBucket.bucketName,
       description: "S3 bucket for Glue scripts and assets",
     });
-
-    this.jobProcessorLambda.addEnvironment(
-      "GLUE_JOB_NAME",
-      dataProcessingJob.name!
-    );
   }
 }
