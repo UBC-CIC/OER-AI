@@ -229,7 +229,7 @@ aws secretsmanager create-secret ^
 ```powershell
 aws secretsmanager create-secret `
   --name OERSecrets `
-  --secret-string "{\"DB_Username\":\"<YOUR-DB-USERNAME>\"}" `
+  --secret-string '{"DB_Username":"<YOUR-DB-USERNAME>"}' `
   --profile <YOUR-PROFILE-NAME>
 ```
 
@@ -242,7 +242,7 @@ For example:
 ```bash
 aws secretsmanager create-secret \
   --name OERSecrets \
-  --secret-string "{\"DB_Username\":\"OERDatabaseUser\"}" \
+  --secret-string '{"DB_Username":"OERDatabaseUser"}' \
   --profile <YOUR-PROFILE-NAME>
 ```
 
