@@ -126,12 +126,7 @@ export const useWebSocket = (
 
           callbacksRef.current.onMessage?.(message);
         } catch (error) {
-          console.error(
-            "[WebSocket] Error parsing message:",
-            error,
-            "Raw data:",
-            event.data
-          );
+          console.error("[WebSocket] Error parsing message:", error);
         }
       };
 
@@ -194,7 +189,7 @@ export const useWebSocket = (
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         try {
           const messageStr = JSON.stringify(message);
-          console.log("[WebSocket] Sending message:", message);
+          console.log("[WebSocket] Sending message");
           wsRef.current.send(messageStr);
           return true;
         } catch (error) {
