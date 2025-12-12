@@ -20,7 +20,7 @@ def get_vectorstore(
         connection_string = (
             f"postgresql+psycopg://{user}:{password}@{host}:{port}/{dbname}"
         )
-        logger.info("Initializing the VectorStore for collection %s", collection_name)
+        logger.info("Initializing the VectorStore")
         vectorstore = PGVector(
             embeddings=embeddings,
             collection_name=collection_name,

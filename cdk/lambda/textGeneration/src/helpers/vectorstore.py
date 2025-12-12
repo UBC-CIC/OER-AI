@@ -69,8 +69,7 @@ def get_textbook_retriever(llm, textbook_id: str, vectorstore_config_dict: Dict[
     
     try:
         # Connect to database to check if collection exists
-        logger.info(f"Connecting to database at {vectorstore_config_dict['host']}:{vectorstore_config_dict['port']}")
-        logger.info(f"Using database: {vectorstore_config_dict['dbname']}")
+        logger.info(f"Connecting to database at")
         
         conn = None
         try:
@@ -131,6 +130,4 @@ def get_textbook_retriever(llm, textbook_id: str, vectorstore_config_dict: Dict[
         logger.error(f"Error in get_textbook_retriever: {str(e)}")
         logger.error(traceback.format_exc())
         logger.error(f"Textbook ID: {textbook_id}")
-        logger.error(f"Database host: {vectorstore_config_dict.get('host', 'not provided')}")
-        logger.error(f"Database name: {vectorstore_config_dict.get('dbname', 'not provided')}")
         return None
