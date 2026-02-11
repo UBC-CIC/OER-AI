@@ -72,7 +72,7 @@ langchain-classic==1.0.1
     #   langchain-community
 langchain-community==0.4.1
     # via -r requirements.in
-langchain-core==1.2.5
+langchain-core==1.2.11
     # via
     #   -r requirements.in
     #   langchain
@@ -134,7 +134,7 @@ propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
-psycopg==3.3.2
+psycopg[binary,pool]==3.3.2
     # via
     #   -r requirements.in
     #   langchain-postgres
@@ -181,7 +181,7 @@ s3transfer==0.16.0
     # via boto3
 six==1.17.0
     # via python-dateutil
-sqlalchemy==2.0.46
+sqlalchemy[asyncio]==2.0.46
     # via
     #   langchain-classic
     #   langchain-community
@@ -192,10 +192,7 @@ tenacity==9.1.2
     #   langchain-core
 typing-extensions==4.15.0
     # via
-    #   aiosignal
-    #   anyio
     #   langchain-core
-    #   psycopg
     #   psycopg-pool
     #   pydantic
     #   pydantic-core
@@ -208,8 +205,6 @@ typing-inspection==0.4.2
     # via
     #   pydantic
     #   pydantic-settings
-tzdata==2025.3
-    # via psycopg
 urllib3==2.6.3
     # via
     #   -r requirements.in
