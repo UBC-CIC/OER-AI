@@ -1,5 +1,5 @@
 langchain-aws==1.0.0
-langchain-core==1.2.5
+langchain-core==1.2.22
 langchain-community>=0.3.29
 langchain-postgres==0.0.16
 langchain>=1.0.0,<2.0.0
