@@ -98,7 +98,7 @@ langgraph-prebuilt==1.0.6
     # via langgraph
 langgraph-sdk==0.3.3
     # via langgraph
-langsmith==0.6.4
+langsmith==0.7.31
     # via
     #   langchain-classic
     #   langchain-community
@@ -134,7 +134,7 @@ propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
-psycopg==3.3.2
+psycopg[binary,pool]==3.3.2
     # via
     #   -r requirements.in
     #   langchain-postgres
@@ -181,7 +181,7 @@ s3transfer==0.16.0
     # via boto3
 six==1.17.0
     # via python-dateutil
-sqlalchemy==2.0.46
+sqlalchemy[asyncio]==2.0.46
     # via
     #   langchain-classic
     #   langchain-community
@@ -192,10 +192,7 @@ tenacity==9.1.2
     #   langchain-core
 typing-extensions==4.15.0
     # via
-    #   aiosignal
-    #   anyio
     #   langchain-core
-    #   psycopg
     #   psycopg-pool
     #   pydantic
     #   pydantic-core
@@ -208,8 +205,6 @@ typing-inspection==0.4.2
     # via
     #   pydantic
     #   pydantic-settings
-tzdata==2025.3
-    # via psycopg
 urllib3==2.6.3
     # via
     #   -r requirements.in
@@ -220,7 +215,9 @@ uuid-utils==0.14.0
     #   langchain-core
     #   langsmith
 xxhash==3.6.0
-    # via langgraph
+    # via
+    #   langgraph
+    #   langsmith
 yarl==1.22.0
     # via aiohttp
 zstandard==0.25.0
